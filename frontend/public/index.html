@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CSCE 331 | Team 32 | Project 3</title>
+    <style>
+      :root {
+        --bg-soft: #f6f9fc;
+        --bg-warm: #f9f5ef;
+        --panel: #ffffff;
+        --text: #16202a;
+        --muted: #516273;
+        --accent: #0f9d8a;
+        --accent-strong: #0b7f70;
+        --ring: rgba(15, 157, 138, 0.25);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 12% 18%, #ffffff 0%, transparent 36%),
+          radial-gradient(circle at 88% 12%, #d8efe8 0%, transparent 38%),
+          linear-gradient(125deg, var(--bg-soft) 0%, var(--bg-warm) 100%);
+        display: grid;
+        place-items: center;
+        padding: 28px;
+      }
+
+      .card {
+        width: min(780px, 100%);
+        background: rgba(255, 255, 255, 0.86);
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        border-radius: 22px;
+        backdrop-filter: blur(7px);
+        box-shadow:
+          0 22px 56px rgba(14, 25, 38, 0.12),
+          0 3px 10px rgba(14, 25, 38, 0.08);
+        padding: 34px;
+        animation: rise 650ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+      }
+
+      .label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid #cce7e1;
+        background: #eef9f7;
+        color: var(--accent-strong);
+        border-radius: 999px;
+        padding: 8px 14px;
+        font-size: 0.84rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+
+      h1 {
+        margin: 18px 0 10px;
+        font-size: clamp(1.9rem, 4vw, 3rem);
+        line-height: 1.12;
+        letter-spacing: -0.02em;
+      }
+
+      .subtitle {
+        margin: 0 0 28px;
+        color: var(--muted);
+        font-size: clamp(1rem, 2vw, 1.12rem);
+        max-width: 52ch;
+      }
+
+      .section-title {
+        margin: 0 0 14px;
+        font-size: 1.06rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        color: #274054;
+      }
+
+      .members {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 12px;
+      }
+
+      .member {
+        padding: 13px 14px;
+        border-radius: 12px;
+        border: 1px solid #d8e4ef;
+        background: linear-gradient(145deg, #ffffff 0%, #f8fbff 100%);
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        transform: translateY(10px);
+        opacity: 0;
+        animation: reveal 450ms ease-out forwards;
+      }
+
+      .member:nth-child(1) { animation-delay: 120ms; }
+      .member:nth-child(2) { animation-delay: 220ms; }
+      .member:nth-child(3) { animation-delay: 320ms; }
+      .member:nth-child(4) { animation-delay: 420ms; }
+      .member:nth-child(5) { animation-delay: 520ms; }
+
+      .footer {
+        margin-top: 26px;
+        font-size: 0.92rem;
+        color: #5a6d80;
+      }
+
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(20px) scale(0.98);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      @keyframes reveal {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (max-width: 560px) {
+        .card {
+          padding: 24px;
+          border-radius: 18px;
+        }
+
+        .members {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <span class="label">CSCE 331</span>
+      <h1>Team 32<br />Project 3 Starting Page</h1>
+      <p class="subtitle">
+        A clean launch page for our project workspace. This is the initial home screen for the team build.
+      </p>
+
+      <h2 class="section-title">Team Members</h2>
+      <ul class="members">
+        <li class="member">Jacob G</li>
+        <li class="member">Jacob M</li>
+        <li class="member">Sai Abhinav V</li>
+        <li class="member">Brian N</li>
+        <li class="member">Brian Q</li>
+      </ul>
+
+      <p class="footer">Project 3 • Team 32 • Texas A&M University</p>
+    </main>
+  </body>
+</html>
