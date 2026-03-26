@@ -1,0 +1,19 @@
+.dashboard {
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.dashboard h1 {
+  margin-bottom: 1rem;
+}
+
+.dashboard button {
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  border: 1px solid #ccc;
+  background: white;
+}
+
+.dashboard button:hover {
+  background: #f5f5f5;
+}
