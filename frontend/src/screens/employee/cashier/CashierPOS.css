@@ -1,0 +1,254 @@
+.cashier-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f4f7fb 0%, #eef2f7 100%);
+  padding: 24px;
+  color: #172033;
+}
+
+.cashier-shell {
+  max-width: 1300px;
+  margin: 0 auto;
+}
+
+.cashier-header,
+.cashier-panel,
+.cashier-status {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(20, 33, 61, 0.08);
+}
+
+.cashier-header {
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.cashier-header h1 {
+  margin: 0 0 6px;
+}
+
+.cashier-header p {
+  margin: 0;
+  color: #64748b;
+}
+
+.cashier-pill {
+  background: #e0f2fe;
+  color: #0c4a6e;
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.cashier-status {
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.cashier-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(340px, 420px);
+  gap: 20px;
+}
+
+.cashier-panel {
+  padding: 24px;
+}
+
+.cashier-panel h2 {
+  margin-top: 0;
+}
+
+.category-grid,
+.common-grid,
+.item-grid,
+.option-grid,
+.checkout-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.category-grid {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  margin-bottom: 28px;
+}
+
+.common-grid,
+.option-grid,
+.checkout-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.item-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.category-button,
+.menu-card,
+.option-button,
+.primary-action,
+.secondary-action {
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.category-button,
+.menu-card,
+.option-button,
+.secondary-action {
+  background: #f8fafc;
+  border: 1px solid #dbe4f0;
+}
+
+.category-button:hover,
+.menu-card:hover,
+.option-button:hover,
+.primary-action:hover,
+.secondary-action:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(20, 33, 61, 0.08);
+}
+
+.category-button {
+  min-height: 96px;
+  padding: 14px;
+  font-weight: 700;
+}
+
+.menu-card,
+.option-button {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+}
+
+.menu-card.large {
+  min-height: 120px;
+}
+
+.option-button.active {
+  background: #dbeafe;
+  border-color: #60a5fa;
+}
+
+.order-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.order-list {
+  flex: 1;
+  min-height: 360px;
+  max-height: 520px;
+  overflow: auto;
+  border: 1px solid #dbe4f0;
+  border-radius: 16px;
+  padding: 12px;
+  background: #fbfdff;
+}
+
+.empty-state {
+  color: #64748b;
+  text-align: center;
+  padding: 40px 12px;
+}
+
+.order-item {
+  border-bottom: 1px solid #e5edf6;
+  padding: 12px 6px;
+}
+
+.order-item:last-child {
+  border-bottom: none;
+}
+
+.order-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.order-detail {
+  color: #64748b;
+  margin-top: 4px;
+  font-size: 0.95rem;
+}
+
+.order-total,
+.checkout-total {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: #e2e8f0;
+  font-weight: 800;
+}
+
+.checkout-total {
+  text-align: center;
+  font-size: 2rem;
+  background: #fff;
+  border: 3px solid #172033;
+}
+
+.primary-action {
+  background: #0f172a;
+  color: white;
+  padding: 14px 18px;
+  font-weight: 700;
+}
+
+.secondary-action {
+  color: #172033;
+  padding: 12px 16px;
+  font-weight: 700;
+}
+
+.panel-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-start;
+  margin-top: 20px;
+}
+
+.comment-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 22px;
+  font-weight: 700;
+}
+
+.comment-box input {
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-size: 1rem;
+}
+
+.checkout-panel {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+@media (max-width: 960px) {
+  .cashier-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cashier-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
