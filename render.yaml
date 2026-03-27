@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: sharetea-pos-frontend
+    env: node
+    region: oregon
+    buildCommand: cd frontend && npm install && npm run build
+    startCommand: cd frontend && npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.0
