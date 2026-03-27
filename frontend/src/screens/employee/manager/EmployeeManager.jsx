@@ -50,7 +50,6 @@ export default function EmployeeManager() {
       alert('Please select an employee to edit.');
       return;
     }
-
     setMode('edit');
     setForm({
       employee_id: employee.employee_id,
