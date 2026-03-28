@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './CashierScreen.css';
 
 const MENU_ITEMS = [
@@ -66,7 +67,8 @@ function buildDisplayLines(item) {
   return lines;
 }
 
-export default function CashierPOS({ onExit }) {
+export default function CashierPOS() {
+  const navigate = useNavigate();
   const [screen, setScreen] = useState(SCREEN.HOME);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [orderItems, setOrderItems] = useState([]);
@@ -152,15 +154,22 @@ export default function CashierPOS({ onExit }) {
       <div className="cashier-shell">
         <header className="cashier-header">
           <div>
-            <h1>Cashier POS</h1>
+            <h1>Cashier</h1>
           </div>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
             <div className="cashier-pill">{screen}</div>
-            {onExit && (
-              <button className="secondary-action" onClick={onExit}>
-                Exit
-              </button>
-            )}
+            <button
+              className="secondary-action"
+              onClick={() => {
+                localStorage.removeItem('role');
+                localStorage.removeItem('employee');
+                localStorage.removeItem('user');
+                sessionStorage.clear();
+                navigate('/');
+              }}
+            >
+              Logout
+            </button>
           </div>
         </header>
 

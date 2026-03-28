@@ -13,9 +13,9 @@ function EmployeeDashboard() {
   }
 
   if (view === 'cashier') {
-    return <CashierScreen onExit={() => setView('dashboard')} />;
+    return <CashierScreen />;
   }
-
+  
   return (
     <div className="dashboard">
       <h1>Employee Dashboard</h1>

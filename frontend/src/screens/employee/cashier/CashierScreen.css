@@ -64,6 +64,7 @@
 
 .cashier-panel h2 {
   margin-top: 0;
+  margin-bottom: 20px;
 }
 
 .category-grid,
@@ -146,6 +147,7 @@
 .order-panel {
   display: flex;
   flex-direction: column;
+  gap: 10px;
 }
 
 .order-list {
@@ -186,13 +188,21 @@
   font-size: 0.95rem;
 }
 
-.order-total,
-.checkout-total {
-  margin-top: 18px;
+.order-total {
   padding: 16px 18px;
   border-radius: 16px;
   background: #e2e8f0;
   font-weight: 800;
+}
+
+.checkout-total {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  text-align: center;
+  font-size: 2rem;
+  background: #fff;
+  border: 3px solid #172033;
 }
 
 .checkout-total {
@@ -218,7 +228,7 @@
 .panel-actions {
   display: flex;
   gap: 12px;
-  justify-content: flex-start;
+  justify-content: flex-end;
   margin-top: 20px;
 }
 
