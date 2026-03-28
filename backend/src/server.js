@@ -230,6 +230,160 @@ app.delete('/api/employees/:id', async (req, res, next) => {
   }
 });
 
+
+// Cashier routes
+app.get('/api/cashier/modifications', async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT modification_type_id, name, cost
+       FROM modification_type
+       WHERE modification_type_id BETWEEN 1 AND 17
+       ORDER BY modification_type_id`,
+    );
+
+    const sugar = [];
+    const ice = [];
+    const toppings = [];
+
+    for (const row of result.rows) {
+      const record = {
+        modification_type_id: Number(row.modification_type_id),
+        name: row.name,
+        cost: Number(row.cost || 0),
+      };
+      if (record.modification_type_id >= 1 && record.modification_type_id <= 6) {
+        sugar.push(record);
+      } else if (record.modification_type_id >= 7 && record.modification_type_id <= 10) {
+        ice.push(record);
+      } else if (record.modification_type_id >= 11 && record.modification_type_id <= 17) {
+        toppings.push(record);
+      }
+    }
+
+    res.json({ sugar, ice, toppings });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/cashier/orders', async (req, res, next) => {
+  const employeeId = Number(req.body?.employee_id);
+  const paymentType = String(req.body?.payment_type || 'CARD').trim() || 'CARD';
+  const items = Array.isArray(req.body?.items) ? req.body.items : [];
+
+  if (!Number.isInteger(employeeId) || employeeId <= 0) {
+    return res.status(400).json({ error: 'employee_id must be a positive integer' });
+  }
+
+  if (!items.length) {
+    return res.status(400).json({ error: 'At least one order item is required' });
+  }
+
+  const normalizedItems = [];
+  for (const item of items) {
+    const menuItemId = Number(item?.menu_item_id);
+    const quantity = Number(item?.quantity || 1);
+    const modificationIds = Array.isArray(item?.modification_ids)
+      ? item.modification_ids.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0)
+      : [];
+    const comments = typeof item?.comments === 'string' ? item.comments.trim() : '';
+
+    if (!Number.isInteger(menuItemId) || menuItemId <= 0 || !Number.isInteger(quantity) || quantity <= 0) {
+      return res.status(400).json({ error: 'Each item must include a valid menu_item_id and quantity' });
+    }
+
+    normalizedItems.push({ menuItemId, quantity, modificationIds, comments });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const employeeResult = await client.query(
+      'SELECT employee_id FROM employee WHERE employee_id = $1',
+      [employeeId],
+    );
+    if (!employeeResult.rowCount) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Employee not found' });
+    }
+
+    const menuIds = [...new Set(normalizedItems.map((item) => item.menuItemId))];
+    const menuResult = await client.query(
+      'SELECT menu_item_id, cost FROM menu_item WHERE menu_item_id = ANY($1::int[])',
+      [menuIds],
+    );
+    const menuMap = new Map(menuResult.rows.map((row) => [Number(row.menu_item_id), Number(row.cost || 0)]));
+
+    for (const item of normalizedItems) {
+      if (!menuMap.has(item.menuItemId)) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: `Menu item not found: ${item.menuItemId}` });
+      }
+    }
+
+    const allModIds = [...new Set(normalizedItems.flatMap((item) => item.modificationIds))];
+    const modMap = new Map();
+    if (allModIds.length) {
+      const modResult = await client.query(
+        'SELECT modification_type_id, cost FROM modification_type WHERE modification_type_id = ANY($1::int[])',
+        [allModIds],
+      );
+      for (const row of modResult.rows) {
+        modMap.set(Number(row.modification_type_id), Number(row.cost || 0));
+      }
+    }
+
+    let totalCost = 0;
+    const pricedItems = normalizedItems.map((item) => {
+      const baseCost = menuMap.get(item.menuItemId) || 0;
+      const modCost = item.modificationIds.reduce((sum, modId) => sum + (modMap.get(modId) || 0), 0);
+      const itemPrice = baseCost + modCost;
+      totalCost += itemPrice * item.quantity;
+      return { ...item, itemPrice };
+    });
+
+    const orderResult = await client.query(
+      `INSERT INTO customer_order (order_id, order_date, total_cost, employee_id, payment_type)
+       VALUES ((SELECT COALESCE(MAX(order_id), 0) + 1 FROM customer_order), NOW(), $1, $2, $3)
+       RETURNING order_id, order_date, total_cost, employee_id, payment_type`,
+      [totalCost, employeeId, paymentType],
+    );
+    const order = orderResult.rows[0];
+
+    for (const item of pricedItems) {
+      const orderItemResult = await client.query(
+        `INSERT INTO order_item (order_item_id, order_id, menu_item_id, quantity, item_price, comments)
+         VALUES ((SELECT COALESCE(MAX(order_item_id), 0) + 1 FROM order_item), $1, $2, $3, $4, $5)
+         RETURNING order_item_id`,
+        [order.order_id, item.menuItemId, item.quantity, item.itemPrice, item.comments || null],
+      );
+
+      const orderItemId = orderItemResult.rows[0]?.order_item_id;
+      for (const modId of item.modificationIds) {
+        await client.query(
+          `INSERT INTO order_item_modification (order_item_id, modification_type_id)
+           VALUES ($1, $2)`,
+          [orderItemId, modId],
+        );
+      }
+    }
+
+    await client.query('COMMIT');
+    res.status(201).json({
+      order: {
+        ...order,
+        total_cost: Number(order.total_cost || 0),
+      },
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
 // Reports routes
 app.get('/api/reports/items-sold', async (req, res, next) => {
   const date = parseDateInput(req.query.date);

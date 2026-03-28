@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import './CashierPOS.css';
+import './CashierScreen.css';
 
 const MENU_ITEMS = [
   { id: 1, name: 'Classic Milk Tea', cost: 4.5, category: 'Milk Tea' },
@@ -43,6 +43,7 @@ const TOPPING_OPTIONS = [
 ];
 
 const GROUPS = ['Milk Tea', 'Fruit Tea', 'Smoothies', 'Lattes', 'Seasonal'];
+
 const SCREEN = {
   HOME: 'HOME',
   ITEM_SELECT: 'ITEM_SELECT',
@@ -65,7 +66,7 @@ function buildDisplayLines(item) {
   return lines;
 }
 
-export default function CashierPOS() {
+export default function CashierPOS({ onExit }) {
   const [screen, setScreen] = useState(SCREEN.HOME);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [orderItems, setOrderItems] = useState([]);
@@ -152,9 +153,15 @@ export default function CashierPOS() {
         <header className="cashier-header">
           <div>
             <h1>Cashier POS</h1>
-            <p>Render-ready React cashier flow for Team 32</p>
           </div>
-          <div className="cashier-pill">{screen}</div>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="cashier-pill">{screen}</div>
+            {onExit && (
+              <button className="secondary-action" onClick={onExit}>
+                Exit
+              </button>
+            )}
+          </div>
         </header>
 
         {statusMessage && <div className="cashier-status">{statusMessage}</div>}
@@ -206,7 +213,9 @@ export default function CashierPOS() {
                         <span>{currency(item.price)}</span>
                       </div>
                       {buildDisplayLines(item).map((line) => (
-                        <div key={line} className="order-detail">{line}</div>
+                        <div key={line} className="order-detail">
+                          {line}
+                        </div>
                       ))}
                     </div>
                   ))
@@ -233,7 +242,9 @@ export default function CashierPOS() {
         {screen === SCREEN.ITEM_SELECT && (
           <section className="cashier-panel">
             <div className="panel-actions">
-              <button className="secondary-action" onClick={() => setScreen(SCREEN.HOME)}>Back</button>
+              <button className="secondary-action" onClick={() => setScreen(SCREEN.HOME)}>
+                Back
+              </button>
             </div>
             <h2>{selectedCategory || 'All Items'}</h2>
             <div className="item-grid">
@@ -305,8 +316,12 @@ export default function CashierPOS() {
             </label>
 
             <div className="panel-actions">
-              <button className="secondary-action" onClick={() => setScreen(SCREEN.ICE)}>Back</button>
-              <button className="primary-action" onClick={finalizeItem}>Add to Order</button>
+              <button className="secondary-action" onClick={() => setScreen(SCREEN.ICE)}>
+                Back
+              </button>
+              <button className="primary-action" onClick={finalizeItem}>
+                Add to Order
+              </button>
             </div>
           </section>
         )}
@@ -316,12 +331,20 @@ export default function CashierPOS() {
             <h2>Checkout</h2>
             <div className="checkout-total">COST: {currency(orderTotal)}</div>
             <div className="checkout-grid">
-              <button className="primary-action" onClick={() => completeOrder('Card')}>Card</button>
-              <button className="primary-action" onClick={() => completeOrder('Cash')}>Cash</button>
-              <button className="primary-action" onClick={() => completeOrder('Gift Card')}>Gift Card</button>
+              <button className="primary-action" onClick={() => completeOrder('Card')}>
+                Card
+              </button>
+              <button className="primary-action" onClick={() => completeOrder('Cash')}>
+                Cash
+              </button>
+              <button className="primary-action" onClick={() => completeOrder('Gift Card')}>
+                Gift Card
+              </button>
             </div>
             <div className="panel-actions">
-              <button className="secondary-action" onClick={() => setScreen(SCREEN.HOME)}>Cancel</button>
+              <button className="secondary-action" onClick={() => setScreen(SCREEN.HOME)}>
+                Cancel
+              </button>
             </div>
           </section>
         )}
@@ -347,8 +370,12 @@ function SelectionStep({ title, options, selectedId, onSelect, onBack, onNext })
         ))}
       </div>
       <div className="panel-actions">
-        <button className="secondary-action" onClick={onBack}>Back</button>
-        <button className="primary-action" onClick={onNext}>Next</button>
+        <button className="secondary-action" onClick={onBack}>
+          Back
+        </button>
+        <button className="primary-action" onClick={onNext}>
+          Next
+        </button>
       </div>
     </section>
   );
