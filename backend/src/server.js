@@ -1,12 +1,12 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import pool from './config/database.js';
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import pool from "./config/database.js";
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Middleware
 app.use(cors());
@@ -14,40 +14,40 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Health check route
-app.get('/health', async (req, res) => {
+app.get("/health", async (req, res) => {
   try {
-    const result = await pool.query('SELECT NOW()');
-    res.json({ 
-      status: 'healthy', 
-      database: 'connected',
-      timestamp: result.rows[0].now 
+    const result = await pool.query("SELECT NOW()");
+    res.json({
+      status: "healthy",
+      database: "connected",
+      timestamp: result.rows[0].now,
     });
   } catch (error) {
-    res.status(500).json({ 
-      status: 'unhealthy', 
-      database: 'disconnected',
-      error: error.message 
+    res.status(500).json({
+      status: "unhealthy",
+      database: "disconnected",
+      error: error.message,
     });
   }
 });
 
 // API Routes (to be implemented)
-app.get('/api', (req, res) => {
-  res.json({ message: 'Sharetea POS API' });
+app.get("/api", (req, res) => {
+  res.json({ message: "Sharetea POS API" });
 });
 
 function parseDateInput(value) {
-  if (!value || typeof value !== 'string') return null;
+  if (!value || typeof value !== "string") return null;
   const date = new Date(`${value}T00:00:00`);
   if (Number.isNaN(date.getTime())) return null;
   return value;
 }
 
 // Menu routes
-app.get('/api/menu/items', async (req, res, next) => {
+app.get("/api/menu/items", async (req, res, next) => {
   try {
     const result = await pool.query(
-      'SELECT menu_item_id, name, cost, category FROM menu_item ORDER BY menu_item_id',
+      "SELECT menu_item_id, name, cost, category FROM menu_item ORDER BY menu_item_id",
     );
     res.json({ items: result.rows });
   } catch (error) {
@@ -55,10 +55,10 @@ app.get('/api/menu/items', async (req, res, next) => {
   }
 });
 
-app.post('/api/menu/items', async (req, res, next) => {
+app.post("/api/menu/items", async (req, res, next) => {
   const { name, cost, category } = req.body;
   if (!name || Number.isNaN(Number(cost))) {
-    return res.status(400).json({ error: 'name and cost are required' });
+    return res.status(400).json({ error: "name and cost are required" });
   }
 
   try {
@@ -74,11 +74,11 @@ app.post('/api/menu/items', async (req, res, next) => {
   }
 });
 
-app.put('/api/menu/items/:id', async (req, res, next) => {
+app.put("/api/menu/items/:id", async (req, res, next) => {
   const { id } = req.params;
   const { name, cost, category } = req.body;
   if (!name || Number.isNaN(Number(cost))) {
-    return res.status(400).json({ error: 'name and cost are required' });
+    return res.status(400).json({ error: "name and cost are required" });
   }
 
   try {
@@ -89,17 +89,22 @@ app.put('/api/menu/items/:id', async (req, res, next) => {
        RETURNING menu_item_id, name, cost, category`,
       [name.trim(), Number(cost), category || null, id],
     );
-    if (!result.rowCount) return res.status(404).json({ error: 'Menu item not found' });
+    if (!result.rowCount)
+      return res.status(404).json({ error: "Menu item not found" });
     res.json({ item: result.rows[0] });
   } catch (error) {
     next(error);
   }
 });
 
-app.delete('/api/menu/items/:id', async (req, res, next) => {
+app.delete("/api/menu/items/:id", async (req, res, next) => {
   try {
-    const result = await pool.query('DELETE FROM menu_item WHERE menu_item_id = $1', [req.params.id]);
-    if (!result.rowCount) return res.status(404).json({ error: 'Menu item not found' });
+    const result = await pool.query(
+      "DELETE FROM menu_item WHERE menu_item_id = $1",
+      [req.params.id],
+    );
+    if (!result.rowCount)
+      return res.status(404).json({ error: "Menu item not found" });
     res.status(204).send();
   } catch (error) {
     next(error);
@@ -107,10 +112,10 @@ app.delete('/api/menu/items/:id', async (req, res, next) => {
 });
 
 // Inventory routes
-app.get('/api/inventory', async (req, res, next) => {
+app.get("/api/inventory", async (req, res, next) => {
   try {
     const result = await pool.query(
-      'SELECT inventory_id, resource_name, quantity_available FROM inventory ORDER BY inventory_id',
+      "SELECT inventory_id, resource_name, quantity_available FROM inventory ORDER BY inventory_id",
     );
     res.json({ inventory: result.rows });
   } catch (error) {
@@ -118,10 +123,12 @@ app.get('/api/inventory', async (req, res, next) => {
   }
 });
 
-app.post('/api/inventory', async (req, res, next) => {
+app.post("/api/inventory", async (req, res, next) => {
   const { resource_name, quantity_available } = req.body;
   if (!resource_name || Number.isNaN(Number(quantity_available))) {
-    return res.status(400).json({ error: 'resource_name and quantity_available are required' });
+    return res
+      .status(400)
+      .json({ error: "resource_name and quantity_available are required" });
   }
 
   try {
@@ -137,10 +144,12 @@ app.post('/api/inventory', async (req, res, next) => {
   }
 });
 
-app.put('/api/inventory/:id', async (req, res, next) => {
+app.put("/api/inventory/:id", async (req, res, next) => {
   const { resource_name, quantity_available } = req.body;
   if (!resource_name || Number.isNaN(Number(quantity_available))) {
-    return res.status(400).json({ error: 'resource_name and quantity_available are required' });
+    return res
+      .status(400)
+      .json({ error: "resource_name and quantity_available are required" });
   }
 
   try {
@@ -151,17 +160,22 @@ app.put('/api/inventory/:id', async (req, res, next) => {
        RETURNING inventory_id, resource_name, quantity_available`,
       [resource_name.trim(), Number(quantity_available), req.params.id],
     );
-    if (!result.rowCount) return res.status(404).json({ error: 'Inventory item not found' });
+    if (!result.rowCount)
+      return res.status(404).json({ error: "Inventory item not found" });
     res.json({ item: result.rows[0] });
   } catch (error) {
     next(error);
   }
 });
 
-app.delete('/api/inventory/:id', async (req, res, next) => {
+app.delete("/api/inventory/:id", async (req, res, next) => {
   try {
-    const result = await pool.query('DELETE FROM inventory WHERE inventory_id = $1', [req.params.id]);
-    if (!result.rowCount) return res.status(404).json({ error: 'Inventory item not found' });
+    const result = await pool.query(
+      "DELETE FROM inventory WHERE inventory_id = $1",
+      [req.params.id],
+    );
+    if (!result.rowCount)
+      return res.status(404).json({ error: "Inventory item not found" });
     res.status(204).send();
   } catch (error) {
     next(error);
@@ -169,10 +183,10 @@ app.delete('/api/inventory/:id', async (req, res, next) => {
 });
 
 // Employee routes
-app.get('/api/employees', async (req, res, next) => {
+app.get("/api/employees", async (req, res, next) => {
   try {
     const result = await pool.query(
-      'SELECT employee_id, name, position, hire_date FROM employee ORDER BY employee_id',
+      "SELECT employee_id, name, position, hire_date FROM employee ORDER BY employee_id",
     );
     res.json({ employees: result.rows });
   } catch (error) {
@@ -180,10 +194,12 @@ app.get('/api/employees', async (req, res, next) => {
   }
 });
 
-app.post('/api/employees', async (req, res, next) => {
+app.post("/api/employees", async (req, res, next) => {
   const { employee_id, name, position, hire_date } = req.body;
   if (!employee_id || !name || !position || !parseDateInput(hire_date)) {
-    return res.status(400).json({ error: 'employee_id, name, position, hire_date are required' });
+    return res
+      .status(400)
+      .json({ error: "employee_id, name, position, hire_date are required" });
   }
 
   try {
@@ -199,10 +215,12 @@ app.post('/api/employees', async (req, res, next) => {
   }
 });
 
-app.put('/api/employees/:id', async (req, res, next) => {
+app.put("/api/employees/:id", async (req, res, next) => {
   const { name, position, hire_date } = req.body;
   if (!name || !position || !parseDateInput(hire_date)) {
-    return res.status(400).json({ error: 'name, position, hire_date are required' });
+    return res
+      .status(400)
+      .json({ error: "name, position, hire_date are required" });
   }
 
   try {
@@ -213,17 +231,22 @@ app.put('/api/employees/:id', async (req, res, next) => {
        RETURNING employee_id, name, position, hire_date`,
       [name.trim(), position.trim(), hire_date, req.params.id],
     );
-    if (!result.rowCount) return res.status(404).json({ error: 'Employee not found' });
+    if (!result.rowCount)
+      return res.status(404).json({ error: "Employee not found" });
     res.json({ employee: result.rows[0] });
   } catch (error) {
     next(error);
   }
 });
 
-app.delete('/api/employees/:id', async (req, res, next) => {
+app.delete("/api/employees/:id", async (req, res, next) => {
   try {
-    const result = await pool.query('DELETE FROM employee WHERE employee_id = $1', [req.params.id]);
-    if (!result.rowCount) return res.status(404).json({ error: 'Employee not found' });
+    const result = await pool.query(
+      "DELETE FROM employee WHERE employee_id = $1",
+      [req.params.id],
+    );
+    if (!result.rowCount)
+      return res.status(404).json({ error: "Employee not found" });
     res.status(204).send();
   } catch (error) {
     next(error);
@@ -231,9 +254,12 @@ app.delete('/api/employees/:id', async (req, res, next) => {
 });
 
 // Reports routes
-app.get('/api/reports/items-sold', async (req, res, next) => {
+app.get("/api/reports/items-sold", async (req, res, next) => {
   const date = parseDateInput(req.query.date);
-  if (!date) return res.status(400).json({ error: 'date query param is required (YYYY-MM-DD)' });
+  if (!date)
+    return res
+      .status(400)
+      .json({ error: "date query param is required (YYYY-MM-DD)" });
 
   try {
     const result = await pool.query(
@@ -254,9 +280,12 @@ app.get('/api/reports/items-sold', async (req, res, next) => {
   }
 });
 
-app.get('/api/reports/employees', async (req, res, next) => {
+app.get("/api/reports/employees", async (req, res, next) => {
   const date = parseDateInput(req.query.date);
-  if (!date) return res.status(400).json({ error: 'date query param is required (YYYY-MM-DD)' });
+  if (!date)
+    return res
+      .status(400)
+      .json({ error: "date query param is required (YYYY-MM-DD)" });
 
   try {
     const result = await pool.query(
@@ -276,9 +305,12 @@ app.get('/api/reports/employees', async (req, res, next) => {
   }
 });
 
-app.get('/api/reports/total-profit', async (req, res, next) => {
+app.get("/api/reports/total-profit", async (req, res, next) => {
   const date = parseDateInput(req.query.date);
-  if (!date) return res.status(400).json({ error: 'date query param is required (YYYY-MM-DD)' });
+  if (!date)
+    return res
+      .status(400)
+      .json({ error: "date query param is required (YYYY-MM-DD)" });
 
   try {
     const result = await pool.query(
@@ -293,9 +325,12 @@ app.get('/api/reports/total-profit', async (req, res, next) => {
   }
 });
 
-app.get('/api/reports/daily', async (req, res, next) => {
+app.get("/api/reports/daily", async (req, res, next) => {
   const date = parseDateInput(req.query.date);
-  if (!date) return res.status(400).json({ error: 'date query param is required (YYYY-MM-DD)' });
+  if (!date)
+    return res
+      .status(400)
+      .json({ error: "date query param is required (YYYY-MM-DD)" });
 
   try {
     const [items, employees, totals] = await Promise.all([
@@ -340,11 +375,13 @@ app.get('/api/reports/daily', async (req, res, next) => {
   }
 });
 
-app.get('/api/reports/sales', async (req, res, next) => {
+app.get("/api/reports/sales", async (req, res, next) => {
   const startDate = parseDateInput(req.query.startDate);
   const endDate = parseDateInput(req.query.endDate);
   if (!startDate || !endDate) {
-    return res.status(400).json({ error: 'startDate and endDate are required (YYYY-MM-DD)' });
+    return res
+      .status(400)
+      .json({ error: "startDate and endDate are required (YYYY-MM-DD)" });
   }
 
   try {
@@ -381,11 +418,13 @@ app.get('/api/reports/sales', async (req, res, next) => {
   }
 });
 
-app.get('/api/reports/inventory', async (req, res, next) => {
+app.get("/api/reports/inventory", async (req, res, next) => {
   const startDate = parseDateInput(req.query.startDate);
   const endDate = parseDateInput(req.query.endDate);
   if (!startDate || !endDate) {
-    return res.status(400).json({ error: 'startDate and endDate are required (YYYY-MM-DD)' });
+    return res
+      .status(400)
+      .json({ error: "startDate and endDate are required (YYYY-MM-DD)" });
   }
 
   try {
@@ -427,9 +466,12 @@ app.get('/api/reports/inventory', async (req, res, next) => {
   }
 });
 
-app.get('/api/reports/x-report', async (req, res, next) => {
+app.get("/api/reports/x-report", async (req, res, next) => {
   const date = parseDateInput(req.query.date);
-  if (!date) return res.status(400).json({ error: 'date query param is required (YYYY-MM-DD)' });
+  if (!date)
+    return res
+      .status(400)
+      .json({ error: "date query param is required (YYYY-MM-DD)" });
 
   try {
     const result = await pool.query(
@@ -513,18 +555,19 @@ app.get('/api/reports/x-report', async (req, res, next) => {
   }
 });
 
-app.get('/api/reports/x', async (req, res, next) => {
-  const date = req.query.date ? String(req.query.date) : '';
+app.get("/api/reports/x", async (req, res, next) => {
+  const date = req.query.date ? String(req.query.date) : "";
   res.redirect(307, `/api/reports/x-report?date=${encodeURIComponent(date)}`);
 });
 
-app.post('/api/reports/z-report', async (req, res, next) => {
+app.post("/api/reports/z-report", async (req, res, next) => {
   const date = parseDateInput(req.body?.date || req.query?.date);
-  if (!date) return res.status(400).json({ error: 'date is required (YYYY-MM-DD)' });
+  if (!date)
+    return res.status(400).json({ error: "date is required (YYYY-MM-DD)" });
 
   const client = await pool.connect();
   try {
-    await client.query('BEGIN');
+    await client.query("BEGIN");
     await client.query(
       `CREATE TABLE IF NOT EXISTS z_report_runs (
         run_date DATE PRIMARY KEY,
@@ -533,11 +576,15 @@ app.post('/api/reports/z-report', async (req, res, next) => {
     );
 
     try {
-      await client.query('INSERT INTO z_report_runs(run_date) VALUES ($1)', [date]);
+      await client.query("INSERT INTO z_report_runs(run_date) VALUES ($1)", [
+        date,
+      ]);
     } catch (error) {
-      if (error.code === '23505') {
-        await client.query('ROLLBACK');
-        return res.status(409).json({ error: 'Z-Report already generated for this date.' });
+      if (error.code === "23505") {
+        await client.query("ROLLBACK");
+        return res
+          .status(409)
+          .json({ error: "Z-Report already generated for this date." });
       }
       throw error;
     }
@@ -583,7 +630,7 @@ app.post('/api/reports/z-report', async (req, res, next) => {
       [date],
     );
 
-    await client.query('COMMIT');
+    await client.query("COMMIT");
 
     res.json({
       totalOrders: totals.rows[0]?.total_orders || 0,
@@ -593,21 +640,21 @@ app.post('/api/reports/z-report', async (req, res, next) => {
       employees: employees.rows,
     });
   } catch (error) {
-    await client.query('ROLLBACK');
+    await client.query("ROLLBACK");
     next(error);
   } finally {
     client.release();
   }
 });
 
-app.post('/api/reports/z', async (req, res, next) => {
-  res.redirect(307, '/api/reports/z-report');
+app.post("/api/reports/z", async (req, res, next) => {
+  res.redirect(307, "/api/reports/z-report");
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
+  res.status(500).json({ error: "Something went wrong!" });
 });
 
 // Start server
