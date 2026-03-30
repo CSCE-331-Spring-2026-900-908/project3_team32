@@ -49,7 +49,7 @@ app.get('/api/menu/items', async (req, res, next) => {
     const result = await pool.query(
       'SELECT menu_item_id, name, cost, category FROM menu_item ORDER BY menu_item_id',
     );
-    res.json({ items: result.rows });
+    res.json({ menuItems: result.rows });
   } catch (error) {
     next(error);
   }
@@ -672,13 +672,102 @@ app.get('/api/reports/x', async (req, res, next) => {
   res.redirect(307, `/api/reports/x-report?date=${encodeURIComponent(date)}`);
 });
 
+// Z-Report GET endpoint - Load existing report
+app.get('/api/reports/z-report', async (req, res, next) => {
+  const date = parseDateInput(req.query.date);
+  if (!date) return res.status(400).json({ error: 'date query param is required (YYYY-MM-DD)' });
+
+  try {
+    // Check if Z-Report exists for this date
+    const reportCheck = await pool.query(
+      'SELECT run_date, run_at FROM z_report_runs WHERE run_date = $1',
+      [date],
+    );
+
+    if (!reportCheck.rowCount) {
+      return res.status(404).json({ 
+        error: `No Z-Report found for ${date}. Use 'Generate Z-Report' to create one.` 
+      });
+    }
+
+    const reportInfo = reportCheck.rows[0];
+
+    // Load the report data
+    const totals = await pool.query(
+      `SELECT COUNT(*)::int AS total_orders,
+              COALESCE(SUM(total_cost),0)::float8 AS total_sales,
+              COALESCE(SUM(CASE WHEN UPPER(payment_type)='CASH' THEN total_cost ELSE 0 END),0)::float8 AS total_cash
+       FROM customer_order
+       WHERE DATE(order_date) = $1`,
+      [date],
+    );
+
+    const payments = await pool.query(
+      `WITH pt AS (
+          SELECT COALESCE(payment_type,'Not Specified') AS method,
+                 COUNT(*)::int AS count,
+                 SUM(total_cost)::float8 AS total
+          FROM customer_order
+          WHERE DATE(order_date) = $1
+          GROUP BY payment_type
+       ),
+       grand AS (
+          SELECT COALESCE(SUM(total_cost), 0)::float8 AS g
+          FROM customer_order WHERE DATE(order_date) = $1
+       )
+       SELECT pt.method,
+              pt.count,
+              pt.total,
+              COALESCE(ROUND((pt.total * 100.0 / NULLIF(grand.g, 0))::numeric, 1), 0)::float8 AS pct
+       FROM pt CROSS JOIN grand`,
+      [date],
+    );
+
+    const employees = await pool.query(
+      `SELECT COALESCE(e.name, 'Unknown') AS name,
+              COUNT(*)::int AS orders
+       FROM customer_order o
+       LEFT JOIN employee e ON o.employee_id = e.employee_id
+       WHERE DATE(o.order_date) = $1
+       GROUP BY e.name
+       ORDER BY COUNT(*) DESC`,
+      [date],
+    );
+
+    res.json({
+      totalOrders: totals.rows[0]?.total_orders || 0,
+      totalSales: totals.rows[0]?.total_sales || 0,
+      totalCash: totals.rows[0]?.total_cash || 0,
+      payments: payments.rows,
+      employees: employees.rows,
+      generatedDate: reportInfo.run_at ? new Date(reportInfo.run_at).toISOString().slice(0, 10) : null,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Z-Report GET redirect
+app.get('/api/reports/z', async (req, res, next) => {
+  const date = req.query.date ? String(req.query.date) : '';
+  res.redirect(307, `/api/reports/z-report?date=${encodeURIComponent(date)}`);
+});
+
+// Z-Report POST endpoint - Generate new report
 app.post('/api/reports/z-report', async (req, res, next) => {
   const date = parseDateInput(req.body?.date || req.query?.date);
+  const managerSignature = req.body?.managerSignature || null;
+  
   if (!date) return res.status(400).json({ error: 'date is required (YYYY-MM-DD)' });
+  if (!managerSignature || managerSignature.trim() === '') {
+    return res.status(400).json({ error: 'Manager signature is required to generate Z-Report' });
+  }
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    
+    // Create table without manager_signature column
     await client.query(
       `CREATE TABLE IF NOT EXISTS z_report_runs (
         run_date DATE PRIMARY KEY,
@@ -687,11 +776,16 @@ app.post('/api/reports/z-report', async (req, res, next) => {
     );
 
     try {
-      await client.query('INSERT INTO z_report_runs(run_date) VALUES ($1)', [date]);
+      await client.query(
+        'INSERT INTO z_report_runs(run_date) VALUES ($1)',
+        [date]
+      );
     } catch (error) {
       if (error.code === '23505') {
         await client.query('ROLLBACK');
-        return res.status(409).json({ error: 'Z-Report already generated for this date.' });
+        return res.status(409).json({ 
+          error: `Z-Report already exists for ${date}. Use 'Load Z-Report' to view it.` 
+        });
       }
       throw error;
     }
@@ -699,7 +793,7 @@ app.post('/api/reports/z-report', async (req, res, next) => {
     const totals = await client.query(
       `SELECT COUNT(*)::int AS total_orders,
               COALESCE(SUM(total_cost),0)::float8 AS total_sales,
-              COALESCE(SUM(CASE WHEN payment_type='Cash' THEN total_cost ELSE 0 END),0)::float8 AS total_cash
+              COALESCE(SUM(CASE WHEN UPPER(payment_type)='CASH' THEN total_cost ELSE 0 END),0)::float8 AS total_cash
        FROM customer_order
        WHERE DATE(order_date) = $1`,
       [date],
@@ -745,6 +839,8 @@ app.post('/api/reports/z-report', async (req, res, next) => {
       totalCash: totals.rows[0]?.total_cash || 0,
       payments: payments.rows,
       employees: employees.rows,
+      managerSignature: managerSignature,
+      generatedDate: new Date().toISOString().slice(0, 10),
     });
   } catch (error) {
     await client.query('ROLLBACK');
@@ -754,6 +850,7 @@ app.post('/api/reports/z-report', async (req, res, next) => {
   }
 });
 
+// Z-Report POST redirect
 app.post('/api/reports/z', async (req, res, next) => {
   res.redirect(307, '/api/reports/z-report');
 });

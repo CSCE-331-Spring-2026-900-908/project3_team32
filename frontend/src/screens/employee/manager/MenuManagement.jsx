@@ -119,23 +119,23 @@ export default function MenuManagement() {
   }
 
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <h2 style={{ margin: 0 }}>Manager View - Menu Management</h2>
+    <div className="manager-panel">
+      <h2>Menu Management</h2>
 
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button onClick={openAdd}>Add New Item</button>
-        <button onClick={() => openEdit()}>Edit Selected</button>
-        <button onClick={deleteSelected}>Delete Selected</button>
-        <button onClick={loadMenuItems}>Refresh</button>
+      <div className="manager-actions">
+        <button onClick={openAdd} className="manager-btn manager-btn-primary">Add New Item</button>
+        <button onClick={() => openEdit()} className="manager-btn manager-btn-secondary">Edit Selected</button>
+        <button onClick={deleteSelected} className="manager-btn manager-btn-danger">Delete Selected</button>
+        <button onClick={loadMenuItems} className="manager-btn manager-btn-secondary">Refresh</button>
       </div>
 
-      {error ? <div style={{ color: '#b42318' }}>{error}</div> : null}
+      {error ? <div className="manager-error">{error}</div> : null}
       {loading ? <div>Loading menu items...</div> : null}
 
       {showForm ? (
-        <form onSubmit={handleSubmit} style={cardStyle}>
-          <h3 style={{ marginTop: 0 }}>{mode === 'add' ? 'Add New Menu Item' : 'Edit Menu Item'}</h3>
-          <div style={{ display: 'grid', gap: 8, maxWidth: 360 }}>
+        <form onSubmit={handleSubmit} className="manager-form">
+          <h3>{mode === 'add' ? 'Add New Menu Item' : 'Edit Menu Item'}</h3>
+          <div className="manager-form-grid">
             <label>
               Item Name
               <input
@@ -170,22 +170,22 @@ export default function MenuManagement() {
               </select>
             </label>
           </div>
-          <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
-            <button type="submit">Save</button>
-            <button type="button" onClick={() => setShowForm(false)}>
+          <div className="manager-form-actions">
+            <button type="submit" className="manager-btn manager-btn-primary">Save</button>
+            <button type="button" onClick={() => setShowForm(false)} className="manager-btn manager-btn-secondary">
               Cancel
             </button>
           </div>
         </form>
       ) : null}
 
-      <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+      <table className="manager-table">
         <thead>
           <tr>
-            <th style={{ textAlign: 'left' }}>Menu Item ID</th>
-            <th style={{ textAlign: 'left' }}>Name</th>
-            <th style={{ textAlign: 'left' }}>Cost</th>
-            <th style={{ textAlign: 'left' }}>Category</th>
+            <th>Menu Item ID</th>
+            <th>Name</th>
+            <th>Cost</th>
+            <th>Category</th>
           </tr>
         </thead>
         <tbody>
@@ -196,10 +196,7 @@ export default function MenuManagement() {
                 key={item.menu_item_id}
                 onClick={() => setSelectedId(item.menu_item_id)}
                 onDoubleClick={() => openEdit(item)}
-                style={{
-                  background: isSelected ? '#e6f7ff' : 'transparent',
-                  cursor: 'pointer',
-                }}
+                className={isSelected ? 'selected' : ''}
               >
                 <td>{item.menu_item_id}</td>
                 <td>{item.name}</td>

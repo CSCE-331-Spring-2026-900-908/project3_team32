@@ -1,56 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './CustomerScreen.css';
 
-const MENU_ITEMS = [
-  { id: 1, name: 'Classic Milk Tea', cost: 4.5, category: 'Milk Tea' },
-  { id: 2, name: 'Brown Sugar Milk Tea', cost: 5.25, category: 'Milk Tea' },
-  { id: 3, name: 'Strawberry Fruit Tea', cost: 4.95, category: 'Fruit Tea' },
-  { id: 4, name: 'Mango Fruit Tea', cost: 4.95, category: 'Fruit Tea' },
-  { id: 5, name: 'Taro Smoothie', cost: 5.75, category: 'Smoothies' },
-  { id: 6, name: 'Mango Smoothie', cost: 5.75, category: 'Smoothies' },
-  { id: 7, name: 'Matcha Latte', cost: 5.5, category: 'Lattes' },
-  { id: 8, name: 'Thai Tea Latte', cost: 5.25, category: 'Lattes' },
-  { id: 9, name: 'Wintermelon Special', cost: 5.95, category: 'Seasonal' },
-  { id: 10, name: 'Jasmine Milk Tea', cost: 4.75, category: 'Milk Tea' },
-  { id: 11, name: 'Peach Green Tea', cost: 4.85, category: 'Fruit Tea' },
-  { id: 12, name: 'Coffee Latte', cost: 5.35, category: 'Lattes' },
-];
-
-const SUGAR_OPTIONS = [
-  { id: 1, name: '0% Sugar', cost: 0 },
-  { id: 2, name: '25% Sugar', cost: 0 },
-  { id: 3, name: '50% Sugar', cost: 0 },
-  { id: 4, name: '75% Sugar', cost: 0 },
-  { id: 5, name: '100% Sugar', cost: 0 },
-  { id: 6, name: 'Extra Sugar', cost: 0.25 },
-];
-
-const ICE_OPTIONS = [
-  { id: 7, name: 'No Ice', cost: 0 },
-  { id: 8, name: 'Less Ice', cost: 0 },
-  { id: 9, name: 'Regular Ice', cost: 0 },
-  { id: 10, name: 'Extra Ice', cost: 0 },
-];
-
-const TOPPING_OPTIONS = [
-  { id: 11, name: 'Boba', cost: 0.75 },
-  { id: 12, name: 'Pudding', cost: 0.75 },
-  { id: 13, name: 'Grass Jelly', cost: 0.75 },
-  { id: 14, name: 'Aloe Vera', cost: 0.75 },
-  { id: 15, name: 'Lychee Jelly', cost: 0.75 },
-  { id: 16, name: 'Red Bean', cost: 0.75 },
-  { id: 17, name: 'Cheese Foam', cost: 1.0 },
-];
-
-const CATEGORIES = ['All', 'Milk Tea', 'Fruit Tea', 'Smoothies', 'Lattes', 'Seasonal'];
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 const SCREEN = {
   MENU: 'MENU',
   CUSTOMIZE: 'CUSTOMIZE',
   CART: 'CART',
   CHECKOUT: 'CHECKOUT',
-  CONFIRMATION: 'CONFIRMATION',
 };
 
 function currency(value) {
@@ -79,11 +37,73 @@ export default function CustomerScreen() {
   const [comments, setComments] = useState('');
   const [orderNumber, setOrderNumber] = useState(null);
   const [showCart, setShowCart] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  
+  // API data
+  const [menuItems, setMenuItems] = useState([]);
+  const [sugarOptions, setSugarOptions] = useState([]);
+  const [iceOptions, setIceOptions] = useState([]);
+  const [toppingOptions, setToppingOptions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState(['All']);
+
+  // Load menu items and modifications on mount
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoading(true);
+        
+        // Fetch menu items
+        const menuRes = await fetch(`${API_BASE}/menu/items`);
+        const menuData = await menuRes.json();
+        const items = menuData.menuItems || menuData.items || [];
+        setMenuItems(items.map(item => ({
+          id: item.menu_item_id,
+          name: item.name,
+          cost: Number(item.cost),
+          category: item.category || 'Other'
+        })));
+        
+        // Extract unique categories
+        const uniqueCategories = [...new Set(items.map(item => item.category || 'Other'))];
+        setCategories(['All', ...uniqueCategories]);
+        
+        // Fetch modifications
+        const modRes = await fetch(`${API_BASE}/cashier/modifications`);
+        const modData = await modRes.json();
+        
+        setSugarOptions((modData.sugar || []).map(m => ({
+          id: m.modification_type_id,
+          name: m.name,
+          cost: Number(m.cost)
+        })));
+        
+        setIceOptions((modData.ice || []).map(m => ({
+          id: m.modification_type_id,
+          name: m.name,
+          cost: Number(m.cost)
+        })));
+        
+        setToppingOptions((modData.toppings || []).map(m => ({
+          id: m.modification_type_id,
+          name: m.name,
+          cost: Number(m.cost)
+        })));
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Failed to load data:', error);
+        setLoading(false);
+      }
+    }
+    
+    loadData();
+  }, []);
 
   const visibleItems = useMemo(() => {
-    if (selectedCategory === 'All') return MENU_ITEMS;
-    return MENU_ITEMS.filter((item) => item.category === selectedCategory);
-  }, [selectedCategory]);
+    if (selectedCategory === 'All') return menuItems;
+    return menuItems.filter((item) => item.category === selectedCategory);
+  }, [selectedCategory, menuItems]);
 
   const cartTotal = useMemo(
     () => cart.reduce((sum, item) => sum + item.price, 0),
@@ -123,14 +143,22 @@ export default function CustomerScreen() {
       (selectedIce?.cost || 0) +
       selectedToppings.reduce((sum, t) => sum + t.cost, 0);
 
+    const modificationIds = [
+      selectedSugar?.id,
+      selectedIce?.id,
+      ...selectedToppings.map(t => t.id)
+    ].filter(Boolean);
+
     const item = {
       id: Date.now(),
+      menuItemId: currentItem.id,
       name: currentItem.name,
       price: totalPrice,
       sugarLevel: selectedSugar?.name || 'Regular',
       iceLevel: selectedIce?.name || 'Regular',
       toppingNames: selectedToppings.map((t) => t.name),
       comments: comments.trim(),
+      modificationIds
     };
 
     setCart((prev) => [...prev, item]);
@@ -146,14 +174,54 @@ export default function CustomerScreen() {
   }
 
   function completeOrder() {
-    const orderNum = Math.floor(1000 + Math.random() * 9000);
-    setOrderNumber(orderNum);
-    setScreen(SCREEN.CONFIRMATION);
-    setTimeout(() => {
-      setCart([]);
-      setOrderNumber(null);
-      setScreen(SCREEN.MENU);
-    }, 5000);
+    async function submitOrder() {
+      try {
+        const orderPayload = {
+          employee_id: 1, // Use employee ID 1 for customer kiosk orders
+          payment_type: 'CARD',
+          items: cart.map(item => ({
+            menu_item_id: item.menuItemId,
+            quantity: 1,
+            modification_ids: item.modificationIds || [],
+            comments: item.comments || ''
+          }))
+        };
+        
+        console.log('Submitting order:', orderPayload); // Debug log
+        
+        const response = await fetch(`${API_BASE}/cashier/orders`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderPayload)
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Order submission failed:', errorData);
+          throw new Error(errorData.error || 'Order submission failed');
+        }
+        
+        const result = await response.json();
+        const orderNum = result.order?.order_id || Math.floor(1000 + Math.random() * 9000);
+        
+        // Clear cart and go back to menu
+        setCart([]);
+        setOrderNumber(orderNum);
+        setScreen(SCREEN.MENU);
+        setShowConfirmation(true);
+        
+        // Hide confirmation after 5 seconds
+        setTimeout(() => {
+          setShowConfirmation(false);
+          setOrderNumber(null);
+        }, 5000);
+      } catch (error) {
+        console.error('Order submission error:', error);
+        alert(`Failed to submit order: ${error.message}. Please try again or see a cashier.`);
+      }
+    }
+    
+    submitOrder();
   }
 
   return (
@@ -168,6 +236,20 @@ export default function CustomerScreen() {
         </div>
       </header>
 
+      {/* Order Confirmation Notification */}
+      {showConfirmation && (
+        <div className="order-confirmation-notification">
+          <div className="confirmation-content">
+            <div className="confirmation-checkmark">✓</div>
+            <div className="confirmation-text">
+              <h3>Order Confirmed!</h3>
+              <p>Order #{orderNumber}</p>
+              <p className="confirmation-subtitle">Please proceed to the counter to pick up your order</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Cart Badge */}
       {screen === SCREEN.MENU && cartCount > 0 && (
         <button className="cart-badge" onClick={() => setScreen(SCREEN.CART)}>
@@ -180,32 +262,38 @@ export default function CustomerScreen() {
       {/* Menu Screen */}
       {screen === SCREEN.MENU && (
         <div className="customer-content">
-          {/* Category Tabs */}
-          <div className="category-tabs">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat}
-                className={`category-tab ${selectedCategory === cat ? 'active' : ''}`}
-                onClick={() => setSelectedCategory(cat)}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
+          {loading && <div style={{ textAlign: 'center', padding: '20px' }}>Loading menu...</div>}
+          
+          {!loading && (
+            <>
+              {/* Category Tabs */}
+              <div className="category-tabs">
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    className={`category-tab ${selectedCategory === cat ? 'active' : ''}`}
+                    onClick={() => setSelectedCategory(cat)}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
 
-          {/* Menu Grid */}
-          <div className="menu-grid">
-            {visibleItems.map((item) => (
-              <button
-                key={item.id}
-                className="menu-item-card"
-                onClick={() => handleSelectItem(item)}
-              >
-                <div className="item-name">{item.name}</div>
-                <div className="item-price">{currency(item.cost)}</div>
-              </button>
-            ))}
-          </div>
+              {/* Menu Grid */}
+              <div className="menu-grid">
+                {visibleItems.map((item) => (
+                  <button
+                    key={item.id}
+                    className="menu-item-card"
+                    onClick={() => handleSelectItem(item)}
+                  >
+                    <div className="item-name">{item.name}</div>
+                    <div className="item-price">{currency(item.cost)}</div>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -221,7 +309,7 @@ export default function CustomerScreen() {
             <div className="customize-section">
               <h3>Choose Sugar Level</h3>
               <div className="option-grid">
-                {SUGAR_OPTIONS.map((option) => (
+                {sugarOptions.map((option) => (
                   <button
                     key={option.id}
                     className={`option-btn ${selectedSugar?.id === option.id ? 'selected' : ''}`}
@@ -239,7 +327,7 @@ export default function CustomerScreen() {
             <div className="customize-section">
               <h3>Choose Ice Level</h3>
               <div className="option-grid">
-                {ICE_OPTIONS.map((option) => (
+                {iceOptions.map((option) => (
                   <button
                     key={option.id}
                     className={`option-btn ${selectedIce?.id === option.id ? 'selected' : ''}`}
@@ -257,7 +345,7 @@ export default function CustomerScreen() {
             <div className="customize-section">
               <h3>Add Toppings (Optional)</h3>
               <div className="option-grid">
-                {TOPPING_OPTIONS.map((option) => {
+                {toppingOptions.map((option) => {
                   const isSelected = selectedToppings.some((t) => t.id === option.id);
                   return (
                     <button
@@ -403,17 +491,6 @@ export default function CustomerScreen() {
           <button className="btn-secondary full-width" onClick={() => setScreen(SCREEN.CART)}>
             Back to Cart
           </button>
-        </div>
-      )}
-
-      {/* Confirmation Screen */}
-      {screen === SCREEN.CONFIRMATION && (
-        <div className="customer-content confirmation-screen">
-          <div className="confirmation-icon">✓</div>
-          <h2>Order Confirmed!</h2>
-          <div className="order-number">Order #{orderNumber}</div>
-          <p>Please proceed to the counter to pick up your order</p>
-          <p className="redirect-message">Returning to menu...</p>
         </div>
       )}
     </div>

@@ -1,5 +1,27 @@
 services:
   - type: web
+    name: sharetea-pos-backend
+    env: node
+    region: oregon
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.0
+      - key: DB_HOST
+        value: csce-315-db.engr.tamu.edu
+      - key: DB_USER
+        value: team_32
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        value: team_32_db
+      - key: DB_PORT
+        value: 5432
+      - key: PORT
+        value: 5000
+
+  - type: web
     name: sharetea-pos-frontend
     env: node
     region: oregon
@@ -8,3 +30,5 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 22.22.0
+      - key: VITE_API_URL
+        value: https://sharetea-pos-backend.onrender.com/api

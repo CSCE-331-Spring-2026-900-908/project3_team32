@@ -13,9 +13,8 @@ function Portal() {
         <div className="portal-header">
           <div className="logo">
             <FiCoffee className="logo-icon" />
-            <h1>Sharetea POS</h1>
+            <h1>Team 32's Boba Bar</h1>
           </div>
-          <p className="tagline">Point of Sale System</p>
         </div>
 
         <div className="portal-cards">

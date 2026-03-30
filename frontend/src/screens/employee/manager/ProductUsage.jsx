@@ -72,10 +72,10 @@ export default function ProductUsage() {
   }
 
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <h2 style={{ margin: 0 }}>Product Usage</h2>
+    <div className="manager-panel">
+      <h2>Product Usage</h2>
 
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div className="manager-actions">
         <label>
           Start Date:
           <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ marginLeft: 6 }} />
@@ -84,14 +84,20 @@ export default function ProductUsage() {
           End Date:
           <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ marginLeft: 6 }} />
         </label>
-        <button onClick={load}>Generate Report</button>
+        <button onClick={load} className="manager-btn manager-btn-primary">Generate Report</button>
       </div>
 
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button onClick={() => setTab('table')} style={{ background: tab === 'table' ? '#e6f7ff' : '#fff' }}>
+      <div className="manager-tabs">
+        <button 
+          onClick={() => setTab('table')} 
+          className={`manager-tab-btn ${tab === 'table' ? 'active' : ''}`}
+        >
           Table View
         </button>
-        <button onClick={() => setTab('chart')} style={{ background: tab === 'chart' ? '#e6f7ff' : '#fff' }}>
+        <button 
+          onClick={() => setTab('chart')} 
+          className={`manager-tab-btn ${tab === 'chart' ? 'active' : ''}`}
+        >
           Bar Chart
         </button>
       </div>
@@ -100,14 +106,14 @@ export default function ProductUsage() {
       {loading ? <div>Loading product usage...</div> : null}
 
       {tab === 'table' ? (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table className="manager-table">
           <thead>
             <tr>
-              <th style={{ textAlign: 'left' }}>Inventory Item</th>
-              <th style={{ textAlign: 'left' }}>Starting Quantity</th>
-              <th style={{ textAlign: 'left' }}>Used</th>
-              <th style={{ textAlign: 'left' }}>Remaining</th>
-              <th style={{ textAlign: 'left' }}>Usage %</th>
+              <th>Inventory Item</th>
+              <th>Starting Quantity</th>
+              <th>Used</th>
+              <th>Remaining</th>
+              <th>Usage %</th>
             </tr>
           </thead>
           <tbody>

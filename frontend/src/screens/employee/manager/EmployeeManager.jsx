@@ -114,23 +114,23 @@ export default function EmployeeManager() {
   }
 
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <h2 style={{ margin: 0 }}>Manager View - Employee Management</h2>
+    <div className="manager-panel">
+      <h2>Employee Management</h2>
 
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button onClick={openAdd}>Add Employee</button>
-        <button onClick={() => openEdit()}>Edit Selected</button>
-        <button onClick={deleteSelected}>Delete Selected</button>
-        <button onClick={loadEmployees}>Refresh</button>
+      <div className="manager-actions">
+        <button onClick={openAdd} className="manager-btn manager-btn-primary">Add Employee</button>
+        <button onClick={() => openEdit()} className="manager-btn manager-btn-secondary">Edit Selected</button>
+        <button onClick={deleteSelected} className="manager-btn manager-btn-danger">Delete Selected</button>
+        <button onClick={loadEmployees} className="manager-btn manager-btn-secondary">Refresh</button>
       </div>
 
-      {error ? <div style={{ color: '#b42318' }}>{error}</div> : null}
+      {error ? <div className="manager-error">{error}</div> : null}
       {loading ? <div>Loading employees...</div> : null}
 
       {showForm ? (
-        <form onSubmit={saveEmployee} style={{ border: '1px solid #ddd', borderRadius: 6, padding: 12, background: '#fff' }}>
-          <h3 style={{ marginTop: 0 }}>{mode === 'add' ? 'Add New Employee' : 'Edit Employee'}</h3>
-          <div style={{ display: 'grid', gap: 8, maxWidth: 420 }}>
+        <form onSubmit={saveEmployee} className="manager-form">
+          <h3>{mode === 'add' ? 'Add New Employee' : 'Edit Employee'}</h3>
+          <div className="manager-form-grid">
             <label>
               Employee ID
               <input
@@ -171,22 +171,22 @@ export default function EmployeeManager() {
               />
             </label>
           </div>
-          <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
-            <button type="submit">Save</button>
-            <button type="button" onClick={() => setShowForm(false)}>
+          <div className="manager-form-actions">
+            <button type="submit" className="manager-btn manager-btn-primary">Save</button>
+            <button type="button" onClick={() => setShowForm(false)} className="manager-btn manager-btn-secondary">
               Cancel
             </button>
           </div>
         </form>
       ) : null}
 
-      <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+      <table className="manager-table">
         <thead>
           <tr>
-            <th style={{ textAlign: 'left' }}>Employee ID</th>
-            <th style={{ textAlign: 'left' }}>Name</th>
-            <th style={{ textAlign: 'left' }}>Position</th>
-            <th style={{ textAlign: 'left' }}>Hire Date</th>
+            <th>Employee ID</th>
+            <th>Name</th>
+            <th>Position</th>
+            <th>Hire Date</th>
           </tr>
         </thead>
         <tbody>
@@ -197,7 +197,7 @@ export default function EmployeeManager() {
                 key={employee.employee_id}
                 onClick={() => setSelectedId(employee.employee_id)}
                 onDoubleClick={() => openEdit(employee)}
-                style={{ background: isSelected ? '#e6f7ff' : 'transparent', cursor: 'pointer' }}
+                className={isSelected ? 'selected' : ''}
               >
                 <td>{employee.employee_id}</td>
                 <td>{employee.name}</td>

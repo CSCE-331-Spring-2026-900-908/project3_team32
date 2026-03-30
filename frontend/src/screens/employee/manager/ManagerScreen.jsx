@@ -1,4 +1,5 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import MenuManagement from './MenuManagement.jsx';
 import InventoryManagement from './InventoryManagement.jsx';
 import EmployeeManager from './EmployeeManager.jsx';
@@ -7,7 +8,7 @@ import SalesReport from './SalesReport.jsx';
 import ProductUsage from './ProductUsage.jsx';
 import XReport from './XReport.jsx';
 import ZReport from './ZReport.jsx';
-import { checkDatabaseHealth, getApiBase } from './managerApi.js';
+import './ManagerScreen.css';
 
 const PANELS = {
   MENU: { title: 'Menu', comp: <MenuManagement /> },
@@ -20,93 +21,46 @@ const PANELS = {
   ZREPORT: { title: 'Z-Report', comp: <ZReport /> },
 };
 
-const sidebarStyle = {
-  width: 240,
-  background: '#f6f8fa',
-  padding: 12,
-  boxSizing: 'border-box',
-  borderRight: '1px solid #e1e4e8',
-};
-
 export default function ManagerScreen() {
+  const navigate = useNavigate();
   const [active, setActive] = useState('MENU');
-  const [dbStatus, setDbStatus] = useState('Checking...');
-  const apiBase = useMemo(() => getApiBase(), []);
-
-  useEffect(() => {
-    let mounted = true;
-
-    checkDatabaseHealth()
-      .then((health) => {
-        if (!mounted) return;
-        const db = health?.database === 'connected' ? 'Connected' : 'Disconnected';
-        setDbStatus(db);
-      })
-      .catch(() => {
-        if (!mounted) return;
-        setDbStatus('Unavailable');
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   return (
-    <div style={{ display: 'flex', height: '100vh', fontFamily: 'Arial, sans-serif' }}>
-      <aside style={sidebarStyle}>
-        <div style={{ marginBottom: 12 }}>
-          <strong style={{ fontSize: 18 }}>Manager Panel</strong>
+    <div className="manager-screen">
+      <aside className="manager-sidebar">
+        <div className="sidebar-header">
+          <h2>Manager Panel</h2>
         </div>
 
-        {Object.keys(PANELS).map((key) => (
-          <button
-            key={key}
-            onClick={() => setActive(key)}
-            style={{
-              display: 'block',
-              width: '100%',
-              padding: '10px 12px',
-              marginBottom: 8,
-              textAlign: 'left',
-              background: active === key ? '#e6f7ff' : 'transparent',
-              border: '1px solid #ddd',
-              borderRadius: 4,
-              cursor: 'pointer',
-            }}
-          >
-            {PANELS[key].title}
-          </button>
-        ))}
+        <nav className="sidebar-nav">
+          {Object.keys(PANELS).map((key) => (
+            <button
+              key={key}
+              onClick={() => setActive(key)}
+              className={`nav-button ${active === key ? 'active' : ''}`}
+            >
+              {PANELS[key].title}
+            </button>
+          ))}
+        </nav>
 
-        <div style={{ marginTop: 16 }}>
+        <div className="sidebar-footer">
           <button
             onClick={() => {
-              localStorage.removeItem('token');
-              window.location.href = '/';
+              localStorage.removeItem('role');
+              localStorage.removeItem('employee');
+              localStorage.removeItem('user');
+              sessionStorage.clear();
+              navigate('/');
             }}
-            style={{
-              padding: '8px 12px',
-              width: '100%',
-              border: '1px solid #ddd',
-              borderRadius: 4,
-              background: '#fff',
-              cursor: 'pointer',
-            }}
+            className="logout-button"
           >
             Logout
           </button>
         </div>
-
-        <div style={{ marginTop: 12, fontSize: 12, color: '#666', wordBreak: 'break-word' }}>
-          API: {apiBase}
-        </div>
-        <div style={{ marginTop: 4, fontSize: 12, color: dbStatus === 'Connected' ? '#0a7a30' : '#666' }}>
-          DB: {dbStatus}
-        </div>
       </aside>
 
-      <main style={{ flex: 1, padding: 16, overflow: 'auto' }}>{PANELS[active].comp}</main>
+      <main className="manager-content">{PANELS[active].comp}</main>
     </div>
   );
 }

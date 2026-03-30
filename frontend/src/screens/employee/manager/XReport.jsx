@@ -98,22 +98,28 @@ export default function XReport() {
   }
 
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <h2 style={{ margin: 0 }}>X-Report</h2>
+    <div className="manager-panel">
+      <h2>X-Report</h2>
 
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div className="manager-actions">
         <label>
           Date (YYYY-MM-DD):
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ marginLeft: 6 }} />
         </label>
-        <button onClick={loadReport}>Load X-Report</button>
+        <button onClick={loadReport} className="manager-btn manager-btn-primary">Load X-Report</button>
       </div>
 
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button onClick={() => setTab('hourly')} style={{ background: tab === 'hourly' ? '#e6f7ff' : '#fff' }}>
+      <div className="manager-tabs">
+        <button 
+          onClick={() => setTab('hourly')} 
+          className={`manager-tab-btn ${tab === 'hourly' ? 'active' : ''}`}
+        >
           Hourly Breakdown
         </button>
-        <button onClick={() => setTab('graphs')} style={{ background: tab === 'graphs' ? '#e6f7ff' : '#fff' }}>
+        <button 
+          onClick={() => setTab('graphs')} 
+          className={`manager-tab-btn ${tab === 'graphs' ? 'active' : ''}`}
+        >
           Graphs
         </button>
       </div>
@@ -122,15 +128,15 @@ export default function XReport() {
       {loading ? <div>Loading X-Report...</div> : null}
 
       {tab === 'hourly' ? (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table className="manager-table">
           <thead>
             <tr>
-              <th style={{ textAlign: 'left' }}>Hour</th>
-              <th style={{ textAlign: 'left' }}>Transactions</th>
-              <th style={{ textAlign: 'left' }}>Items Sold</th>
-              <th style={{ textAlign: 'left' }}>Avg Order Cost</th>
-              <th style={{ textAlign: 'left' }}>Top Employee (Transactions)</th>
-              <th style={{ textAlign: 'left' }}>Top Item (Qty)</th>
+              <th>Hour</th>
+              <th>Transactions</th>
+              <th>Items Sold</th>
+              <th>Avg Order Cost</th>
+              <th>Top Employee (Transactions)</th>
+              <th>Top Item (Qty)</th>
             </tr>
           </thead>
           <tbody>

@@ -1,49 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FiCreditCard, FiDollarSign, FiGift } from 'react-icons/fi';
 import './CashierScreen.css';
 
-const MENU_ITEMS = [
-  { id: 1, name: 'Classic Milk Tea', cost: 4.5, category: 'Milk Tea' },
-  { id: 2, name: 'Brown Sugar Milk Tea', cost: 5.25, category: 'Milk Tea' },
-  { id: 3, name: 'Strawberry Fruit Tea', cost: 4.95, category: 'Fruit Tea' },
-  { id: 4, name: 'Mango Fruit Tea', cost: 4.95, category: 'Fruit Tea' },
-  { id: 5, name: 'Taro Smoothie', cost: 5.75, category: 'Smoothies' },
-  { id: 6, name: 'Mango Smoothie', cost: 5.75, category: 'Smoothies' },
-  { id: 7, name: 'Matcha Latte', cost: 5.5, category: 'Lattes' },
-  { id: 8, name: 'Thai Tea Latte', cost: 5.25, category: 'Lattes' },
-  { id: 9, name: 'Wintermelon Special', cost: 5.95, category: 'Seasonal' },
-  { id: 10, name: 'Jasmine Milk Tea', cost: 4.75, category: 'Milk Tea' },
-  { id: 11, name: 'Peach Green Tea', cost: 4.85, category: 'Fruit Tea' },
-  { id: 12, name: 'Coffee Latte', cost: 5.35, category: 'Lattes' },
-];
-
-const SUGAR_OPTIONS = [
-  { id: 1, name: '0% Sugar', cost: 0 },
-  { id: 2, name: '25% Sugar', cost: 0 },
-  { id: 3, name: '50% Sugar', cost: 0 },
-  { id: 4, name: '75% Sugar', cost: 0 },
-  { id: 5, name: '100% Sugar', cost: 0 },
-  { id: 6, name: 'Extra Sugar', cost: 0.25 },
-];
-
-const ICE_OPTIONS = [
-  { id: 7, name: 'No Ice', cost: 0 },
-  { id: 8, name: 'Less Ice', cost: 0 },
-  { id: 9, name: 'Regular Ice', cost: 0 },
-  { id: 10, name: 'Extra Ice', cost: 0 },
-];
-
-const TOPPING_OPTIONS = [
-  { id: 11, name: 'Boba', cost: 0.75 },
-  { id: 12, name: 'Pudding', cost: 0.75 },
-  { id: 13, name: 'Grass Jelly', cost: 0.75 },
-  { id: 14, name: 'Aloe Vera', cost: 0.75 },
-  { id: 15, name: 'Lychee Jelly', cost: 0.75 },
-  { id: 16, name: 'Red Bean', cost: 0.75 },
-  { id: 17, name: 'Cheese Foam', cost: 1.0 },
-];
-
-const GROUPS = ['Milk Tea', 'Fruit Tea', 'Smoothies', 'Lattes', 'Seasonal'];
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 const SCREEN = {
   HOME: 'HOME',
@@ -80,12 +40,75 @@ export default function CashierPOS() {
   const [comments, setComments] = useState('');
   const [orderNumber, setOrderNumber] = useState(1001);
   const [statusMessage, setStatusMessage] = useState('');
+  const [nextItemId, setNextItemId] = useState(1);
+  
+  // API data
+  const [menuItems, setMenuItems] = useState([]);
+  const [sugarOptions, setSugarOptions] = useState([]);
+  const [iceOptions, setIceOptions] = useState([]);
+  const [toppingOptions, setToppingOptions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState([]);
 
-  const mostCommonItems = useMemo(() => MENU_ITEMS.slice(0, 9), []);
+  // Load menu items and modifications on mount
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoading(true);
+        
+        // Fetch menu items
+        const menuRes = await fetch(`${API_BASE}/menu/items`);
+        const menuData = await menuRes.json();
+        const items = menuData.menuItems || menuData.items || [];
+        setMenuItems(items.map(item => ({
+          id: item.menu_item_id,
+          name: item.name,
+          cost: Number(item.cost),
+          category: item.category || 'Other'
+        })));
+        
+        // Extract unique categories
+        const uniqueCategories = [...new Set(items.map(item => item.category || 'Other'))];
+        setCategories(uniqueCategories);
+        
+        // Fetch modifications
+        const modRes = await fetch(`${API_BASE}/cashier/modifications`);
+        const modData = await modRes.json();
+        
+        setSugarOptions((modData.sugar || []).map(m => ({
+          id: m.modification_type_id,
+          name: m.name,
+          cost: Number(m.cost)
+        })));
+        
+        setIceOptions((modData.ice || []).map(m => ({
+          id: m.modification_type_id,
+          name: m.name,
+          cost: Number(m.cost)
+        })));
+        
+        setToppingOptions((modData.toppings || []).map(m => ({
+          id: m.modification_type_id,
+          name: m.name,
+          cost: Number(m.cost)
+        })));
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Failed to load data:', error);
+        setStatusMessage('Failed to load menu data. Please refresh.');
+        setLoading(false);
+      }
+    }
+    
+    loadData();
+  }, []);
+
+  const mostCommonItems = useMemo(() => menuItems.slice(0, 9), [menuItems]);
   const visibleItems = useMemo(() => {
-    if (!selectedCategory) return MENU_ITEMS;
-    return MENU_ITEMS.filter((item) => item.category === selectedCategory);
-  }, [selectedCategory]);
+    if (!selectedCategory) return menuItems;
+    return menuItems.filter((item) => item.category === selectedCategory);
+  }, [selectedCategory, menuItems]);
 
   const orderTotal = useMemo(
     () => orderItems.reduce((sum, item) => sum + item.price, 0),
@@ -123,30 +146,77 @@ export default function CashierPOS() {
       (selectedIce?.cost || 0) +
       selectedToppings.reduce((sum, topping) => sum + topping.cost, 0);
 
+    const modificationIds = [
+      selectedSugar?.id,
+      selectedIce?.id,
+      ...selectedToppings.map(t => t.id)
+    ].filter(Boolean);
+
     const item = {
+      id: nextItemId, // Use incrementing ID
+      menuItemId: currentItem.id,
       name: currentItem.name,
       price: totalPrice,
       sugarLevel: selectedSugar?.name || null,
       iceLevel: selectedIce?.name || null,
       toppingNames: selectedToppings.map((topping) => topping.name),
       comments: comments.trim(),
+      modificationIds
     };
 
     setOrderItems((prev) => [...prev, item]);
+    setNextItemId((prev) => prev + 1);
     clearSelectionState();
     setCurrentItem(null);
     setScreen(SCREEN.HOME);
-    setStatusMessage(`${item.name} added to order.`);
+  }
+
+  function removeOrderItem(itemId) {
+    setOrderItems((prev) => prev.filter((item) => item.id !== itemId));
   }
 
   function completeOrder(paymentMethod) {
-    const completedOrder = orderNumber;
-    setOrderNumber((prev) => prev + 1);
-    setOrderItems([]);
-    setCurrentItem(null);
-    clearSelectionState();
-    setScreen(SCREEN.HOME);
-    setStatusMessage(`Order #${completedOrder} completed — ${paymentMethod} — ${currency(orderTotal)}`);
+    async function submitOrder() {
+      try {
+        const orderPayload = {
+          employee_id: 1, // TODO: Get from logged-in employee
+          payment_type: paymentMethod.toUpperCase(),
+          items: orderItems.map(item => ({
+            menu_item_id: item.menuItemId,
+            quantity: 1,
+            modification_ids: item.modificationIds || [],
+            comments: item.comments || ''
+          }))
+        };
+        
+        console.log('Submitting order:', orderPayload); // Debug log
+        
+        const response = await fetch(`${API_BASE}/cashier/orders`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderPayload)
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Order submission failed:', errorData);
+          throw new Error(errorData.error || 'Order submission failed');
+        }
+        
+        const result = await response.json();
+        const completedOrder = result.order?.order_id || orderNumber;
+        
+        setOrderNumber((prev) => prev + 1);
+        setOrderItems([]);
+        setCurrentItem(null);
+        clearSelectionState();
+        setScreen(SCREEN.HOME);
+      } catch (error) {
+        console.error('Order submission error:', error);
+      }
+    }
+    
+    submitOrder();
   }
 
   return (
@@ -173,14 +243,12 @@ export default function CashierPOS() {
           </div>
         </header>
 
-        {statusMessage && <div className="cashier-status">{statusMessage}</div>}
-
         {screen === SCREEN.HOME && (
           <div className="cashier-grid">
             <section className="cashier-panel">
               <h2>Menu Categories</h2>
               <div className="category-grid">
-                {GROUPS.map((group) => (
+                {categories.map((group) => (
                   <button
                     key={group}
                     className="category-button"
@@ -216,10 +284,19 @@ export default function CashierPOS() {
                   <div className="empty-state">No items added yet.</div>
                 ) : (
                   orderItems.map((item, index) => (
-                    <div key={`${item.name}-${index}`} className="order-item">
+                    <div key={item.id} className="order-item">
                       <div className="order-topline">
                         <strong>{index + 1}. {item.name}</strong>
-                        <span>{currency(item.price)}</span>
+                        <div className="order-item-actions">
+                          <span>{currency(item.price)}</span>
+                          <button 
+                            className="remove-order-item-btn"
+                            onClick={() => removeOrderItem(item.id)}
+                            title="Remove item"
+                          >
+                            ✕
+                          </button>
+                        </div>
                       </div>
                       {buildDisplayLines(item).map((line) => (
                         <div key={line} className="order-detail">
@@ -274,7 +351,7 @@ export default function CashierPOS() {
         {screen === SCREEN.SUGAR && (
           <SelectionStep
             title="Select Sugar Level"
-            options={SUGAR_OPTIONS}
+            options={sugarOptions}
             selectedId={selectedSugar?.id}
             onSelect={setSelectedSugar}
             onBack={() => {
@@ -288,7 +365,7 @@ export default function CashierPOS() {
         {screen === SCREEN.ICE && (
           <SelectionStep
             title="Select Ice Level"
-            options={ICE_OPTIONS}
+            options={iceOptions}
             selectedId={selectedIce?.id}
             onSelect={setSelectedIce}
             onBack={() => setScreen(SCREEN.SUGAR)}
@@ -300,7 +377,7 @@ export default function CashierPOS() {
           <section className="cashier-panel">
             <h2>Select Toppings</h2>
             <div className="option-grid">
-              {TOPPING_OPTIONS.map((option) => {
+              {toppingOptions.map((option) => {
                 const active = selectedToppings.some((value) => value.id === option.id);
                 return (
                   <button
@@ -337,23 +414,55 @@ export default function CashierPOS() {
 
         {screen === SCREEN.CHECKOUT && (
           <section className="cashier-panel checkout-panel">
-            <h2>Checkout</h2>
-            <div className="checkout-total">COST: {currency(orderTotal)}</div>
-            <div className="checkout-grid">
-              <button className="primary-action" onClick={() => completeOrder('Card')}>
-                Card
+            <div className="checkout-header">
+              <button className="cancel-checkout-btn" onClick={() => setScreen(SCREEN.HOME)}>
+                ← Cancel Order
               </button>
-              <button className="primary-action" onClick={() => completeOrder('Cash')}>
-                Cash
-              </button>
-              <button className="primary-action" onClick={() => completeOrder('Gift Card')}>
-                Gift Card
-              </button>
+              <h2>Complete Payment</h2>
             </div>
-            <div className="panel-actions">
-              <button className="secondary-action" onClick={() => setScreen(SCREEN.HOME)}>
-                Cancel
-              </button>
+            
+            {/* Order Summary */}
+            <div className="checkout-order-summary">
+              <h3>Order Summary</h3>
+              <div className="checkout-order-list">
+                {orderItems.map((item, index) => (
+                  <div key={`${item.name}-${index}`} className="checkout-order-item">
+                    <div className="checkout-item-header">
+                      <strong>{index + 1}. {item.name}</strong>
+                      <span>{currency(item.price)}</span>
+                    </div>
+                    {buildDisplayLines(item).map((line) => (
+                      <div key={line} className="checkout-item-detail">
+                        {line}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="checkout-summary">
+              <div className="summary-label">Order Total</div>
+              <div className="checkout-total">{currency(orderTotal)}</div>
+              <div className="summary-items">{orderItems.length} item{orderItems.length !== 1 ? 's' : ''}</div>
+            </div>
+
+            <div className="payment-section">
+              <h3>Select Payment Method</h3>
+              <div className="checkout-grid">
+                <button className="payment-method-btn" onClick={() => completeOrder('Card')}>
+                  <FiCreditCard className="payment-icon" />
+                  <span className="payment-label">Card</span>
+                </button>
+                <button className="payment-method-btn" onClick={() => completeOrder('Cash')}>
+                  <FiDollarSign className="payment-icon" />
+                  <span className="payment-label">Cash</span>
+                </button>
+                <button className="payment-method-btn" onClick={() => completeOrder('Gift Card')}>
+                  <FiGift className="payment-icon" />
+                  <span className="payment-label">Gift Card</span>
+                </button>
+              </div>
             </div>
           </section>
         )}
