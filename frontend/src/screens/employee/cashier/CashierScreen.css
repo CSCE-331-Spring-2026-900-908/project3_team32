@@ -1,8 +1,8 @@
 .cashier-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #f4f7fb 0%, #eef2f7 100%);
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   padding: 24px;
-  color: #172033;
+  color: #212529;
 }
 
 .cashier-shell {
@@ -14,8 +14,9 @@
 .cashier-panel,
 .cashier-status {
   background: #ffffff;
-  border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(20, 33, 61, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #dee2e6;
 }
 
 .cashier-header {
@@ -29,27 +30,29 @@
 
 .cashier-header h1 {
   margin: 0 0 6px;
+  color: #212529;
 }
 
 .cashier-header p {
   margin: 0;
-  color: #64748b;
+  color: #6c757d;
 }
 
 .cashier-pill {
-  background: #e0f2fe;
-  color: #0c4a6e;
+  background: #e9ecef;
+  color: #495057;
   padding: 10px 14px;
   border-radius: 999px;
   font-weight: 700;
+  font-size: 0.9rem;
 }
 
 .cashier-status {
   padding: 14px 18px;
   margin-bottom: 16px;
-  border: 1px solid #bbf7d0;
-  background: #f0fdf4;
-  color: #166534;
+  border: 1px solid #d1e7dd;
+  background: #d1e7dd;
+  color: #0f5132;
 }
 
 .cashier-grid {
@@ -65,6 +68,8 @@
 .cashier-panel h2 {
   margin-top: 0;
   margin-bottom: 20px;
+  color: #212529;
+  font-weight: 700;
 }
 
 .category-grid,
@@ -97,17 +102,19 @@
 .primary-action,
 .secondary-action {
   border: none;
-  border-radius: 16px;
+  border-radius: 12px;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  font-weight: 600;
 }
 
 .category-button,
 .menu-card,
 .option-button,
 .secondary-action {
-  background: #f8fafc;
-  border: 1px solid #dbe4f0;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  color: #495057;
 }
 
 .category-button:hover,
@@ -115,8 +122,8 @@
 .option-button:hover,
 .primary-action:hover,
 .secondary-action:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(20, 33, 61, 0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .category-button {
@@ -140,8 +147,9 @@
 }
 
 .option-button.active {
-  background: #dbeafe;
-  border-color: #60a5fa;
+  background: #8b4513;
+  border-color: #8b4513;
+  color: white;
 }
 
 .order-panel {
@@ -155,20 +163,20 @@
   min-height: 360px;
   max-height: 520px;
   overflow: auto;
-  border: 1px solid #dbe4f0;
-  border-radius: 16px;
+  border: 1px solid #dee2e6;
+  border-radius: 12px;
   padding: 12px;
-  background: #fbfdff;
+  background: #f8f9fa;
 }
 
 .empty-state {
-  color: #64748b;
+  color: #6c757d;
   text-align: center;
   padding: 40px 12px;
 }
 
 .order-item {
-  border-bottom: 1px solid #e5edf6;
+  border-bottom: 1px solid #dee2e6;
   padding: 12px 6px;
 }
 
@@ -180,49 +188,54 @@
   display: flex;
   justify-content: space-between;
   gap: 12px;
+  color: #212529;
 }
 
 .order-detail {
-  color: #64748b;
+  color: #6c757d;
   margin-top: 4px;
   font-size: 0.95rem;
 }
 
 .order-total {
   padding: 16px 18px;
-  border-radius: 16px;
-  background: #e2e8f0;
+  border-radius: 12px;
+  background: #e9ecef;
   font-weight: 800;
+  color: #212529;
 }
 
 .checkout-total {
   margin-top: 18px;
   padding: 16px 18px;
-  border-radius: 16px;
+  border-radius: 12px;
   text-align: center;
   font-size: 2rem;
   background: #fff;
-  border: 3px solid #172033;
-}
-
-.checkout-total {
-  text-align: center;
-  font-size: 2rem;
-  background: #fff;
-  border: 3px solid #172033;
+  border: 3px solid #8b4513;
+  color: #8b4513;
+  font-weight: 800;
 }
 
 .primary-action {
-  background: #0f172a;
+  background: #8b4513;
   color: white;
   padding: 14px 18px;
   font-weight: 700;
 }
 
+.primary-action:hover {
+  background: #6b3410;
+}
+
 .secondary-action {
-  color: #172033;
+  color: #495057;
   padding: 12px 16px;
   font-weight: 700;
+}
+
+.secondary-action:hover {
+  background: #e9ecef;
 }
 
 .panel-actions {
@@ -238,13 +251,21 @@
   gap: 8px;
   margin-top: 22px;
   font-weight: 700;
+  color: #212529;
 }
 
 .comment-box input {
-  border: 1px solid #cbd5e1;
-  border-radius: 14px;
+  border: 1px solid #dee2e6;
+  border-radius: 12px;
   padding: 12px 14px;
   font-size: 1rem;
+  background: #f8f9fa;
+}
+
+.comment-box input:focus {
+  outline: none;
+  border-color: #8b4513;
+  background: white;
 }
 
 .checkout-panel {
