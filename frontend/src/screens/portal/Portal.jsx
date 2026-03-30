@@ -7,7 +7,7 @@ function Portal() {
 
   return (
     <div className="portal">
-      <h1>Sharetea POS</h1>
+      <h1>Team 32's Boba Bar</h1>
       <div className="portal-options">
         <button onClick={() => navigate('/login/customer')}>Customer</button>
         <button onClick={() => navigate('/login/employee')}>Employee</button>
