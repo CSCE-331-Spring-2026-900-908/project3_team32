@@ -12,6 +12,7 @@ const SCREEN = {
   ICE: 'ICE',
   TOPPINGS: 'TOPPINGS',
   CHECKOUT: 'CHECKOUT',
+  CONFIRMATION: 'CONFIRMATION',
 };
 
 function currency(value) {
@@ -41,6 +42,9 @@ export default function CashierPOS() {
   const [orderNumber, setOrderNumber] = useState(1001);
   const [statusMessage, setStatusMessage] = useState('');
   const [nextItemId, setNextItemId] = useState(1);
+  const [completedOrderId, setCompletedOrderId] = useState(null);
+  const [completedOrderTotal, setCompletedOrderTotal] = useState(0);
+  const [completedPaymentMethod, setCompletedPaymentMethod] = useState('');
   
   // API data
   const [menuItems, setMenuItems] = useState([]);
@@ -206,17 +210,32 @@ export default function CashierPOS() {
         const result = await response.json();
         const completedOrder = result.order?.order_id || orderNumber;
         
+        // Store order details for confirmation screen
+        setCompletedOrderId(completedOrder);
+        setCompletedOrderTotal(orderTotal);
+        setCompletedPaymentMethod(paymentMethod);
+        
+        // Show confirmation screen
+        setScreen(SCREEN.CONFIRMATION);
+        
         setOrderNumber((prev) => prev + 1);
-        setOrderItems([]);
-        setCurrentItem(null);
-        clearSelectionState();
-        setScreen(SCREEN.HOME);
       } catch (error) {
         console.error('Order submission error:', error);
+        setStatusMessage('Failed to submit order. Please try again.');
       }
     }
     
     submitOrder();
+  }
+
+  function startNewOrder() {
+    setOrderItems([]);
+    setCurrentItem(null);
+    clearSelectionState();
+    setCompletedOrderId(null);
+    setCompletedOrderTotal(0);
+    setCompletedPaymentMethod('');
+    setScreen(SCREEN.HOME);
   }
 
   return (
@@ -465,6 +484,35 @@ export default function CashierPOS() {
               </div>
             </div>
           </section>
+        )}
+
+        {screen === SCREEN.CONFIRMATION && (
+          <div className="confirmation-overlay">
+            <div className="confirmation-modal">
+              <div className="confirmation-icon">✓</div>
+              
+              <h2 className="confirmation-title">Order Complete</h2>
+              
+              <div className="confirmation-details">
+                <div className="confirmation-row">
+                  <span className="confirmation-label">Order Number</span>
+                  <span className="confirmation-value">#{completedOrderId}</span>
+                </div>
+                <div className="confirmation-row">
+                  <span className="confirmation-label">Total</span>
+                  <span className="confirmation-value">{currency(completedOrderTotal)}</span>
+                </div>
+                <div className="confirmation-row">
+                  <span className="confirmation-label">Payment</span>
+                  <span className="confirmation-value">{completedPaymentMethod}</span>
+                </div>
+              </div>
+
+              <button className="confirmation-btn" onClick={startNewOrder}>
+                Start New Order
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
