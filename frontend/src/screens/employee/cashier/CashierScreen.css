@@ -417,7 +417,7 @@
 .panel-actions {
   display: flex;
   gap: 12px;
-  justify-content: center;
+  justify-content: flex-end;
   margin-top: 20px;
 }
 
