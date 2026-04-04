@@ -1,4 +1,5 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import MenuManagement from './MenuManagement.jsx';
 import InventoryManagement from './InventoryManagement.jsx';
 import EmployeeManager from './EmployeeManager.jsx';
@@ -7,7 +8,7 @@ import SalesReport from './SalesReport.jsx';
 import ProductUsage from './ProductUsage.jsx';
 import XReport from './XReport.jsx';
 import ZReport from './ZReport.jsx';
-import { checkDatabaseHealth, getApiBase } from './managerApi.js';
+import './ManagerScreen.css';
 
 // Defines all available panels and their corresponding components
 const PANELS = {
@@ -21,6 +22,7 @@ const PANELS = {
   ZREPORT: { title: 'Z-Report', comp: <ZReport /> },
 };
 
+<<<<<<< HEAD
 // Styling for the left sidebar navigation
 const sidebarStyle = {
   width: 240,
@@ -53,14 +55,20 @@ export default function ManagerScreen() {
       mounted = false;
     };
   }, []);
+=======
+export default function ManagerScreen() {
+  const navigate = useNavigate();
+  const [active, setActive] = useState('MENU');
+>>>>>>> a2cc746ee7a661c84072a56d15c25e5b242f6d9c
 
   return (
-    <div style={{ display: 'flex', height: '100vh', fontFamily: 'Arial, sans-serif' }}>
-      <aside style={sidebarStyle}>
-        <div style={{ marginBottom: 12 }}>
-          <strong style={{ fontSize: 18 }}>Manager Panel</strong>
+    <div className="manager-screen">
+      <aside className="manager-sidebar">
+        <div className="sidebar-header">
+          <h2>Manager Panel</h2>
         </div>
 
+<<<<<<< HEAD
         {/* Dynamically render sidebar buttons for each panel */}
         {Object.keys(PANELS).map((key) => (
           <button
@@ -81,10 +89,24 @@ export default function ManagerScreen() {
             {PANELS[key].title}
           </button>
         ))}
+=======
+        <nav className="sidebar-nav">
+          {Object.keys(PANELS).map((key) => (
+            <button
+              key={key}
+              onClick={() => setActive(key)}
+              className={`nav-button ${active === key ? 'active' : ''}`}
+            >
+              {PANELS[key].title}
+            </button>
+          ))}
+        </nav>
+>>>>>>> a2cc746ee7a661c84072a56d15c25e5b242f6d9c
 
-        <div style={{ marginTop: 16 }}>
+        <div className="sidebar-footer">
           <button
             onClick={() => {
+<<<<<<< HEAD
               localStorage.removeItem('token'); // Clear auth token
               window.location.href = '/'; // Redirect to login/home
             }}
@@ -95,11 +117,20 @@ export default function ManagerScreen() {
               borderRadius: 4,
               background: '#fff',
               cursor: 'pointer',
+=======
+              localStorage.removeItem('role');
+              localStorage.removeItem('employee');
+              localStorage.removeItem('user');
+              sessionStorage.clear();
+              navigate('/');
+>>>>>>> a2cc746ee7a661c84072a56d15c25e5b242f6d9c
             }}
+            className="logout-button"
           >
             Logout
           </button>
         </div>
+<<<<<<< HEAD
 
         {/* Debug / status info */}
         <div style={{ marginTop: 12, fontSize: 12, color: '#666', wordBreak: 'break-word' }}>
@@ -114,6 +145,11 @@ export default function ManagerScreen() {
       <main style={{ flex: 1, padding: 16, overflow: 'auto' }}>
         {PANELS[active].comp}
       </main>
+=======
+      </aside>
+
+      <main className="manager-content">{PANELS[active].comp}</main>
+>>>>>>> a2cc746ee7a661c84072a56d15c25e5b242f6d9c
     </div>
   );
 }

@@ -101,25 +101,31 @@ export default function ReportsPanel() {
   }
 
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <h2 style={{ margin: 0 }}>Manager View - Daily Report</h2>
+    <div className="manager-panel">
+      <h2>Daily Report</h2>
 
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div className="manager-actions">
         <label>
           Date (YYYY-MM-DD):
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ marginLeft: 6 }} />
         </label>
-        <button onClick={() => runReport(true)}>Run Report</button>
-        <button onClick={() => runReport(true)}>Refresh</button>
-        <button onClick={clearReport}>Clear</button>
+        <button onClick={() => runReport(true)} className="manager-btn manager-btn-primary">Run Report</button>
+        <button onClick={() => runReport(true)} className="manager-btn manager-btn-secondary">Refresh</button>
+        <button onClick={clearReport} className="manager-btn manager-btn-secondary">Clear</button>
         <strong>Total Profit: {money(totalProfit)}</strong>
       </div>
 
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button onClick={() => setTab('items')} style={{ background: tab === 'items' ? '#e6f7ff' : '#fff' }}>
+      <div className="manager-tabs">
+        <button 
+          onClick={() => setTab('items')} 
+          className={`manager-tab-btn ${tab === 'items' ? 'active' : ''}`}
+        >
           Items Sold
         </button>
-        <button onClick={() => setTab('employees')} style={{ background: tab === 'employees' ? '#e6f7ff' : '#fff' }}>
+        <button 
+          onClick={() => setTab('employees')} 
+          className={`manager-tab-btn ${tab === 'employees' ? 'active' : ''}`}
+        >
           Sales per Employee
         </button>
       </div>
@@ -129,13 +135,13 @@ export default function ReportsPanel() {
       {!loading && noOrders ? <div style={{ color: '#666' }}>No orders found for this date.</div> : null}
 
       {tab === 'items' ? (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table className="manager-table">
           <thead>
             <tr>
-              <th style={{ textAlign: 'left' }}>Menu Item ID</th>
-              <th style={{ textAlign: 'left' }}>Item Name</th>
-              <th style={{ textAlign: 'left' }}>Qty Sold</th>
-              <th style={{ textAlign: 'left' }}>Revenue</th>
+              <th>Menu Item ID</th>
+              <th>Item Name</th>
+              <th>Qty Sold</th>
+              <th>Revenue</th>
             </tr>
           </thead>
           <tbody>
@@ -150,13 +156,13 @@ export default function ReportsPanel() {
           </tbody>
         </table>
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table className="manager-table">
           <thead>
             <tr>
-              <th style={{ textAlign: 'left' }}>Employee ID</th>
-              <th style={{ textAlign: 'left' }}>Employee Name</th>
-              <th style={{ textAlign: 'left' }}># Sales</th>
-              <th style={{ textAlign: 'left' }}>Revenue</th>
+              <th>Employee ID</th>
+              <th>Employee Name</th>
+              <th># Sales</th>
+              <th>Revenue</th>
             </tr>
           </thead>
           <tbody>

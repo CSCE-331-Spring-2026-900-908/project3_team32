@@ -69,10 +69,10 @@ export default function SalesReport() {
   }
 
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <h2 style={{ margin: 0 }}>Sales Report by Item</h2>
+    <div className="manager-panel">
+      <h2>Sales Report by Item</h2>
 
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div className="manager-actions">
         <label>
           Start Date:
           <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ marginLeft: 6 }} />
@@ -81,22 +81,22 @@ export default function SalesReport() {
           End Date:
           <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ marginLeft: 6 }} />
         </label>
-        <button onClick={load}>Generate Report</button>
+        <button onClick={load} className="manager-btn manager-btn-primary">Generate Report</button>
       </div>
 
       {error ? <div style={{ color: '#b42318' }}>{error}</div> : null}
       {loading ? <div>Loading sales report...</div> : null}
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table className="manager-table">
           <thead>
             <tr>
-              <th style={{ textAlign: 'left' }}>Menu Item</th>
-              <th style={{ textAlign: 'left' }}>Category</th>
-              <th style={{ textAlign: 'left' }}>Quantity Sold</th>
-              <th style={{ textAlign: 'left' }}>Revenue</th>
-              <th style={{ textAlign: 'left' }}>Avg Price</th>
-              <th style={{ textAlign: 'left' }}>% of Total</th>
+              <th>Menu Item</th>
+              <th>Category</th>
+              <th>Quantity Sold</th>
+              <th>Revenue</th>
+              <th>Avg Price</th>
+              <th>% of Total</th>
             </tr>
           </thead>
           <tbody>

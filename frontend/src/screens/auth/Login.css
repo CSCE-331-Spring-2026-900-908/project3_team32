@@ -1,24 +1,199 @@
 .login {
   min-height: 100vh;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2rem;
+  padding: 2rem;
 }
 
-.login h1 {
-  font-size: 1.5rem;
+.customer-login {
+  background: linear-gradient(135deg, #fef3e2 0%, #fce7c8 100%);
 }
 
-.login button {
-  padding: 1rem 2rem;
-  font-size: 1rem;
-  cursor: pointer;
-  border: 1px solid #ccc;
+.employee-login {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.login-card {
+  position: relative;
   background: white;
+  border: 2px solid #e5d4b8;
+  border-radius: 24px;
+  padding: 3rem;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 8px 24px rgba(139, 69, 19, 0.1);
+  text-align: center;
 }
 
-.login button:hover {
-  background: #f5f5f5;
+.back-button {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  background: transparent;
+  border: 2px solid #e5d4b8;
+  color: #666;
+  padding: 0.5rem 1rem;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.back-button:hover {
+  background: #fef3e2;
+  border-color: #d4a574;
+  color: #8b4513;
+}
+
+.login-icon {
+  font-size: 4rem;
+  margin: 2rem 0 1.5rem;
+  color: #8b4513;
+}
+
+.login-card h1 {
+  font-size: 2.25rem;
+  margin: 0 0 0.75rem;
+  color: #2c2c2c;
+  font-weight: 700;
+}
+
+.login-subtitle {
+  font-size: 1rem;
+  color: #666;
+  margin: 0 0 2.5rem;
+  line-height: 1.5;
+}
+
+.login-content {
+  margin-top: 2rem;
+}
+
+.customer-login-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.info-card {
+  background: #fef3e2;
+  border: 2px solid #e5d4b8;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  text-align: left;
+  transition: all 0.2s;
+}
+
+.info-card:hover {
+  transform: translateX(4px);
+  border-color: #d4a574;
+}
+
+.info-icon {
+  color: #8b4513;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.info-card p {
+  margin: 0;
+  font-weight: 600;
+  color: #2c2c2c;
+  font-size: 0.95rem;
+}
+
+.employee-login-info {
+  margin-bottom: 2rem;
+}
+
+.auth-placeholder {
+  background: #f8f9fa;
+  border: 2px dashed #d4a574;
+  border-radius: 12px;
+  padding: 2rem 1.5rem;
+}
+
+.auth-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: #8b4513;
+}
+
+.auth-placeholder p {
+  margin: 0.5rem 0;
+  color: #2c2c2c;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.auth-note {
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 400;
+}
+
+.login-button {
+  width: 100%;
+  padding: 1.25rem;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #8b4513;
+  color: white;
+}
+
+.login-button:hover {
+  background: #6b3410;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3);
+}
+
+@media (max-width: 768px) {
+  .login-card {
+    padding: 2.5rem 1.5rem;
+  }
+
+  .login-icon {
+    font-size: 3.5rem;
+    margin: 1.5rem 0 1rem;
+  }
+
+  .login-card h1 {
+    font-size: 1.875rem;
+  }
+
+  .login-subtitle {
+    font-size: 0.95rem;
+  }
+
+  .back-button {
+    top: 1rem;
+    left: 1rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .info-card {
+    padding: 0.875rem 1rem;
+  }
+
+  .info-icon {
+    font-size: 1.25rem;
+  }
+
+  .info-card p {
+    font-size: 0.875rem;
+  }
 }

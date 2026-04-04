@@ -1,19 +1,214 @@
-.dashboard {
+.employee-dashboard {
   min-height: 100vh;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   padding: 2rem;
 }
 
-.dashboard h1 {
-  margin-bottom: 1rem;
+.dashboard-container {
+  max-width: 1000px;
+  margin: 0 auto;
 }
 
-.dashboard button {
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  border: 1px solid #ccc;
+.dashboard-header {
   background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
-.dashboard button:hover {
-  background: #f5f5f5;
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.header-icon {
+  font-size: 3rem;
+  color: #495057;
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  font-size: 2rem;
+  color: #212529;
+  font-weight: 700;
+}
+
+.dashboard-header p {
+  margin: 0.25rem 0 0;
+  color: #6c757d;
+  font-size: 1rem;
+}
+
+.logout-btn {
+  background: transparent;
+  border: 2px solid #dee2e6;
+  color: #6c757d;
+  padding: 0.75rem 1.25rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+}
+
+.logout-btn:hover {
+  background: #f8f9fa;
+  border-color: #adb5bd;
+  color: #495057;
+}
+
+.logout-btn svg {
+  font-size: 1.25rem;
+}
+
+.role-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
+}
+
+.role-card {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 16px;
+  padding: 2.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.role-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #8b4513 0%, #d4a574 100%);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.role-card:hover::before {
+  transform: scaleX(1);
+}
+
+.role-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  border-color: #adb5bd;
+}
+
+.cashier-card:hover {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+}
+
+.manager-card:hover {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+}
+
+.role-card-content {
+  flex: 1;
+}
+
+.role-icon {
+  font-size: 3rem;
+  color: #495057;
+  margin-bottom: 1rem;
+  transition: all 0.3s ease;
+}
+
+.role-card:hover .role-icon {
+  transform: scale(1.05);
+  color: #8b4513;
+}
+
+.role-card h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.75rem;
+  color: #212529;
+  font-weight: 700;
+}
+
+.role-card p {
+  margin: 0;
+  color: #6c757d;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.role-arrow {
+  font-size: 2rem;
+  color: #8b4513;
+  opacity: 0;
+  transform: translateX(-10px);
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.role-card:hover .role-arrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+@media (max-width: 768px) {
+  .employee-dashboard {
+    padding: 1rem;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 1.5rem;
+  }
+
+  .header-content {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .header-icon {
+    font-size: 2.5rem;
+  }
+
+  .dashboard-header h1 {
+    font-size: 1.75rem;
+  }
+
+  .logout-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .role-cards {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .role-card {
+    padding: 2rem;
+  }
+
+  .role-icon {
+    font-size: 2.5rem;
+  }
+
+  .role-card h2 {
+    font-size: 1.5rem;
+  }
 }
