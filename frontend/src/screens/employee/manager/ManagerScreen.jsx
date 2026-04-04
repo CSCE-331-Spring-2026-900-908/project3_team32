@@ -9,6 +9,7 @@ import XReport from './XReport.jsx';
 import ZReport from './ZReport.jsx';
 import { checkDatabaseHealth, getApiBase } from './managerApi.js';
 
+// Defines all available panels and their corresponding components
 const PANELS = {
   MENU: { title: 'Menu', comp: <MenuManagement /> },
   INVENTORY: { title: 'Inventory', comp: <InventoryManagement /> },
@@ -20,6 +21,7 @@ const PANELS = {
   ZREPORT: { title: 'Z-Report', comp: <ZReport /> },
 };
 
+// Styling for the left sidebar navigation
 const sidebarStyle = {
   width: 240,
   background: '#f6f8fa',
@@ -29,12 +31,12 @@ const sidebarStyle = {
 };
 
 export default function ManagerScreen() {
-  const [active, setActive] = useState('MENU');
-  const [dbStatus, setDbStatus] = useState('Checking...');
-  const apiBase = useMemo(() => getApiBase(), []);
+  const [active, setActive] = useState('MENU'); // Tracks currently selected panel
+  const [dbStatus, setDbStatus] = useState('Checking...'); // Displays DB connection state
+  const apiBase = useMemo(() => getApiBase(), []); // Memoize API base URL so it doesn't recompute
 
   useEffect(() => {
-    let mounted = true;
+    let mounted = true; // Prevents state updates if component unmounts
 
     checkDatabaseHealth()
       .then((health) => {
@@ -59,10 +61,11 @@ export default function ManagerScreen() {
           <strong style={{ fontSize: 18 }}>Manager Panel</strong>
         </div>
 
+        {/* Dynamically render sidebar buttons for each panel */}
         {Object.keys(PANELS).map((key) => (
           <button
             key={key}
-            onClick={() => setActive(key)}
+            onClick={() => setActive(key)} // Switch active panel
             style={{
               display: 'block',
               width: '100%',
@@ -82,8 +85,8 @@ export default function ManagerScreen() {
         <div style={{ marginTop: 16 }}>
           <button
             onClick={() => {
-              localStorage.removeItem('token');
-              window.location.href = '/';
+              localStorage.removeItem('token'); // Clear auth token
+              window.location.href = '/'; // Redirect to login/home
             }}
             style={{
               padding: '8px 12px',
@@ -98,6 +101,7 @@ export default function ManagerScreen() {
           </button>
         </div>
 
+        {/* Debug / status info */}
         <div style={{ marginTop: 12, fontSize: 12, color: '#666', wordBreak: 'break-word' }}>
           API: {apiBase}
         </div>
@@ -106,7 +110,10 @@ export default function ManagerScreen() {
         </div>
       </aside>
 
-      <main style={{ flex: 1, padding: 16, overflow: 'auto' }}>{PANELS[active].comp}</main>
+      {/* Main content renders the selected panel */}
+      <main style={{ flex: 1, padding: 16, overflow: 'auto' }}>
+        {PANELS[active].comp}
+      </main>
     </div>
   );
 }
