@@ -1,14 +1,18 @@
+
+/* Main container for the cashier interface, sets full height and background gradient */
 .cashier-page {
   min-height: 100vh;
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   padding: 24px;
   color: #212529;
 }
+/* Centers the entire cashier layout and limits max width for readability */
 
 .cashier-shell {
   max-width: 1300px;
   margin: 0 auto;
 }
+/* Shared card-style layout used for headers, panels, and status sections */
 
 .cashier-header,
 .cashier-panel,
@@ -18,6 +22,7 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   border: 1px solid #dee2e6;
 }
+/* Header layout uses flexbox to align title and controls horizontally */
 
 .cashier-header {
   padding: 24px;
@@ -27,6 +32,7 @@
   gap: 16px;
   margin-bottom: 16px;
 }
+/* Status banner used to display system or order state (e.g., success/connection) */
 
 .cashier-header h1 {
   margin: 0 0 6px;
@@ -54,6 +60,7 @@
   background: #d1e7dd;
   color: #0f5132;
 }
+/* Grid layout splits main UI into menu section and order/checkout panel */
 
 .cashier-grid {
   display: grid;
