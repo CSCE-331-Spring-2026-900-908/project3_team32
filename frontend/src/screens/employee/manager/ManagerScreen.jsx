@@ -11,6 +11,8 @@ import XReport from './XReport.jsx';
 import ZReport from './ZReport.jsx';
 import './ManagerScreen.css';
 
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
+
 // Defines all available panels and their corresponding components
 const PANELS = {
   MENU: { title: 'Menu', comp: <MenuManagement /> },
@@ -36,7 +38,7 @@ export default function ManagerScreen() {
     async function loadWeather() {
       try {
         setWeatherLoading(true);
-        const response = await fetch('/api/external/weather?city=College%20Station,US');
+        const response = await fetch(`${API_BASE}/external/weather?city=College%20Station,US`);
         if (!response.ok) throw new Error('Unable to load weather');
         const data = await response.json();
         setWeather(data);
