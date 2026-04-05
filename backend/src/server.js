@@ -43,57 +43,110 @@ function parseDateInput(value) {
   return value;
 }
 
-function isBadWeatherCondition(weatherCode, description = '') {
-  const text = description.toLowerCase();
-  if (text.includes('hail') || text.includes('tornado') || text.includes('squall') || text.includes('thunderstorm')) {
-    return true;
-  }
-  // OpenWeather weather codes: 2xx thunderstorm, 6xx snow/ice, 7xx atmospheric hazards.
-  return (weatherCode >= 200 && weatherCode < 300) || (weatherCode >= 600 && weatherCode < 800);
+function describeOpenMeteoWeatherCode(weatherCode) {
+  const codeMap = {
+    0: 'Clear sky',
+    1: 'Mainly clear',
+    2: 'Partly cloudy',
+    3: 'Overcast',
+    45: 'Fog',
+    48: 'Rime fog',
+    51: 'Light drizzle',
+    53: 'Moderate drizzle',
+    55: 'Dense drizzle',
+    56: 'Light freezing drizzle',
+    57: 'Dense freezing drizzle',
+    61: 'Slight rain',
+    63: 'Moderate rain',
+    65: 'Heavy rain',
+    66: 'Light freezing rain',
+    67: 'Heavy freezing rain',
+    71: 'Slight snow fall',
+    73: 'Moderate snow fall',
+    75: 'Heavy snow fall',
+    77: 'Snow grains',
+    80: 'Slight rain showers',
+    81: 'Moderate rain showers',
+    82: 'Violent rain showers',
+    85: 'Slight snow showers',
+    86: 'Heavy snow showers',
+    95: 'Thunderstorm',
+    96: 'Thunderstorm with hail',
+    99: 'Thunderstorm with heavy hail',
+  };
+  return codeMap[weatherCode] || 'Unknown weather';
 }
 
-// External weather route (OpenWeather)
-app.get('/api/external/weather', async (req, res, next) => {
-  const apiKey = process.env.WEATHER_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: 'WEATHER_API_KEY is not configured on the server' });
-  }
+function isBadWeatherCondition(weatherCode) {
+  // Highlight severe/impactful conditions such as hail, thunderstorms, freezing rain, and heavy snow/showers.
+  return [66, 67, 75, 77, 82, 85, 86, 95, 96, 99].includes(weatherCode);
+}
 
-  const city = typeof req.query.city === 'string' && req.query.city.trim() ? req.query.city.trim() : 'College Station,US';
+// External weather route (Open-Meteo, no API key required)
+app.get('/api/external/weather', async (req, res, next) => {
+  const cityInput = typeof req.query.city === 'string' && req.query.city.trim() ? req.query.city.trim() : 'College Station,US';
   const units = typeof req.query.units === 'string' && req.query.units.trim() ? req.query.units.trim() : 'imperial';
 
+  const [cityNameRaw, countryRaw] = cityInput.split(',').map((part) => part.trim());
+  const cityName = cityNameRaw || cityInput;
+  const countryCode = countryRaw && countryRaw.length === 2 ? countryRaw.toUpperCase() : '';
+  const temperatureUnit = units === 'metric' ? 'celsius' : 'fahrenheit';
+
   try {
-    const params = new URLSearchParams({
-      q: city,
-      appid: apiKey,
-      units,
+    const geocodeParams = new URLSearchParams({
+      name: cityName,
+      count: '1',
+      language: 'en',
+      format: 'json',
     });
+    if (countryCode) geocodeParams.set('countryCode', countryCode);
 
-    const weatherResponse = await fetch(`https://api.openweathermap.org/data/2.5/weather?${params.toString()}`);
-    const weatherData = await weatherResponse.json().catch(() => ({}));
+    const geocodeResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?${geocodeParams.toString()}`);
+    const geocodeData = await geocodeResponse.json().catch(() => ({}));
 
-    if (!weatherResponse.ok) {
-      return res.status(weatherResponse.status).json({
-        error: weatherData.message || 'Failed to fetch weather from OpenWeather',
+    if (!geocodeResponse.ok) {
+      return res.status(geocodeResponse.status).json({
+        error: geocodeData.reason || 'Failed to geocode location with Open-Meteo',
       });
     }
 
-    const weather = weatherData.weather?.[0] || {};
-    const weatherCode = Number(weather.id || 0);
-    const description = String(weather.description || '');
-    const isSevere = isBadWeatherCondition(weatherCode, description);
+    const match = geocodeData.results?.[0];
+    if (!match) {
+      return res.status(404).json({ error: `Location not found: ${cityInput}` });
+    }
+
+    const forecastParams = new URLSearchParams({
+      latitude: String(match.latitude),
+      longitude: String(match.longitude),
+      current: 'temperature_2m,apparent_temperature,weather_code',
+      temperature_unit: temperatureUnit,
+      timezone: 'auto',
+    });
+
+    const forecastResponse = await fetch(`https://api.open-meteo.com/v1/forecast?${forecastParams.toString()}`);
+    const forecastData = await forecastResponse.json().catch(() => ({}));
+
+    if (!forecastResponse.ok) {
+      return res.status(forecastResponse.status).json({
+        error: forecastData.reason || 'Failed to fetch weather from Open-Meteo',
+      });
+    }
+
+    const current = forecastData.current || {};
+    const weatherCode = Number(current.weather_code ?? -1);
+    const description = describeOpenMeteoWeatherCode(weatherCode);
 
     return res.json({
-      source: 'OpenWeather',
-      location: weatherData.name || city,
-      country: weatherData.sys?.country || null,
+      source: 'Open-Meteo',
+      location: match.name || cityName,
+      country: match.country_code || null,
       units,
-      temperature: Number(weatherData.main?.temp),
-      feelsLike: Number(weatherData.main?.feels_like),
+      temperature: Number(current.temperature_2m),
+      feelsLike: Number(current.apparent_temperature),
       description,
       weatherCode,
-      icon: weather.icon || null,
-      isSevere,
+      icon: null,
+      isSevere: isBadWeatherCondition(weatherCode),
     });
   } catch (error) {
     return next(error);
