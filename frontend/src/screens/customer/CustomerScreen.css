@@ -31,6 +31,70 @@
   gap: 1rem;
 }
 
+.text-size-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  min-width: 520px;
+}
+
+.text-size-control label {
+  font-size: 1.1rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+#text-size-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 420px;
+  height: 56px;
+  cursor: pointer;
+  background: transparent;
+}
+
+#text-size-slider::-webkit-slider-runnable-track {
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+#text-size-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 3px solid #8b4513;
+  margin-top: -31px;
+}
+
+#text-size-slider::-moz-range-track {
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+#text-size-slider::-moz-range-thumb {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 3px solid #8b4513;
+}
+
+.text-size-control span {
+  min-width: 58px;
+  text-align: right;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
 .google-translate-widget .goog-te-gadget {
   color: white;
   font-size: 0;
@@ -525,6 +589,18 @@
   .header-actions {
     width: 100%;
     justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .text-size-control {
+    width: 100%;
+    min-width: 0;
+    justify-content: space-between;
+  }
+
+  #text-size-slider {
+    width: 100%;
+    flex: 1;
   }
 
   .customer-content {

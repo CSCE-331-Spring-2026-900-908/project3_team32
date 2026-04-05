@@ -64,6 +64,7 @@ function relabelGoogleTranslateOptions() {
 export default function CustomerScreen() {
   const navigate = useNavigate();
   const [screen, setScreen] = useState(SCREEN.MENU);
+  const [textScale, setTextScale] = useState(100);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [cart, setCart] = useState([]);
   const [currentItem, setCurrentItem] = useState(null);
@@ -184,6 +185,16 @@ export default function CustomerScreen() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const previousFontSize = root.style.fontSize;
+    root.style.fontSize = `${textScale}%`;
+
+    return () => {
+      root.style.fontSize = previousFontSize;
+    };
+  }, [textScale]);
 
   const visibleItems = useMemo(() => {
     if (selectedCategory === 'All') return menuItems;
@@ -316,6 +327,19 @@ export default function CustomerScreen() {
         <div className="header-content">
           <h1>Team 32's Boba Bar</h1>
           <div className="header-actions">
+            <div className="text-size-control">
+              <label htmlFor="text-size-slider">Text Size</label>
+              <input
+                id="text-size-slider"
+                type="range"
+                min="85"
+                max="140"
+                step="5"
+                value={textScale}
+                onChange={(e) => setTextScale(Number(e.target.value))}
+              />
+              <span>{textScale}%</span>
+            </div>
             <div id="google_translate_element" className="google-translate-widget" />
             <button className="exit-btn" onClick={() => navigate('/')}>
               Exit
