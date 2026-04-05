@@ -5,6 +5,11 @@ import './CustomerScreen.css';
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 const GOOGLE_TRANSLATE_SCRIPT_ID = 'google-translate-script';
 
+const LANGUAGE_CODE_ALIASES = {
+  iw: 'he',
+  jw: 'jv',
+};
+
 const SCREEN = {
   MENU: 'MENU',
   CUSTOMIZE: 'CUSTOMIZE',
@@ -23,6 +28,37 @@ function buildDisplayLines(item) {
   if (item.toppingNames?.length) lines.push(`Toppings: ${item.toppingNames.join(', ')}`);
   if (item.comments) lines.push(`Note: ${item.comments}`);
   return lines;
+}
+
+function toNativeLanguageName(languageCode, fallback) {
+  if (!languageCode) return fallback;
+
+  const [baseCode] = languageCode.split('-');
+  const normalizedBaseCode = LANGUAGE_CODE_ALIASES[baseCode] || baseCode;
+  const normalizedLocale = languageCode.replace(baseCode, normalizedBaseCode);
+
+  try {
+    const displayNames = new Intl.DisplayNames([normalizedLocale], { type: 'language' });
+    return displayNames.of(normalizedBaseCode) || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function relabelGoogleTranslateOptions() {
+  const select = document.querySelector('#google_translate_element select.goog-te-combo');
+  if (!select) return false;
+
+  Array.from(select.options).forEach((option) => {
+    const code = option.value;
+    if (!code) {
+      option.text = 'English';
+      return;
+    }
+    option.text = toNativeLanguageName(code, option.text);
+  });
+
+  return true;
 }
 
 export default function CustomerScreen() {
@@ -102,6 +138,8 @@ export default function CustomerScreen() {
   }, []);
 
   useEffect(() => {
+    let labelInterval = null;
+
     function initializeGoogleTranslate() {
       if (!window.google?.translate) return;
       const container = document.getElementById('google_translate_element');
@@ -114,6 +152,16 @@ export default function CustomerScreen() {
         },
         'google_translate_element'
       );
+
+      let attempts = 0;
+      labelInterval = window.setInterval(() => {
+        attempts += 1;
+        const updated = relabelGoogleTranslateOptions();
+        if (updated || attempts >= 50) {
+          window.clearInterval(labelInterval);
+          labelInterval = null;
+        }
+      }, 150);
     }
 
     window.googleTranslateElementInit = initializeGoogleTranslate;
@@ -129,6 +177,12 @@ export default function CustomerScreen() {
     script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
     script.async = true;
     document.body.appendChild(script);
+
+    return () => {
+      if (labelInterval) {
+        window.clearInterval(labelInterval);
+      }
+    };
   }, []);
 
   const visibleItems = useMemo(() => {
