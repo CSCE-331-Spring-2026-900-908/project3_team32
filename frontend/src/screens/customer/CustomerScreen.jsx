@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import './CustomerScreen.css';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const GOOGLE_TRANSLATE_SCRIPT_ID = 'google-translate-script';
 
 const SCREEN = {
   MENU: 'MENU',
@@ -98,6 +99,36 @@ export default function CustomerScreen() {
     }
     
     loadData();
+  }, []);
+
+  useEffect(() => {
+    function initializeGoogleTranslate() {
+      if (!window.google?.translate) return;
+      const container = document.getElementById('google_translate_element');
+      if (!container || container.childElementCount > 0) return;
+
+      new window.google.translate.TranslateElement(
+        {
+          pageLanguage: 'en',
+          autoDisplay: false
+        },
+        'google_translate_element'
+      );
+    }
+
+    window.googleTranslateElementInit = initializeGoogleTranslate;
+
+    const existingScript = document.getElementById(GOOGLE_TRANSLATE_SCRIPT_ID);
+    if (existingScript) {
+      initializeGoogleTranslate();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.id = GOOGLE_TRANSLATE_SCRIPT_ID;
+    script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+    script.async = true;
+    document.body.appendChild(script);
   }, []);
 
   const visibleItems = useMemo(() => {
@@ -230,9 +261,12 @@ export default function CustomerScreen() {
       <header className="customer-header">
         <div className="header-content">
           <h1>Team 32's Boba Bar</h1>
-          <button className="exit-btn" onClick={() => navigate('/')}>
-            Exit
-          </button>
+          <div className="header-actions">
+            <div id="google_translate_element" className="google-translate-widget" />
+            <button className="exit-btn" onClick={() => navigate('/')}>
+              Exit
+            </button>
+          </div>
         </div>
       </header>
 
