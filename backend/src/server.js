@@ -43,6 +43,63 @@ function parseDateInput(value) {
   return value;
 }
 
+function isBadWeatherCondition(weatherCode, description = '') {
+  const text = description.toLowerCase();
+  if (text.includes('hail') || text.includes('tornado') || text.includes('squall') || text.includes('thunderstorm')) {
+    return true;
+  }
+  // OpenWeather weather codes: 2xx thunderstorm, 6xx snow/ice, 7xx atmospheric hazards.
+  return (weatherCode >= 200 && weatherCode < 300) || (weatherCode >= 600 && weatherCode < 800);
+}
+
+// External weather route (OpenWeather)
+app.get('/api/external/weather', async (req, res, next) => {
+  const apiKey = process.env.WEATHER_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({ error: 'WEATHER_API_KEY is not configured on the server' });
+  }
+
+  const city = typeof req.query.city === 'string' && req.query.city.trim() ? req.query.city.trim() : 'College Station,US';
+  const units = typeof req.query.units === 'string' && req.query.units.trim() ? req.query.units.trim() : 'imperial';
+
+  try {
+    const params = new URLSearchParams({
+      q: city,
+      appid: apiKey,
+      units,
+    });
+
+    const weatherResponse = await fetch(`https://api.openweathermap.org/data/2.5/weather?${params.toString()}`);
+    const weatherData = await weatherResponse.json().catch(() => ({}));
+
+    if (!weatherResponse.ok) {
+      return res.status(weatherResponse.status).json({
+        error: weatherData.message || 'Failed to fetch weather from OpenWeather',
+      });
+    }
+
+    const weather = weatherData.weather?.[0] || {};
+    const weatherCode = Number(weather.id || 0);
+    const description = String(weather.description || '');
+    const isSevere = isBadWeatherCondition(weatherCode, description);
+
+    return res.json({
+      source: 'OpenWeather',
+      location: weatherData.name || city,
+      country: weatherData.sys?.country || null,
+      units,
+      temperature: Number(weatherData.main?.temp),
+      feelsLike: Number(weatherData.main?.feels_like),
+      description,
+      weatherCode,
+      icon: weather.icon || null,
+      isSevere,
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 // Menu routes
 app.get('/api/menu/items', async (req, res, next) => {
   try {

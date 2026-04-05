@@ -1,5 +1,6 @@
 ﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import MenuManagement from './MenuManagement.jsx';
 import InventoryManagement from './InventoryManagement.jsx';
 import EmployeeManager from './EmployeeManager.jsx';
@@ -25,12 +26,49 @@ const PANELS = {
 export default function ManagerScreen() {
   const navigate = useNavigate();
   const [active, setActive] = useState('MENU');
+  const [weather, setWeather] = useState(null);
+  const [weatherLoading, setWeatherLoading] = useState(true);
+  const [weatherError, setWeatherError] = useState('');
+
+  useEffect(() => {
+    let timerId = null;
+
+    async function loadWeather() {
+      try {
+        setWeatherLoading(true);
+        const response = await fetch('/api/external/weather?city=College%20Station,US');
+        if (!response.ok) throw new Error('Unable to load weather');
+        const data = await response.json();
+        setWeather(data);
+        setWeatherError('');
+      } catch (error) {
+        console.error('Weather fetch failed:', error);
+        setWeather(null);
+        setWeatherError('Weather unavailable');
+      } finally {
+        setWeatherLoading(false);
+      }
+    }
+
+    loadWeather();
+    timerId = window.setInterval(loadWeather, 10 * 60 * 1000);
+    return () => {
+      if (timerId) window.clearInterval(timerId);
+    };
+  }, []);
 
   return (
     <div className="manager-screen">
       <aside className="manager-sidebar">
         <div className="sidebar-header">
           <h2>Manager Panel</h2>
+          <div className="manager-weather" title={weather?.description || weatherError || 'Current weather'}>
+            <span className="manager-weather-label">Weather</span>
+            <span className="manager-weather-value">
+              {weatherLoading ? 'Loading...' : weather ? `${Math.round(weather.temperature)}°F` : 'N/A'}
+            </span>
+            {weather?.isSevere && <span className="manager-weather-warning" aria-label="Bad weather warning">⚠</span>}
+          </div>
         </div>
 
         <nav className="sidebar-nav">
