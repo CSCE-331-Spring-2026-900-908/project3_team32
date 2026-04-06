@@ -4,6 +4,7 @@ import Portal from './screens/portal/Portal';
 import Login from './screens/auth/Login';
 import EmployeeDashboard from './screens/employee/EmployeeDashboard';
 import CustomerScreen from './screens/customer/CustomerScreen';
+import MenuBoard from "./screens/menu/MenuBoard";
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         <Route path="/login/:role" element={<Login />} />
         <Route path="/employee" element={<EmployeeDashboard />} />
         <Route path="/customer" element={<CustomerScreen />} />
+        <Route path="/menu-board" element={<MenuBoard />} />
       </Routes>
     </Router>
   );
