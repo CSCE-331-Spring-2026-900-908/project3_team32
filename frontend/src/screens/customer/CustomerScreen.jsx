@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import html2canvas from 'html2canvas';
 import './CustomerScreen.css';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -47,13 +46,11 @@ export default function CustomerScreen() {
   const [orderNumber, setOrderNumber] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
 
-  // Accessibility panel state
   const [accessibilityOpen, setAccessibilityOpen] = useState(false);
   const [magnifierEnabled, setMagnifierEnabled] = useState(false);
   const [magnifierZoom, setMagnifierZoom] = useState(2);
   const [highContrastEnabled, setHighContrastEnabled] = useState(false);
 
-  // API data
   const [menuItems, setMenuItems] = useState([]);
   const [sugarOptions, setSugarOptions] = useState([]);
   const [iceOptions, setIceOptions] = useState([]);
@@ -70,7 +67,6 @@ export default function CustomerScreen() {
 
   useEffect(() => { magnifierZoomRef.current = magnifierZoom; }, [magnifierZoom]);
 
-  // --- Data loading ---
   useEffect(() => {
     async function loadData() {
       try {
@@ -98,7 +94,6 @@ export default function CustomerScreen() {
     loadData();
   }, []);
 
-  // --- Google Translate ---
   useEffect(() => {
     let labelInterval = null;
 
@@ -191,97 +186,33 @@ export default function CustomerScreen() {
 
   useEffect(() => {
     if (!magnifierEnabled) return;
+    
     function handleMouseMove(e) {
       const mag = magnifierRef.current;
       const inner = lensInnerRef.current;
       if (!mag || !inner) return;
-      
-      const lw = Math.round(window.innerWidth / 2.5);
-      const lh = Math.round(window.innerHeight / 2.5);
+
+      const x = e.clientX;
+      const y = e.clientY;
       const z = magnifierZoomRef.current;
 
-      mag.style.left = `${e.clientX - lw / 2}px`;
-      mag.style.top = `${e.clientY - lh / 2}px`;
+      const lensSize = 350; 
+      const half = lensSize / 2;
 
-      inner.style.left = `${lw / 2}px`;
-      inner.style.top = `${lh / 2}px`;
+      mag.style.left = `${x}px`;
+      mag.style.top = `${y}px`;
+      mag.style.width = `${lensSize}px`;
+      mag.style.height = `${lensSize}px`;
 
-      const pageEl = document.querySelector('.customer-page');
-      let relX = e.clientX;
-      let relY = e.clientY;
-
-      if (pageEl) {
-        const rect = pageEl.getBoundingClientRect();
-        relX = e.clientX - rect.left;
-        relY = e.clientY - rect.top;
-      }
-      
-      inner.style.transformOrigin = '0 0';
-      inner.style.transform = `scale(${z}) translate(${-relX}px, ${-relY}px)`;
+      inner.style.transform = `scale(${z})`;
+      inner.style.left = `${-x * z + half}px`;
+      inner.style.top = `${-y * z + half}px`;
     }
+
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, [magnifierEnabled]);
 
-  useEffect(() => {
-    if (!magnifierEnabled) return;
-    
-    let isDrawing = false; 
-
-    async function updateSnapshot() {
-      if (isDrawing) return;
-      const pageEl = document.querySelector('.customer-page');
-      const inner = lensInnerRef.current;
-      if (!pageEl || !inner) return;
-
-      isDrawing = true;
-
-      try {
-        const w = pageEl.offsetWidth;
-        const h = pageEl.offsetHeight;
-
-        const canvas = await html2canvas(pageEl, {
-          logging: false,
-          useCORS: true,
-          scale: window.devicePixelRatio || 1, 
-          backgroundColor: '#fef3e2',
-          width: w,
-          height: h,
-          windowWidth: document.documentElement.clientWidth,
-          windowHeight: document.documentElement.clientHeight,
-          x: 0,
-          y: 0,
-          scrollX: 0,
-          scrollY: 0
-        });
-
-        const filters = highContrastEnabled 
-          ? `grayscale(100%) contrast(250%) brightness(95%)` 
-          : `contrast(110%)`;
-
-        canvas.style.width = `${w}px`;
-        canvas.style.height = `${h}px`;
-        
-        canvas.style.filter = filters;
-        canvas.style.position = 'absolute';
-        canvas.style.left = '0';
-        canvas.style.top = '0';
-        canvas.style.pointerEvents = 'none'; 
-
-        inner.innerHTML = '';
-        inner.appendChild(canvas);
-        
-      } catch (err) {
-        console.error('Magnifier snapshot failed:', err);
-      }
-      isDrawing = false;
-    }
-
-    updateSnapshot();
-    const interval = setInterval(updateSnapshot, 350);
-    return () => clearInterval(interval);
-    
-  }, [magnifierEnabled, highContrastEnabled, accessibilityOpen, screen, customizeStep]);
 
   const visibleItems = useMemo(() => {
     if (selectedCategory === 'All') return menuItems;
@@ -345,15 +276,12 @@ export default function CustomerScreen() {
     }
     submitOrder();
   }
-  
-  const lensW = typeof window !== 'undefined' ? Math.round(window.innerWidth / 2.5) : 400;
-  const lensH = typeof window !== 'undefined' ? Math.round(window.innerHeight / 2.5) : 300;
 
   const textSizePercent = ((textScale - 85) / (140 - 85)) * 100;
   const zoomPercent = ((magnifierZoom - 1.5) / (4 - 1.5)) * 100;
 
-  return (
-    <div className="customer-page">
+  const renderAppContent = () => (
+    <>
       <header className="customer-header">
         <div className="header-content">
           <h1>Team 32's Boba Bar</h1>
@@ -366,10 +294,6 @@ export default function CustomerScreen() {
                 aria-expanded={accessibilityOpen}
                 aria-haspopup="true"
               >
-                <img 
-                  src="https://uxwing.com/wp-content/themes/uxwing/download/web-app-development/accessibility-icon.png" 
-                  alt="Accessibility" 
-                />
                 <span>Accessibility</span>
                 <span className={`a11y-caret${accessibilityOpen ? ' open' : ''}`}>▾</span>
               </button>
@@ -614,43 +538,18 @@ export default function CustomerScreen() {
           <span>{currency(cartTotal)}</span>
         </button>
       )}
+    </>
+  );
 
-      {/* Magnifier Lens Overlay */}
+  return (
+    <div className="customer-page">
+      {renderAppContent()}
+
       {magnifierEnabled && (
-        <div
-          ref={magnifierRef}
-          className="magnifier-overlay"
-          data-html2canvas-ignore="true" 
-          style={{
-            position: 'fixed',
-            width: `${lensW}px`,
-            height: `${lensH}px`,
-            overflow: 'hidden',
-            borderRadius: '16px',
-            border: '4px solid #8b4513',
-            boxShadow: '0 8px 40px rgba(0,0,0,0.55)',
-            zIndex: 9998,
-            pointerEvents: 'none',
-            background: '#fff',
-            left: 0,
-            top: 0,
-          }}
-        >
-          <div ref={lensInnerRef} style={{ position: 'absolute', pointerEvents: 'none' }} />
-          
-          <div style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            width: '6px',
-            height: '6px',
-            background: 'rgba(239, 68, 68, 0.8)',
-            borderRadius: '50%',
-            transform: 'translate(-50%, -50%)',
-            pointerEvents: 'none',
-            boxShadow: '0 0 0 2px rgba(255,255,255,0.8)'
-          }} />
-
+        <div ref={magnifierRef} className="magnifier-v1">
+          <div ref={lensInnerRef} className="magnified-content">
+            {renderAppContent()}
+          </div>
           <div className="magnifier-badge">🔍 {magnifierZoom}×</div>
         </div>
       )}

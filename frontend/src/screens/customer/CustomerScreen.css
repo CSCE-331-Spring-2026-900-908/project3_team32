@@ -627,11 +627,6 @@
   margin-bottom: 1rem;
 }
 
-.a11y-section-icon {
-  font-size: 1.4rem;
-  line-height: 1;
-}
-
 .a11y-section-title {
   flex: 1;
   font-weight: 700;
@@ -779,15 +774,32 @@
   background: white;
 }
 
-.magnifier-overlay {
-  box-sizing: border-box; 
-  cursor: none;
+.magnifier-v1 {
+  position: fixed;
+  border-radius: 50%;
+  border: 4px solid #8b4513;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.55);
+  overflow: hidden;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  background: #fef3e2;
+  z-index: 9998;
+}
+
+.magnified-content {
+  position: absolute;
+  transform-origin: 0 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  will-change: transform, left, top;
 }
 
 .magnifier-badge {
   position: absolute;
-  bottom: 12px;
-  right: 16px;
+  bottom: 24px;
+  right: 50%;
+  transform: translateX(50%);
   background: rgba(139, 69, 19, 0.9);
   color: white;
   font-size: 0.9rem;
