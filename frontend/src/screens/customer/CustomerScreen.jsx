@@ -373,7 +373,6 @@ export default function CustomerScreen() {
               >
                 <section className="a11y-section">
                   <div className="a11y-section-header">
-                    <span className="a11y-section-icon">🔠</span>
                     <span className="a11y-section-title">Text Size</span>
                     <span className="a11y-section-value">{textScale}%</span>
                   </div>
@@ -388,7 +387,6 @@ export default function CustomerScreen() {
 
                 <section className="a11y-section">
                   <div className="a11y-section-header">
-                    <span className="a11y-section-icon">🌐</span>
                     <span className="a11y-section-title">Language</span>
                   </div>
                   <div id={translateContainerId} className="google-translate-widget" />
@@ -398,7 +396,6 @@ export default function CustomerScreen() {
 
                 <section className="a11y-section">
                   <div className="a11y-section-header" style={{ marginBottom: 0 }}>
-                    <span className="a11y-section-icon">🌗</span>
                     <span className="a11y-section-title">Contrast (B&W)</span>
                     <button className={`a11y-toggle${highContrastEnabled ? ' on' : ' off'}`} onClick={() => setHighContrastEnabled(v => !v)}>
                       {highContrastEnabled ? 'ON' : 'OFF'}
@@ -410,7 +407,6 @@ export default function CustomerScreen() {
 
                 <section className="a11y-section">
                   <div className="a11y-section-header">
-                    <span className="a11y-section-icon">🔍</span>
                     <span className="a11y-section-title">Magnifier</span>
                     <button className={`a11y-toggle${magnifierEnabled ? ' on' : ' off'}`} onClick={() => setMagnifierEnabled(v => !v)}>
                       {magnifierEnabled ? 'ON' : 'OFF'}
