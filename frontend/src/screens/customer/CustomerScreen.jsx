@@ -174,7 +174,7 @@ export default function CustomerScreen() {
   useEffect(() => {
     const root = document.documentElement;
     if (highContrastEnabled) {
-      root.style.filter = 'grayscale(100%) contrast(200%) brightness(95%)';
+      root.style.filter = 'grayscale(100%) contrast(250%) brightness(95%)';
     } else {
       root.style.filter = '';
     }
