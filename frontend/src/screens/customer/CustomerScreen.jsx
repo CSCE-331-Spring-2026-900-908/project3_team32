@@ -184,33 +184,45 @@ export default function CustomerScreen() {
     return () => document.removeEventListener('mousedown', handleOutside);
   }, [accessibilityOpen]);
 
+  // Add this new ref near your other refs at the top of the component
+  const mousePosRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+
+  // Replace your existing magnifier useEffect with this one:
   useEffect(() => {
     if (!magnifierEnabled) return;
     
-    function handleMouseMove(e) {
+    function updateMagnifier() {
       const mag = magnifierRef.current;
       const inner = lensInnerRef.current;
       if (!mag || !inner) return;
-
-      const x = e.clientX;
-      const y = e.clientY;
+      const { x, y } = mousePosRef.current;
+      const scrollX = window.scrollX || document.documentElement.scrollLeft;
+      const scrollY = window.scrollY || document.documentElement.scrollTop;
       const z = magnifierZoomRef.current;
-
       const lensSize = 350; 
       const half = lensSize / 2;
-
       mag.style.left = `${x}px`;
       mag.style.top = `${y}px`;
       mag.style.width = `${lensSize}px`;
       mag.style.height = `${lensSize}px`;
-
       inner.style.transform = `scale(${z})`;
-      inner.style.left = `${-x * z + half}px`;
-      inner.style.top = `${-y * z + half}px`;
+      inner.style.left = `${-(x + scrollX) * z + half}px`;
+      inner.style.top = `${-(y + scrollY) * z + half}px`;
     }
-
+    function handleMouseMove(e) {
+      mousePosRef.current = { x: e.clientX, y: e.clientY };
+      updateMagnifier();
+    }
+    function handleScroll() {
+      updateMagnifier();
+    }
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    updateMagnifier();
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, [magnifierEnabled]);
 
 

@@ -790,7 +790,6 @@
   position: absolute;
   transform-origin: 0 0;
   width: 100vw;
-  height: 100vh;
   pointer-events: none;
   will-change: transform, left, top;
 }
