@@ -162,7 +162,6 @@ export default function CustomerScreen() {
     };
   }, [translateContainerId]);
 
-  // --- Text scale ---
   useEffect(() => {
     const root = document.documentElement;
     const prev = root.style.fontSize;
@@ -170,7 +169,6 @@ export default function CustomerScreen() {
     return () => { root.style.fontSize = prev; };
   }, [textScale]);
 
-  // --- High Contrast (Global) ---
   useEffect(() => {
     const root = document.documentElement;
     if (highContrastEnabled) {
@@ -181,7 +179,6 @@ export default function CustomerScreen() {
     return () => { root.style.filter = ''; };
   }, [highContrastEnabled]);
 
-  // --- Close accessibility dropdown on outside click ---
   useEffect(() => {
     if (!accessibilityOpen) return;
     function handleOutside(e) {
@@ -193,7 +190,6 @@ export default function CustomerScreen() {
     return () => document.removeEventListener('mousedown', handleOutside);
   }, [accessibilityOpen]);
 
-  // --- Magnifier: PERFECT ALIGNMENT MATH ---
   useEffect(() => {
     if (!magnifierEnabled) return;
     function handleMouseMove(e) {
@@ -211,8 +207,16 @@ export default function CustomerScreen() {
       inner.style.left = `${(lw / 2) - 4}px`; 
       inner.style.top = `${(lh / 2) - 4}px`;
 
-      const pageX = e.clientX + window.scrollX;
-      const pageY = e.clientY + window.scrollY;
+      const pageEl = document.querySelector('.customer-page');
+      
+      let pageX = e.clientX + window.scrollX;
+      let pageY = e.clientY + window.scrollY;
+
+      if (pageEl) {
+        const rect = pageEl.getBoundingClientRect();
+        pageX = e.clientX - rect.left;
+        pageY = e.clientY - rect.top;
+      }
       
       inner.style.transformOrigin = '0 0';
       inner.style.transform = `scale(${z}) translate(${-pageX}px, ${-pageY}px)`;
@@ -221,7 +225,6 @@ export default function CustomerScreen() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, [magnifierEnabled]);
 
-  // --- Magnifier: HTML2CANVAS SNAPSHOT ENGINE ---
   useEffect(() => {
     if (!magnifierEnabled) return;
     
@@ -237,7 +240,6 @@ export default function CustomerScreen() {
       isDrawing = true;
 
       try {
-        // We let html2canvas naturally detect device scale (Retina) for a sharper image
         const canvas = await html2canvas(pageEl, {
           logging: false,
           useCORS: true,
@@ -246,7 +248,7 @@ export default function CustomerScreen() {
         });
 
         const filters = highContrastEnabled 
-          ? `grayscale(100%) contrast(120%) brightness(95%)` 
+          ? `grayscale(100%) contrast(250%) brightness(95%)` 
           : `contrast(110%)`;
 
         canvas.style.filter = filters;
@@ -254,9 +256,6 @@ export default function CustomerScreen() {
         canvas.style.left = '0';
         canvas.style.top = '0';
         
-        // CRITICAL STRETCH FIX: 
-        // Bind the CSS sizing strictly to the page's layout dimensions (offsetWidth/offsetHeight).
-        // This decouples the CSS sizing from the high-res physical canvas pixels.
         canvas.style.width = `${pageEl.offsetWidth}px`;
         canvas.style.height = `${pageEl.offsetHeight}px`;
         
@@ -275,9 +274,8 @@ export default function CustomerScreen() {
     updateSnapshot();
     const interval = setInterval(updateSnapshot, 350);
     return () => clearInterval(interval);
-  }, [magnifierEnabled, highContrastEnabled, accessibilityOpen]); // Added accessibilityOpen so it forces a snapshot when menu opens
+  }, [magnifierEnabled, highContrastEnabled, accessibilityOpen]);
 
-  // --- Cart helpers ---
   const visibleItems = useMemo(() => {
     if (selectedCategory === 'All') return menuItems;
     return menuItems.filter(item => item.category === selectedCategory);
@@ -325,7 +323,6 @@ export default function CustomerScreen() {
                 className={`accessibility-panel ${accessibilityOpen ? 'open' : ''}`} 
                 style={{ padding: '1.5rem' }}
               >
-                {/* Text Size */}
                 <section className="a11y-section">
                   <div className="a11y-section-header">
                     <span className="a11y-section-icon"></span>
@@ -341,7 +338,6 @@ export default function CustomerScreen() {
 
                 <div className="a11y-divider" />
 
-                {/* Language */}
                 <section className="a11y-section">
                   <div className="a11y-section-header">
                     <span className="a11y-section-icon"></span>
@@ -352,7 +348,6 @@ export default function CustomerScreen() {
 
                 <div className="a11y-divider" />
 
-                {/* Contrast */}
                 <section className="a11y-section">
                   <div className="a11y-section-header" style={{ marginBottom: 0 }}>
                     <span className="a11y-section-icon"></span>
@@ -365,7 +360,6 @@ export default function CustomerScreen() {
 
                 <div className="a11y-divider" />
 
-                {/* Magnifier */}
                 <section className="a11y-section">
                   <div className="a11y-section-header">
                     <span className="a11y-section-icon"></span>
@@ -394,7 +388,6 @@ export default function CustomerScreen() {
         </div>
       </header>
 
-      {/* Main Content Area */}
       <div className="customer-content-wrapper">
           {screen === SCREEN.MENU && (
             <div className="customer-content">
@@ -415,7 +408,6 @@ export default function CustomerScreen() {
           )}
       </div>
 
-      {/* Magnifier Lens Overlay */}
       {magnifierEnabled && (
         <div
           ref={magnifierRef}
