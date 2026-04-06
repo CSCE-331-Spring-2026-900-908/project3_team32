@@ -532,10 +532,6 @@
   margin-top: 0.5rem !important;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   ACCESSIBILITY DROPDOWN
-═══════════════════════════════════════════════════════════ */
-
 .accessibility-wrapper {
   position: relative;
 }
@@ -608,7 +604,6 @@
   transition: filter 0.2s;
 }
 
-/* FIX 1: Add the [aria-expanded="true"] selector to keep the icon orange when open */
 .accessibility-toggle-btn:hover img,
 .accessibility-toggle-btn[aria-expanded="true"] img {
   filter: brightness(0) saturate(100%) invert(26%) sepia(90%) saturate(614%) hue-rotate(357deg) brightness(91%) contrast(87%);
@@ -664,7 +659,7 @@
   appearance: none;
   display: block;
   width: 100%;
-  height: 16px; 
+  height: 20px; 
   margin: 1.2rem 0;
   border-radius: 999px;
   background: #e5d4b8;
@@ -675,8 +670,8 @@
 
 .a11y-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 44px;
-  height: 44px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   background: #8b4513;
   border: 4px solid white;
@@ -685,8 +680,8 @@
 }
 
 .a11y-slider::-moz-range-thumb {
-  width: 44px;
-  height: 44px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   background: #8b4513;
   border: 4px solid white;
@@ -783,10 +778,6 @@
   cursor: pointer;
   background: white;
 }
-
-/* ═══════════════════════════════════════════════════════════
-   MAGNIFIER OVERLAY & CLONE PROTECTIONS
-═══════════════════════════════════════════════════════════ */
 
 .magnifier-overlay {
   box-sizing: border-box; 
