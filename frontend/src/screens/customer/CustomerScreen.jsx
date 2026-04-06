@@ -189,7 +189,6 @@ export default function CustomerScreen() {
     return () => document.removeEventListener('mousedown', handleOutside);
   }, [accessibilityOpen]);
 
-  // --- PERFECT ALIGNMENT FIX ---
   useEffect(() => {
     if (!magnifierEnabled) return;
     function handleMouseMove(e) {
@@ -208,17 +207,20 @@ export default function CustomerScreen() {
       inner.style.top = `${(lh / 2) - 4}px`;
 
       const pageEl = document.querySelector('.customer-page');
-      let pageX = e.clientX + window.scrollX;
-      let pageY = e.clientY + window.scrollY;
+      
+      let pX = e.pageX;
+      let pY = e.pageY;
 
       if (pageEl) {
         const rect = pageEl.getBoundingClientRect();
-        pageX = e.clientX - rect.left;
-        pageY = e.clientY - rect.top;
+        const absLeft = rect.left + window.scrollX;
+        const absTop = rect.top + window.scrollY;
+        pX = e.pageX - absLeft;
+        pY = e.pageY - absTop;
       }
       
       inner.style.transformOrigin = '0 0';
-      inner.style.transform = `scale(${z}) translate(${-pageX}px, ${-pageY}px)`;
+      inner.style.transform = `scale(${z}) translate(${-pX}px, ${-pY}px)`;
     }
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
     return () => window.removeEventListener('mousemove', handleMouseMove);
@@ -239,11 +241,18 @@ export default function CustomerScreen() {
       isDrawing = true;
 
       try {
+        const snapWidth = pageEl.scrollWidth;
+        const snapHeight = pageEl.scrollHeight;
+
         const canvas = await html2canvas(pageEl, {
           logging: false,
           useCORS: true,
           scale: window.devicePixelRatio || 1, 
-          backgroundColor: '#fef3e2'
+          backgroundColor: '#fef3e2',
+          width: snapWidth,
+          height: snapHeight,
+          scrollX: 0,
+          scrollY: -window.scrollY
         });
 
         const filters = highContrastEnabled 
@@ -255,8 +264,8 @@ export default function CustomerScreen() {
         canvas.style.left = '0';
         canvas.style.top = '0';
         
-        canvas.style.width = `${pageEl.offsetWidth}px`;
-        canvas.style.height = `${pageEl.offsetHeight}px`;
+        canvas.style.width = `${snapWidth}px`;
+        canvas.style.height = `${snapHeight}px`;
         
         canvas.style.pointerEvents = 'none'; 
 
@@ -273,9 +282,7 @@ export default function CustomerScreen() {
     updateSnapshot();
     const interval = setInterval(updateSnapshot, 350);
     return () => clearInterval(interval);
-  }, [magnifierEnabled, highContrastEnabled, accessibilityOpen]);
-
-  // --- Cart helpers ---
+  }, [magnifierEnabled, highContrastEnabled, accessibilityOpen, screen]);
   const visibleItems = useMemo(() => {
     if (selectedCategory === 'All') return menuItems;
     return menuItems.filter(item => item.category === selectedCategory);
@@ -608,6 +615,7 @@ export default function CustomerScreen() {
         </button>
       )}
 
+      {/* Magnifier Lens Overlay */}
       {magnifierEnabled && (
         <div
           ref={magnifierRef}
