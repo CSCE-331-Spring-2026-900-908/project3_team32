@@ -174,8 +174,7 @@ export default function CustomerScreen() {
   useEffect(() => {
     const root = document.documentElement;
     if (highContrastEnabled) {
-      // 120% contrast prevents the extreme graininess of the old 300% setting
-      root.style.filter = 'grayscale(100%) contrast(200%) brightness(95%)';
+      root.style.filter = 'grayscale(100%) contrast(120%) brightness(95%)';
     } else {
       root.style.filter = '';
     }
@@ -238,18 +237,15 @@ export default function CustomerScreen() {
       isDrawing = true;
 
       try {
+        // We capture the FULL page and remove the viewport width/height overrides
+        // so html2canvas computes the exact, natural aspect ratio of your layout.
         const canvas = await html2canvas(pageEl, {
           logging: false,
           useCORS: true,
           scale: 1, 
-          backgroundColor: '#fef3e2',
-          x: window.scrollX,
-          y: window.scrollY,
-          windowWidth: document.documentElement.clientWidth,
-          windowHeight: document.documentElement.clientHeight
+          backgroundColor: '#fef3e2'
         });
 
-        // Toned down filter for the magnifier overlay as well to prevent grain
         const filters = highContrastEnabled 
           ? `grayscale(100%) contrast(120%) brightness(95%)` 
           : `contrast(110%)`;
@@ -258,8 +254,12 @@ export default function CustomerScreen() {
         canvas.style.position = 'absolute';
         canvas.style.left = '0';
         canvas.style.top = '0';
-        canvas.style.width = `${document.documentElement.clientWidth}px`;
-        canvas.style.height = `${document.documentElement.clientHeight}px`;
+        
+        // CRITICAL FIX: Bind the CSS dimensions directly to the canvas's generated physical dimensions.
+        // This ensures the image cannot be stretched or squished by viewport mismatches.
+        canvas.style.width = `${canvas.width}px`;
+        canvas.style.height = `${canvas.height}px`;
+        
         canvas.style.pointerEvents = 'none'; 
 
         inner.appendChild(canvas);
@@ -328,7 +328,7 @@ export default function CustomerScreen() {
                 {/* Text Size */}
                 <section className="a11y-section">
                   <div className="a11y-section-header">
-                    <span className="a11y-section-icon"></span>
+                    <span className="a11y-section-icon">🔠</span>
                     <span className="a11y-section-title">Text Size</span>
                     <span className="a11y-section-value">{textScale}%</span>
                   </div>
@@ -344,7 +344,7 @@ export default function CustomerScreen() {
                 {/* Language */}
                 <section className="a11y-section">
                   <div className="a11y-section-header">
-                    <span className="a11y-section-icon"></span>
+                    <span className="a11y-section-icon">🌐</span>
                     <span className="a11y-section-title">Language</span>
                   </div>
                   <div id={translateContainerId} className="google-translate-widget" />
@@ -352,10 +352,10 @@ export default function CustomerScreen() {
 
                 <div className="a11y-divider" />
 
-                {/* Contrast (Extracted into new standalone setting) */}
+                {/* Contrast */}
                 <section className="a11y-section">
                   <div className="a11y-section-header" style={{ marginBottom: 0 }}>
-                    <span className="a11y-section-icon"></span>
+                    <span className="a11y-section-icon">🌗</span>
                     <span className="a11y-section-title">Contrast (B&W)</span>
                     <button className={`a11y-toggle${highContrastEnabled ? ' on' : ' off'}`} onClick={() => setHighContrastEnabled(v => !v)}>
                       {highContrastEnabled ? 'ON' : 'OFF'}
@@ -368,7 +368,7 @@ export default function CustomerScreen() {
                 {/* Magnifier */}
                 <section className="a11y-section">
                   <div className="a11y-section-header">
-                    <span className="a11y-section-icon"></span>
+                    <span className="a11y-section-icon">🔍</span>
                     <span className="a11y-section-title">Magnifier</span>
                     <button className={`a11y-toggle${magnifierEnabled ? ' on' : ' off'}`} onClick={() => setMagnifierEnabled(v => !v)}>
                       {magnifierEnabled ? 'ON' : 'OFF'}
@@ -437,7 +437,7 @@ export default function CustomerScreen() {
           }}
         >
           <div ref={lensInnerRef} style={{ position: 'absolute', pointerEvents: 'none' }} />
-          <div className="magnifier-badge"> {magnifierZoom}×</div>
+          <div className="magnifier-badge">🔍 {magnifierZoom}×</div>
         </div>
       )}
     </div>
