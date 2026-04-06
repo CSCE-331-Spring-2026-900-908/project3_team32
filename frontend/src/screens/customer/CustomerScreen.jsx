@@ -62,6 +62,9 @@ export default function CustomerScreen() {
   const lensInnerRef = useRef(null);
   const magnifierZoomRef = useRef(magnifierZoom);
   const accessibilityPanelRef = useRef(null);
+  
+  // Ref for magnifier scroll tracking
+  const mousePosRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
 
   const translateContainerId = useMemo(() => `google_translate_${Math.random().toString(36).substring(7)}`, []);
 
@@ -173,18 +176,7 @@ export default function CustomerScreen() {
     return () => { root.style.filter = ''; };
   }, [highContrastEnabled]);
 
-  useEffect(() => {
-    if (!accessibilityOpen) return;
-    function handleOutside(e) {
-      if (accessibilityPanelRef.current && !accessibilityPanelRef.current.contains(e.target)) {
-        setAccessibilityOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleOutside);
-    return () => document.removeEventListener('mousedown', handleOutside);
-  }, [accessibilityOpen]);
-
-  const mousePosRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+  // The "click outside to close" useEffect has been completely removed to lock the menu open.
 
   useEffect(() => {
     if (!magnifierEnabled) return;
