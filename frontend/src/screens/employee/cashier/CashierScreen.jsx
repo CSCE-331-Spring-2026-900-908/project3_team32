@@ -8,6 +8,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '/api';
 const SCREEN = {
   HOME: 'HOME',
   ITEM_SELECT: 'ITEM_SELECT',
+  SIZE: 'SIZE',
   SUGAR: 'SUGAR',
   ICE: 'ICE',
   TOPPINGS: 'TOPPINGS',
@@ -21,6 +22,7 @@ function currency(value) {
 
 function buildDisplayLines(item) {
   const lines = [];
+  if (item.sizeName) lines.push(`Size: ${item.sizeName}`);
   if (item.sugarLevel) lines.push(`Sugar: ${item.sugarLevel}`);
   if (item.iceLevel) lines.push(`Ice: ${item.iceLevel}`);
   if (item.toppingNames?.length) lines.push(`Toppings: ${item.toppingNames.join(', ')}`);
@@ -35,6 +37,7 @@ export default function CashierPOS() {
   const [orderItems, setOrderItems] = useState([]);
   const [currentItem, setCurrentItem] = useState(null);
   const [previousScreen, setPreviousScreen] = useState(SCREEN.HOME);
+  const [selectedSize, setSelectedSize] = useState(null);
   const [selectedSugar, setSelectedSugar] = useState(null);
   const [selectedIce, setSelectedIce] = useState(null);
   const [selectedToppings, setSelectedToppings] = useState([]);
@@ -51,6 +54,7 @@ export default function CashierPOS() {
   const [sugarOptions, setSugarOptions] = useState([]);
   const [iceOptions, setIceOptions] = useState([]);
   const [toppingOptions, setToppingOptions] = useState([]);
+  const [sizeOptions, setSizeOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState([]);
 
@@ -97,6 +101,12 @@ export default function CashierPOS() {
           cost: Number(m.cost)
         })));
         
+        setSizeOptions((modData.sizes || []).map(m => ({
+          id: m.modification_type_id,
+          name: m.name,
+          cost: Number(m.cost)
+        })));
+        
         setLoading(false);
       } catch (error) {
         console.error('Failed to load data:', error);
@@ -120,6 +130,7 @@ export default function CashierPOS() {
   );
 
   function clearSelectionState() {
+    setSelectedSize(null);
     setSelectedSugar(null);
     setSelectedIce(null);
     setSelectedToppings([]);
@@ -130,7 +141,7 @@ export default function CashierPOS() {
     setCurrentItem(item);
     setPreviousScreen(sourceScreen);
     clearSelectionState();
-    setScreen(SCREEN.SUGAR);
+    setScreen(sizeOptions.length > 0 ? SCREEN.SIZE : SCREEN.SUGAR);
   }
 
   function toggleTopping(topping) {
@@ -146,21 +157,24 @@ export default function CashierPOS() {
 
     const totalPrice =
       currentItem.cost +
+      (selectedSize?.cost || 0) +
       (selectedSugar?.cost || 0) +
       (selectedIce?.cost || 0) +
       selectedToppings.reduce((sum, topping) => sum + topping.cost, 0);
 
     const modificationIds = [
+      selectedSize?.id,
       selectedSugar?.id,
       selectedIce?.id,
       ...selectedToppings.map(t => t.id)
     ].filter(Boolean);
 
     const item = {
-      id: nextItemId, // Use incrementing ID
+      id: nextItemId,
       menuItemId: currentItem.id,
       name: currentItem.name,
       price: totalPrice,
+      sizeName: selectedSize?.name || null,
       sugarLevel: selectedSugar?.name || null,
       iceLevel: selectedIce?.name || null,
       toppingNames: selectedToppings.map((topping) => topping.name),
@@ -367,6 +381,20 @@ export default function CashierPOS() {
           </section>
         )}
 
+        {screen === SCREEN.SIZE && (
+          <SelectionStep
+            title="Select Size"
+            options={sizeOptions}
+            selectedId={selectedSize?.id}
+            onSelect={setSelectedSize}
+            onBack={() => {
+              clearSelectionState();
+              setScreen(previousScreen);
+            }}
+            onNext={() => setScreen(SCREEN.SUGAR)}
+          />
+        )}
+
         {screen === SCREEN.SUGAR && (
           <SelectionStep
             title="Select Sugar Level"
@@ -374,8 +402,12 @@ export default function CashierPOS() {
             selectedId={selectedSugar?.id}
             onSelect={setSelectedSugar}
             onBack={() => {
-              clearSelectionState();
-              setScreen(previousScreen);
+              if (sizeOptions.length > 0) {
+                setScreen(SCREEN.SIZE);
+              } else {
+                clearSelectionState();
+                setScreen(previousScreen);
+              }
             }}
             onNext={() => setScreen(SCREEN.ICE)}
           />

@@ -23,6 +23,7 @@ function currency(value) {
 
 function buildDisplayLines(item) {
   const lines = [];
+  if (item.sizeName) lines.push(`Size: ${item.sizeName}`);
   if (item.sugarLevel) lines.push(`Sugar: ${item.sugarLevel}`);
   if (item.iceLevel) lines.push(`Ice: ${item.iceLevel}`);
   if (item.toppingNames?.length) lines.push(`Toppings: ${item.toppingNames.join(', ')}`);
@@ -69,6 +70,7 @@ export default function CustomerScreen() {
   const [cart, setCart] = useState([]);
   const [currentItem, setCurrentItem] = useState(null);
   const [customizeStep, setCustomizeStep] = useState(1);
+  const [selectedSize, setSelectedSize] = useState(null);
   const [selectedSugar, setSelectedSugar] = useState(null);
   const [selectedIce, setSelectedIce] = useState(null);
   const [selectedToppings, setSelectedToppings] = useState([]);
@@ -82,6 +84,7 @@ export default function CustomerScreen() {
   const [sugarOptions, setSugarOptions] = useState([]);
   const [iceOptions, setIceOptions] = useState([]);
   const [toppingOptions, setToppingOptions] = useState([]);
+  const [sizeOptions, setSizeOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState(['All']);
 
@@ -123,6 +126,12 @@ export default function CustomerScreen() {
         })));
         
         setToppingOptions((modData.toppings || []).map(m => ({
+          id: m.modification_type_id,
+          name: m.name,
+          cost: Number(m.cost)
+        })));
+        
+        setSizeOptions((modData.sizes || []).map(m => ({
           id: m.modification_type_id,
           name: m.name,
           cost: Number(m.cost)
@@ -208,7 +217,10 @@ export default function CustomerScreen() {
 
   const cartCount = cart.length;
 
+  const totalSteps = sizeOptions.length > 0 ? 4 : 3;
+
   function clearCustomization() {
+    setSelectedSize(null);
     setSelectedSugar(null);
     setSelectedIce(null);
     setSelectedToppings([]);
@@ -235,11 +247,13 @@ export default function CustomerScreen() {
 
     const totalPrice =
       currentItem.cost +
+      (selectedSize?.cost || 0) +
       (selectedSugar?.cost || 0) +
       (selectedIce?.cost || 0) +
       selectedToppings.reduce((sum, t) => sum + t.cost, 0);
 
     const modificationIds = [
+      selectedSize?.id,
       selectedSugar?.id,
       selectedIce?.id,
       ...selectedToppings.map(t => t.id)
@@ -250,6 +264,7 @@ export default function CustomerScreen() {
       menuItemId: currentItem.id,
       name: currentItem.name,
       price: totalPrice,
+      sizeName: selectedSize?.name || null,
       sugarLevel: selectedSugar?.name || 'Regular',
       iceLevel: selectedIce?.name || 'Regular',
       toppingNames: selectedToppings.map((t) => t.name),
@@ -410,111 +425,137 @@ export default function CustomerScreen() {
       )}
 
       {/* Customize Screen */}
-      {screen === SCREEN.CUSTOMIZE && currentItem && (
-        <div className="customer-content customize-screen">
-          <div className="customize-header">
-            <h2>{currentItem.name}</h2>
-            <div className="customize-progress">Step {customizeStep} of 3</div>
-          </div>
+      {screen === SCREEN.CUSTOMIZE && currentItem && (() => {
+        const hasSizes = sizeOptions.length > 0;
+        const sizeStep = hasSizes ? 1 : null;
+        const sugarStep = hasSizes ? 2 : 1;
+        const iceStep = hasSizes ? 3 : 2;
+        const toppingsStep = hasSizes ? 4 : 3;
 
-          {customizeStep === 1 && (
-            <div className="customize-section">
-              <h3>Choose Sugar Level</h3>
-              <div className="option-grid">
-                {sugarOptions.map((option) => (
-                  <button
-                    key={option.id}
-                    className={`option-btn ${selectedSugar?.id === option.id ? 'selected' : ''}`}
-                    onClick={() => setSelectedSugar(option)}
-                  >
-                    <div>{option.name}</div>
-                    {option.cost > 0 && <div className="option-cost">+{currency(option.cost)}</div>}
-                  </button>
-                ))}
-              </div>
+        return (
+          <div className="customer-content customize-screen">
+            <div className="customize-header">
+              <h2>{currentItem.name}</h2>
+              <div className="customize-progress">Step {customizeStep} of {totalSteps}</div>
             </div>
-          )}
 
-          {customizeStep === 2 && (
-            <div className="customize-section">
-              <h3>Choose Ice Level</h3>
-              <div className="option-grid">
-                {iceOptions.map((option) => (
-                  <button
-                    key={option.id}
-                    className={`option-btn ${selectedIce?.id === option.id ? 'selected' : ''}`}
-                    onClick={() => setSelectedIce(option)}
-                  >
-                    <div>{option.name}</div>
-                    {option.cost > 0 && <div className="option-cost">+{currency(option.cost)}</div>}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {customizeStep === 3 && (
-            <div className="customize-section">
-              <h3>Add Toppings (Optional)</h3>
-              <div className="option-grid">
-                {toppingOptions.map((option) => {
-                  const isSelected = selectedToppings.some((t) => t.id === option.id);
-                  return (
+            {hasSizes && customizeStep === sizeStep && (
+              <div className="customize-section">
+                <h3>Choose Size</h3>
+                <div className="option-grid">
+                  {sizeOptions.map((option) => (
                     <button
                       key={option.id}
-                      className={`option-btn ${isSelected ? 'selected' : ''}`}
-                      onClick={() => toggleTopping(option)}
+                      className={`option-btn ${selectedSize?.id === option.id ? 'selected' : ''}`}
+                      onClick={() => setSelectedSize(option)}
                     >
                       <div>{option.name}</div>
-                      <div className="option-cost">+{currency(option.cost)}</div>
+                      {option.cost > 0 && <div className="option-cost">+{currency(option.cost)}</div>}
                     </button>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
+            )}
 
-              <div className="comments-section">
-                <label>Special Instructions (Optional)</label>
-                <input
-                  type="text"
-                  value={comments}
-                  onChange={(e) => setComments(e.target.value)}
-                  placeholder="e.g., less sweet, extra ice"
-                  className="comments-input"
-                />
+            {customizeStep === sugarStep && (
+              <div className="customize-section">
+                <h3>Choose Sugar Level</h3>
+                <div className="option-grid">
+                  {sugarOptions.map((option) => (
+                    <button
+                      key={option.id}
+                      className={`option-btn ${selectedSugar?.id === option.id ? 'selected' : ''}`}
+                      onClick={() => setSelectedSugar(option)}
+                    >
+                      <div>{option.name}</div>
+                      {option.cost > 0 && <div className="option-cost">+{currency(option.cost)}</div>}
+                    </button>
+                  ))}
+                </div>
               </div>
+            )}
+
+            {customizeStep === iceStep && (
+              <div className="customize-section">
+                <h3>Choose Ice Level</h3>
+                <div className="option-grid">
+                  {iceOptions.map((option) => (
+                    <button
+                      key={option.id}
+                      className={`option-btn ${selectedIce?.id === option.id ? 'selected' : ''}`}
+                      onClick={() => setSelectedIce(option)}
+                    >
+                      <div>{option.name}</div>
+                      {option.cost > 0 && <div className="option-cost">+{currency(option.cost)}</div>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {customizeStep === toppingsStep && (
+              <div className="customize-section">
+                <h3>Add Toppings (Optional)</h3>
+                <div className="option-grid">
+                  {toppingOptions.map((option) => {
+                    const isSelected = selectedToppings.some((t) => t.id === option.id);
+                    return (
+                      <button
+                        key={option.id}
+                        className={`option-btn ${isSelected ? 'selected' : ''}`}
+                        onClick={() => toggleTopping(option)}
+                      >
+                        <div>{option.name}</div>
+                        <div className="option-cost">+{currency(option.cost)}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="comments-section">
+                  <label>Special Instructions (Optional)</label>
+                  <input
+                    type="text"
+                    value={comments}
+                    onChange={(e) => setComments(e.target.value)}
+                    placeholder="e.g., less sweet, extra ice"
+                    className="comments-input"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="customize-actions">
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  if (customizeStep === 1) {
+                    clearCustomization();
+                    setCurrentItem(null);
+                    setScreen(SCREEN.MENU);
+                  } else {
+                    setCustomizeStep(customizeStep - 1);
+                  }
+                }}
+              >
+                {customizeStep === 1 ? 'Cancel' : 'Back'}
+              </button>
+              <button
+                className="btn-primary"
+                onClick={() => {
+                  if (customizeStep === totalSteps) {
+                    addToCart();
+                  } else {
+                    setCustomizeStep(customizeStep + 1);
+                  }
+                }}
+              >
+                {customizeStep === totalSteps ? 'Add to Cart' : 'Next'}
+              </button>
             </div>
-          )}
-
-          <div className="customize-actions">
-            <button
-              className="btn-secondary"
-              onClick={() => {
-                if (customizeStep === 1) {
-                  clearCustomization();
-                  setCurrentItem(null);
-                  setScreen(SCREEN.MENU);
-                } else {
-                  setCustomizeStep(customizeStep - 1);
-                }
-              }}
-            >
-              {customizeStep === 1 ? 'Cancel' : 'Back'}
-            </button>
-            <button
-              className="btn-primary"
-              onClick={() => {
-                if (customizeStep === 3) {
-                  addToCart();
-                } else {
-                  setCustomizeStep(customizeStep + 1);
-                }
-              }}
-            >
-              {customizeStep === 3 ? 'Add to Cart' : 'Next'}
-            </button>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Cart Screen */}
       {screen === SCREEN.CART && (

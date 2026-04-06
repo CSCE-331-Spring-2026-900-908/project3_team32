@@ -347,13 +347,13 @@ app.get('/api/cashier/modifications', async (req, res, next) => {
     const result = await pool.query(
       `SELECT modification_type_id, name, cost
        FROM modification_type
-       WHERE modification_type_id BETWEEN 1 AND 17
        ORDER BY modification_type_id`,
     );
 
     const sugar = [];
     const ice = [];
     const toppings = [];
+    const sizes = [];
 
     for (const row of result.rows) {
       const record = {
@@ -365,12 +365,14 @@ app.get('/api/cashier/modifications', async (req, res, next) => {
         sugar.push(record);
       } else if (record.modification_type_id >= 7 && record.modification_type_id <= 10) {
         ice.push(record);
-      } else if (record.modification_type_id >= 11 && record.modification_type_id <= 17) {
+      } else if (record.modification_type_id >= 11 && record.modification_type_id <= 20) {
         toppings.push(record);
+      } else if (record.modification_type_id >= 21) {
+        sizes.push(record);
       }
     }
 
-    res.json({ sugar, ice, toppings });
+    res.json({ sugar, ice, toppings, sizes });
   } catch (error) {
     next(error);
   }
