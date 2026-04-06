@@ -184,10 +184,8 @@ export default function CustomerScreen() {
     return () => document.removeEventListener('mousedown', handleOutside);
   }, [accessibilityOpen]);
 
-  // Add this new ref near your other refs at the top of the component
   const mousePosRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
 
-  // Replace your existing magnifier useEffect with this one:
   useEffect(() => {
     if (!magnifierEnabled) return;
     
@@ -195,30 +193,54 @@ export default function CustomerScreen() {
       const mag = magnifierRef.current;
       const inner = lensInnerRef.current;
       if (!mag || !inner) return;
+
       const { x, y } = mousePosRef.current;
       const scrollX = window.scrollX || document.documentElement.scrollLeft;
       const scrollY = window.scrollY || document.documentElement.scrollTop;
       const z = magnifierZoomRef.current;
+
       const lensSize = 350; 
       const half = lensSize / 2;
+
       mag.style.left = `${x}px`;
       mag.style.top = `${y}px`;
       mag.style.width = `${lensSize}px`;
       mag.style.height = `${lensSize}px`;
+
       inner.style.transform = `scale(${z})`;
       inner.style.left = `${-(x + scrollX) * z + half}px`;
       inner.style.top = `${-(y + scrollY) * z + half}px`;
+
+      const syncFixedElement = (realId, magId) => {
+        const realEl = document.getElementById(realId);
+        const magEl = document.getElementById(magId);
+        if (realEl && magEl) {
+          const rect = realEl.getBoundingClientRect();
+          magEl.style.top = `${rect.top + scrollY}px`;
+          magEl.style.left = `${rect.left + scrollX}px`;
+          magEl.style.width = `${rect.width}px`;
+          magEl.style.height = `${rect.height}px`;
+        }
+      };
+
+      syncFixedElement('real-cart-badge', 'magnified-cart-badge');
+      syncFixedElement('real-confirmation', 'magnified-confirmation');
     }
+
     function handleMouseMove(e) {
       mousePosRef.current = { x: e.clientX, y: e.clientY };
       updateMagnifier();
     }
+
     function handleScroll() {
       updateMagnifier();
     }
+
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
     window.addEventListener('scroll', handleScroll, { passive: true });
-    updateMagnifier();
+    
+    updateMagnifier(); 
+
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('scroll', handleScroll);
@@ -535,7 +557,11 @@ export default function CustomerScreen() {
       </div>
 
       {showConfirmation && (
-        <div className="order-confirmation-notification">
+        <div 
+          id={isMagnified ? 'magnified-confirmation' : 'real-confirmation'}
+          className="order-confirmation-notification"
+          style={isMagnified ? { transform: 'none', left: 0, top: 0 } : {}}
+        >
           <div className="confirmation-content">
             <div className="confirmation-checkmark">✓</div>
             <div className="confirmation-text">
@@ -548,7 +574,12 @@ export default function CustomerScreen() {
       )}
 
       {screen !== SCREEN.CART && screen !== SCREEN.CHECKOUT && cartCount > 0 && (
-        <button className="cart-badge" onClick={() => setScreen(SCREEN.CART)}>
+        <button 
+          id={isMagnified ? 'magnified-cart-badge' : 'real-cart-badge'}
+          className="cart-badge" 
+          onClick={() => setScreen(SCREEN.CART)}
+          style={isMagnified ? { bottom: 'auto', right: 'auto', margin: 0 } : {}}
+        >
           <span className="cart-icon">🛒</span>
           <span className="cart-count">{cartCount}</span>
           <span>{currency(cartTotal)}</span>
