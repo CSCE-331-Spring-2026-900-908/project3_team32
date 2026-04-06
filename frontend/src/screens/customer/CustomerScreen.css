@@ -594,12 +594,11 @@
   border: 2px solid #e5d4b8;
   z-index: 9000;
   overflow: hidden;
+  display: none;
+}
 
-  visibility: hidden;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-8px);
-  transition: opacity 0.2s ease-out, transform 0.2s ease-out, visibility 0.2s ease-out;
+.accessibility-panel.open {
+  display: block;
 }
 
 .accessibility-toggle-btn img {

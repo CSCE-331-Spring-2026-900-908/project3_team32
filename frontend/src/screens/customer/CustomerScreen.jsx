@@ -237,12 +237,11 @@ export default function CustomerScreen() {
       isDrawing = true;
 
       try {
-        // We capture the FULL page and remove the viewport width/height overrides
-        // so html2canvas computes the exact, natural aspect ratio of your layout.
+        // We let html2canvas naturally detect device scale (Retina) for a sharper image
         const canvas = await html2canvas(pageEl, {
           logging: false,
           useCORS: true,
-          scale: 1, 
+          scale: window.devicePixelRatio || 1, 
           backgroundColor: '#fef3e2'
         });
 
@@ -255,10 +254,11 @@ export default function CustomerScreen() {
         canvas.style.left = '0';
         canvas.style.top = '0';
         
-        // CRITICAL FIX: Bind the CSS dimensions directly to the canvas's generated physical dimensions.
-        // This ensures the image cannot be stretched or squished by viewport mismatches.
-        canvas.style.width = `${canvas.width}px`;
-        canvas.style.height = `${canvas.height}px`;
+        // CRITICAL STRETCH FIX: 
+        // Bind the CSS sizing strictly to the page's layout dimensions (offsetWidth/offsetHeight).
+        // This decouples the CSS sizing from the high-res physical canvas pixels.
+        canvas.style.width = `${pageEl.offsetWidth}px`;
+        canvas.style.height = `${pageEl.offsetHeight}px`;
         
         canvas.style.pointerEvents = 'none'; 
 
@@ -275,7 +275,7 @@ export default function CustomerScreen() {
     updateSnapshot();
     const interval = setInterval(updateSnapshot, 350);
     return () => clearInterval(interval);
-  }, [magnifierEnabled, highContrastEnabled]);
+  }, [magnifierEnabled, highContrastEnabled, accessibilityOpen]); // Added accessibilityOpen so it forces a snapshot when menu opens
 
   // --- Cart helpers ---
   const visibleItems = useMemo(() => {
