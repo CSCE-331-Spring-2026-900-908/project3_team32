@@ -203,24 +203,21 @@ export default function CustomerScreen() {
       mag.style.left = `${e.clientX - lw / 2}px`;
       mag.style.top = `${e.clientY - lh / 2}px`;
 
-      inner.style.left = `${(lw / 2) - 4}px`; 
-      inner.style.top = `${(lh / 2) - 4}px`;
+      inner.style.left = `${lw / 2}px`;
+      inner.style.top = `${lh / 2}px`;
 
       const pageEl = document.querySelector('.customer-page');
-      
-      let pX = e.pageX;
-      let pY = e.pageY;
+      let relX = e.clientX;
+      let relY = e.clientY;
 
       if (pageEl) {
         const rect = pageEl.getBoundingClientRect();
-        const absLeft = rect.left + window.scrollX;
-        const absTop = rect.top + window.scrollY;
-        pX = e.pageX - absLeft;
-        pY = e.pageY - absTop;
+        relX = e.clientX - rect.left;
+        relY = e.clientY - rect.top;
       }
       
       inner.style.transformOrigin = '0 0';
-      inner.style.transform = `scale(${z}) translate(${-pX}px, ${-pY}px)`;
+      inner.style.transform = `scale(${z}) translate(${-relX}px, ${-relY}px)`;
     }
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
     return () => window.removeEventListener('mousemove', handleMouseMove);
@@ -235,44 +232,45 @@ export default function CustomerScreen() {
       if (isDrawing) return;
       const pageEl = document.querySelector('.customer-page');
       const inner = lensInnerRef.current;
-      const magOverlay = magnifierRef.current;
-      if (!pageEl || !inner || !magOverlay) return;
+      if (!pageEl || !inner) return;
 
       isDrawing = true;
 
       try {
-        const snapWidth = pageEl.scrollWidth;
-        const snapHeight = pageEl.scrollHeight;
+        const w = pageEl.offsetWidth;
+        const h = pageEl.offsetHeight;
 
         const canvas = await html2canvas(pageEl, {
           logging: false,
           useCORS: true,
           scale: window.devicePixelRatio || 1, 
           backgroundColor: '#fef3e2',
-          width: snapWidth,
-          height: snapHeight,
+          width: w,
+          height: h,
+          windowWidth: document.documentElement.clientWidth,
+          windowHeight: document.documentElement.clientHeight,
+          x: 0,
+          y: 0,
           scrollX: 0,
-          scrollY: -window.scrollY
+          scrollY: 0
         });
 
         const filters = highContrastEnabled 
           ? `grayscale(100%) contrast(250%) brightness(95%)` 
           : `contrast(110%)`;
 
+        canvas.style.width = `${w}px`;
+        canvas.style.height = `${h}px`;
+        
         canvas.style.filter = filters;
         canvas.style.position = 'absolute';
         canvas.style.left = '0';
         canvas.style.top = '0';
-        
-        canvas.style.width = `${snapWidth}px`;
-        canvas.style.height = `${snapHeight}px`;
-        
         canvas.style.pointerEvents = 'none'; 
 
+        inner.innerHTML = '';
         inner.appendChild(canvas);
-        while (inner.childNodes.length > 1) {
-          inner.removeChild(inner.firstChild);
-        }
+        
       } catch (err) {
         console.error('Magnifier snapshot failed:', err);
       }
@@ -282,7 +280,9 @@ export default function CustomerScreen() {
     updateSnapshot();
     const interval = setInterval(updateSnapshot, 350);
     return () => clearInterval(interval);
-  }, [magnifierEnabled, highContrastEnabled, accessibilityOpen, screen]);
+    
+  }, [magnifierEnabled, highContrastEnabled, accessibilityOpen, screen, customizeStep]);
+
   const visibleItems = useMemo(() => {
     if (selectedCategory === 'All') return menuItems;
     return menuItems.filter(item => item.category === selectedCategory);
@@ -637,7 +637,21 @@ export default function CustomerScreen() {
           }}
         >
           <div ref={lensInnerRef} style={{ position: 'absolute', pointerEvents: 'none' }} />
-          <div className="magnifier-badge"> {magnifierZoom}×</div>
+          
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            width: '6px',
+            height: '6px',
+            background: 'rgba(239, 68, 68, 0.8)',
+            borderRadius: '50%',
+            transform: 'translate(-50%, -50%)',
+            pointerEvents: 'none',
+            boxShadow: '0 0 0 2px rgba(255,255,255,0.8)'
+          }} />
+
+          <div className="magnifier-badge">🔍 {magnifierZoom}×</div>
         </div>
       )}
     </div>
