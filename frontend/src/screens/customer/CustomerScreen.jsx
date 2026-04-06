@@ -280,20 +280,24 @@ export default function CustomerScreen() {
   const textSizePercent = ((textScale - 85) / (140 - 85)) * 100;
   const zoomPercent = ((magnifierZoom - 1.5) / (4 - 1.5)) * 100;
 
-  const renderAppContent = () => (
+  const renderAppContent = (isMagnified = false) => (
     <>
       <header className="customer-header">
         <div className="header-content">
           <h1>Team 32's Boba Bar</h1>
           <div className="header-actions">
 
-            <div className="accessibility-wrapper" ref={accessibilityPanelRef}>
+            <div className="accessibility-wrapper" ref={isMagnified ? null : accessibilityPanelRef}>
               <button
                 className="accessibility-toggle-btn"
                 onClick={() => setAccessibilityOpen(o => !o)}
                 aria-expanded={accessibilityOpen}
                 aria-haspopup="true"
               >
+                <img 
+                  src="https://uxwing.com/wp-content/themes/uxwing/download/web-app-development/accessibility-icon.png" 
+                  alt="Accessibility" 
+                />
                 <span>Accessibility</span>
                 <span className={`a11y-caret${accessibilityOpen ? ' open' : ''}`}>▾</span>
               </button>
@@ -320,7 +324,7 @@ export default function CustomerScreen() {
                   <div className="a11y-section-header">
                     <span className="a11y-section-title">Language</span>
                   </div>
-                  <div id={translateContainerId} className="google-translate-widget" />
+                  <div id={isMagnified ? undefined : translateContainerId} className="google-translate-widget" />
                 </section>
 
                 <div className="a11y-divider" />
@@ -543,14 +547,14 @@ export default function CustomerScreen() {
 
   return (
     <div className="customer-page">
-      {renderAppContent()}
+      {renderAppContent(false)}
 
       {magnifierEnabled && (
         <div ref={magnifierRef} className="magnifier-v1">
           <div ref={lensInnerRef} className="magnified-content">
-            {renderAppContent()}
+            {renderAppContent(true)}
           </div>
-          <div className="magnifier-badge">🔍 {magnifierZoom}×</div>
+          <div className="magnifier-badge">{magnifierZoom}×</div>
         </div>
       )}
     </div>
