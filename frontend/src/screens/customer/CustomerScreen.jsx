@@ -1,29 +1,19 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import html2canvas from 'html2canvas';
 import './CustomerScreen.css';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 const GOOGLE_TRANSLATE_SCRIPT_ID = 'google-translate-script';
 
-const LANGUAGE_CODE_ALIASES = {
-  iw: 'he',
-  jw: 'jv',
-};
+const LANGUAGE_CODE_ALIASES = { iw: 'he', jw: 'jv' };
 
-const SCREEN = {
-  MENU: 'MENU',
-  CUSTOMIZE: 'CUSTOMIZE',
-  CART: 'CART',
-  CHECKOUT: 'CHECKOUT',
-};
+const SCREEN = { MENU: 'MENU', CUSTOMIZE: 'CUSTOMIZE', CART: 'CART', CHECKOUT: 'CHECKOUT' };
 
-function currency(value) {
-  return `$${value.toFixed(2)}`;
-}
+function currency(value) { return `$${value.toFixed(2)}`; }
 
 function buildDisplayLines(item) {
   const lines = [];
-  if (item.sizeName) lines.push(`Size: ${item.sizeName}`);
   if (item.sugarLevel) lines.push(`Sugar: ${item.sugarLevel}`);
   if (item.iceLevel) lines.push(`Ice: ${item.iceLevel}`);
   if (item.toppingNames?.length) lines.push(`Toppings: ${item.toppingNames.join(', ')}`);
@@ -33,33 +23,13 @@ function buildDisplayLines(item) {
 
 function toNativeLanguageName(languageCode, fallback) {
   if (!languageCode) return fallback;
-
   const [baseCode] = languageCode.split('-');
   const normalizedBaseCode = LANGUAGE_CODE_ALIASES[baseCode] || baseCode;
   const normalizedLocale = languageCode.replace(baseCode, normalizedBaseCode);
-
   try {
     const displayNames = new Intl.DisplayNames([normalizedLocale], { type: 'language' });
     return displayNames.of(normalizedBaseCode) || fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function relabelGoogleTranslateOptions() {
-  const select = document.querySelector('#google_translate_element select.goog-te-combo');
-  if (!select) return false;
-
-  Array.from(select.options).forEach((option) => {
-    const code = option.value;
-    if (!code) {
-      option.text = 'English';
-      return;
-    }
-    option.text = toNativeLanguageName(code, option.text);
-  });
-
-  return true;
+  } catch { return fallback; }
 }
 
 export default function CustomerScreen() {
@@ -70,7 +40,6 @@ export default function CustomerScreen() {
   const [cart, setCart] = useState([]);
   const [currentItem, setCurrentItem] = useState(null);
   const [customizeStep, setCustomizeStep] = useState(1);
-  const [selectedSize, setSelectedSize] = useState(null);
   const [selectedSugar, setSelectedSugar] = useState(null);
   const [selectedIce, setSelectedIce] = useState(null);
   const [selectedToppings, setSelectedToppings] = useState([]);
@@ -78,95 +47,94 @@ export default function CustomerScreen() {
   const [orderNumber, setOrderNumber] = useState(null);
   const [showCart, setShowCart] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
-  
+
+  // Accessibility panel state
+  const [accessibilityOpen, setAccessibilityOpen] = useState(false);
+  const [magnifierEnabled, setMagnifierEnabled] = useState(false);
+  const [magnifierZoom, setMagnifierZoom] = useState(2);
+  const [highContrastEnabled, setHighContrastEnabled] = useState(false);
+
   // API data
   const [menuItems, setMenuItems] = useState([]);
   const [sugarOptions, setSugarOptions] = useState([]);
   const [iceOptions, setIceOptions] = useState([]);
   const [toppingOptions, setToppingOptions] = useState([]);
-  const [sizeOptions, setSizeOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState(['All']);
 
-  // Load menu items and modifications on mount
+  const magnifierRef = useRef(null);
+  const lensInnerRef = useRef(null);
+  const magnifierZoomRef = useRef(magnifierZoom);
+  const accessibilityPanelRef = useRef(null);
+
+  const translateContainerId = useMemo(() => `google_translate_${Math.random().toString(36).substring(7)}`, []);
+
+  useEffect(() => { magnifierZoomRef.current = magnifierZoom; }, [magnifierZoom]);
+
+  // --- Data loading ---
   useEffect(() => {
     async function loadData() {
       try {
         setLoading(true);
-        
-        // Fetch menu items
         const menuRes = await fetch(`${API_BASE}/menu/items`);
         const menuData = await menuRes.json();
         const items = menuData.menuItems || menuData.items || [];
         setMenuItems(items.map(item => ({
-          id: item.menu_item_id,
-          name: item.name,
-          cost: Number(item.cost),
-          category: item.category || 'Other'
+          id: item.menu_item_id, name: item.name,
+          cost: Number(item.cost), category: item.category || 'Other'
         })));
-        
-        // Extract unique categories
         const uniqueCategories = [...new Set(items.map(item => item.category || 'Other'))];
         setCategories(['All', ...uniqueCategories]);
-        
-        // Fetch modifications
         const modRes = await fetch(`${API_BASE}/cashier/modifications`);
         const modData = await modRes.json();
-        
-        setSugarOptions((modData.sugar || []).map(m => ({
-          id: m.modification_type_id,
-          name: m.name,
-          cost: Number(m.cost)
-        })));
-        
-        setIceOptions((modData.ice || []).map(m => ({
-          id: m.modification_type_id,
-          name: m.name,
-          cost: Number(m.cost)
-        })));
-        
-        setToppingOptions((modData.toppings || []).map(m => ({
-          id: m.modification_type_id,
-          name: m.name,
-          cost: Number(m.cost)
-        })));
-        
-        setSizeOptions((modData.sizes || []).map(m => ({
-          id: m.modification_type_id,
-          name: m.name,
-          cost: Number(m.cost)
-        })));
-        
+        setSugarOptions((modData.sugar || []).map(m => ({ id: m.modification_type_id, name: m.name, cost: Number(m.cost) })));
+        setIceOptions((modData.ice || []).map(m => ({ id: m.modification_type_id, name: m.name, cost: Number(m.cost) })));
+        setToppingOptions((modData.toppings || []).map(m => ({ id: m.modification_type_id, name: m.name, cost: Number(m.cost) })));
         setLoading(false);
       } catch (error) {
         console.error('Failed to load data:', error);
         setLoading(false);
       }
     }
-    
     loadData();
   }, []);
 
+  // --- Google Translate ---
   useEffect(() => {
     let labelInterval = null;
 
     function initializeGoogleTranslate() {
       if (!window.google?.translate) return;
-      const container = document.getElementById('google_translate_element');
+      
+      const container = document.getElementById(translateContainerId);
       if (!container || container.childElementCount > 0) return;
 
-      new window.google.translate.TranslateElement(
-        {
-          pageLanguage: 'en',
-          autoDisplay: false
-        },
-        'google_translate_element'
-      );
+      try {
+        new window.google.translate.TranslateElement(
+          { pageLanguage: 'en', autoDisplay: false },
+          translateContainerId
+        );
+      } catch (error) {
+        console.error('Google Translate init error:', error);
+      }
 
       let attempts = 0;
       labelInterval = window.setInterval(() => {
         attempts += 1;
-        const updated = relabelGoogleTranslateOptions();
+        const select = document.querySelector(`#${translateContainerId} select.goog-te-combo`);
+        let updated = false;
+
+        if (select) {
+          Array.from(select.options).forEach((option) => {
+            const code = option.value;
+            if (!code) { option.text = 'English'; return; }
+            const newText = toNativeLanguageName(code, option.text);
+            if (option.text !== newText) {
+              option.text = newText;
+              updated = true;
+            }
+          });
+        }
         if (updated || attempts >= 50) {
           window.clearInterval(labelInterval);
           labelInterval = null;
@@ -176,12 +144,6 @@ export default function CustomerScreen() {
 
     window.googleTranslateElementInit = initializeGoogleTranslate;
 
-    const existingScript = document.getElementById(GOOGLE_TRANSLATE_SCRIPT_ID);
-    if (existingScript) {
-      initializeGoogleTranslate();
-      return;
-    }
-
     const script = document.createElement('script');
     script.id = GOOGLE_TRANSLATE_SCRIPT_ID;
     script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
@@ -189,461 +151,293 @@ export default function CustomerScreen() {
     document.body.appendChild(script);
 
     return () => {
-      if (labelInterval) {
-        window.clearInterval(labelInterval);
+      if (labelInterval) window.clearInterval(labelInterval);
+      const existingScript = document.getElementById(GOOGLE_TRANSLATE_SCRIPT_ID);
+      if (existingScript) existingScript.remove();
+      if (window.google && window.google.translate) {
+        delete window.google.translate;
       }
+      const injectedElements = document.querySelectorAll('.skiptranslate, iframe.goog-te-menu-frame, #goog-gt-tt');
+      injectedElements.forEach(el => el.remove());
     };
-  }, []);
+  }, [translateContainerId]);
 
+  // --- Text scale ---
   useEffect(() => {
     const root = document.documentElement;
-    const previousFontSize = root.style.fontSize;
+    const prev = root.style.fontSize;
     root.style.fontSize = `${textScale}%`;
-
-    return () => {
-      root.style.fontSize = previousFontSize;
-    };
+    return () => { root.style.fontSize = prev; };
   }, [textScale]);
 
-  const visibleItems = useMemo(() => {
-    if (selectedCategory === 'All') return menuItems;
-    return menuItems.filter((item) => item.category === selectedCategory);
-  }, [selectedCategory, menuItems]);
+  // --- High Contrast (Global) ---
+  useEffect(() => {
+    const root = document.documentElement;
+    if (highContrastEnabled) {
+      // 120% contrast prevents the extreme graininess of the old 300% setting
+      root.style.filter = 'grayscale(100%) contrast(200%) brightness(95%)';
+    } else {
+      root.style.filter = '';
+    }
+    return () => { root.style.filter = ''; };
+  }, [highContrastEnabled]);
 
-  const cartTotal = useMemo(
-    () => cart.reduce((sum, item) => sum + item.price, 0),
-    [cart]
-  );
-
-  const cartCount = cart.length;
-
-  const totalSteps = sizeOptions.length > 0 ? 4 : 3;
-
-  function clearCustomization() {
-    setSelectedSize(null);
-    setSelectedSugar(null);
-    setSelectedIce(null);
-    setSelectedToppings([]);
-    setComments('');
-    setCustomizeStep(1);
-  }
-
-  function handleSelectItem(item) {
-    setCurrentItem(item);
-    clearCustomization();
-    setScreen(SCREEN.CUSTOMIZE);
-  }
-
-  function toggleTopping(topping) {
-    setSelectedToppings((prev) => {
-      const exists = prev.some((t) => t.id === topping.id);
-      if (exists) return prev.filter((t) => t.id !== topping.id);
-      return [...prev, topping];
-    });
-  }
-
-  function addToCart() {
-    if (!currentItem) return;
-
-    const totalPrice =
-      currentItem.cost +
-      (selectedSize?.cost || 0) +
-      (selectedSugar?.cost || 0) +
-      (selectedIce?.cost || 0) +
-      selectedToppings.reduce((sum, t) => sum + t.cost, 0);
-
-    const modificationIds = [
-      selectedSize?.id,
-      selectedSugar?.id,
-      selectedIce?.id,
-      ...selectedToppings.map(t => t.id)
-    ].filter(Boolean);
-
-    const item = {
-      id: Date.now(),
-      menuItemId: currentItem.id,
-      name: currentItem.name,
-      price: totalPrice,
-      sizeName: selectedSize?.name || null,
-      sugarLevel: selectedSugar?.name || 'Regular',
-      iceLevel: selectedIce?.name || 'Regular',
-      toppingNames: selectedToppings.map((t) => t.name),
-      comments: comments.trim(),
-      modificationIds
-    };
-
-    setCart((prev) => [...prev, item]);
-    clearCustomization();
-    setCurrentItem(null);
-    setScreen(SCREEN.MENU);
-    setShowCart(true);
-    setTimeout(() => setShowCart(false), 2000);
-  }
-
-  function removeFromCart(itemId) {
-    setCart((prev) => prev.filter((item) => item.id !== itemId));
-  }
-
-  function completeOrder() {
-    async function submitOrder() {
-      try {
-        const orderPayload = {
-          employee_id: 1, // Use employee ID 1 for customer kiosk orders
-          payment_type: 'CARD',
-          items: cart.map(item => ({
-            menu_item_id: item.menuItemId,
-            quantity: 1,
-            modification_ids: item.modificationIds || [],
-            comments: item.comments || ''
-          }))
-        };
-        
-        console.log('Submitting order:', orderPayload); // Debug log
-        
-        const response = await fetch(`${API_BASE}/cashier/orders`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(orderPayload)
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          console.error('Order submission failed:', errorData);
-          throw new Error(errorData.error || 'Order submission failed');
-        }
-        
-        const result = await response.json();
-        const orderNum = result.order?.order_id || Math.floor(1000 + Math.random() * 9000);
-        
-        // Clear cart and go back to menu
-        setCart([]);
-        setOrderNumber(orderNum);
-        setScreen(SCREEN.MENU);
-        setShowConfirmation(true);
-        
-        // Hide confirmation after 5 seconds
-        setTimeout(() => {
-          setShowConfirmation(false);
-          setOrderNumber(null);
-        }, 5000);
-      } catch (error) {
-        console.error('Order submission error:', error);
-        alert(`Failed to submit order: ${error.message}. Please try again or see a cashier.`);
+  // --- Close accessibility dropdown on outside click ---
+  useEffect(() => {
+    if (!accessibilityOpen) return;
+    function handleOutside(e) {
+      if (accessibilityPanelRef.current && !accessibilityPanelRef.current.contains(e.target)) {
+        setAccessibilityOpen(false);
       }
     }
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [accessibilityOpen]);
+
+  // --- Magnifier: PERFECT ALIGNMENT MATH ---
+  useEffect(() => {
+    if (!magnifierEnabled) return;
+    function handleMouseMove(e) {
+      const mag = magnifierRef.current;
+      const inner = lensInnerRef.current;
+      if (!mag || !inner) return;
+      
+      const lw = Math.round(window.innerWidth / 2.5);
+      const lh = Math.round(window.innerHeight / 2.5);
+      const z = magnifierZoomRef.current;
+
+      mag.style.left = `${e.clientX - lw / 2}px`;
+      mag.style.top = `${e.clientY - lh / 2}px`;
+
+      inner.style.left = `${(lw / 2) - 4}px`; 
+      inner.style.top = `${(lh / 2) - 4}px`;
+
+      const pageX = e.clientX + window.scrollX;
+      const pageY = e.clientY + window.scrollY;
+      
+      inner.style.transformOrigin = '0 0';
+      inner.style.transform = `scale(${z}) translate(${-pageX}px, ${-pageY}px)`;
+    }
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [magnifierEnabled]);
+
+  // --- Magnifier: HTML2CANVAS SNAPSHOT ENGINE ---
+  useEffect(() => {
+    if (!magnifierEnabled) return;
     
-    submitOrder();
+    let isDrawing = false; 
+
+    async function updateSnapshot() {
+      if (isDrawing) return;
+      const pageEl = document.querySelector('.customer-page');
+      const inner = lensInnerRef.current;
+      const magOverlay = magnifierRef.current;
+      if (!pageEl || !inner || !magOverlay) return;
+
+      isDrawing = true;
+
+      try {
+        const canvas = await html2canvas(pageEl, {
+          logging: false,
+          useCORS: true,
+          scale: 1, 
+          backgroundColor: '#fef3e2',
+          x: window.scrollX,
+          y: window.scrollY,
+          windowWidth: document.documentElement.clientWidth,
+          windowHeight: document.documentElement.clientHeight
+        });
+
+        // Toned down filter for the magnifier overlay as well to prevent grain
+        const filters = highContrastEnabled 
+          ? `grayscale(100%) contrast(120%) brightness(95%)` 
+          : `contrast(110%)`;
+
+        canvas.style.filter = filters;
+        canvas.style.position = 'absolute';
+        canvas.style.left = '0';
+        canvas.style.top = '0';
+        canvas.style.width = `${document.documentElement.clientWidth}px`;
+        canvas.style.height = `${document.documentElement.clientHeight}px`;
+        canvas.style.pointerEvents = 'none'; 
+
+        inner.appendChild(canvas);
+        while (inner.childNodes.length > 1) {
+          inner.removeChild(inner.firstChild);
+        }
+      } catch (err) {
+        console.error('Magnifier snapshot failed:', err);
+      }
+      isDrawing = false;
+    }
+
+    updateSnapshot();
+    const interval = setInterval(updateSnapshot, 350);
+    return () => clearInterval(interval);
+  }, [magnifierEnabled, highContrastEnabled]);
+
+  // --- Cart helpers ---
+  const visibleItems = useMemo(() => {
+    if (selectedCategory === 'All') return menuItems;
+    return menuItems.filter(item => item.category === selectedCategory);
+  }, [selectedCategory, menuItems]);
+
+  const cartTotal = useMemo(() => cart.reduce((sum, item) => sum + item.price, 0), [cart]);
+
+  function clearCustomization() {
+    setSelectedSugar(null); setSelectedIce(null);
+    setSelectedToppings([]); setComments(''); setCustomizeStep(1);
   }
+  function handleSelectItem(item) {
+    setCurrentItem(item); clearCustomization(); setScreen(SCREEN.CUSTOMIZE);
+  }
+  
+  const lensW = typeof window !== 'undefined' ? Math.round(window.innerWidth / 2.5) : 400;
+  const lensH = typeof window !== 'undefined' ? Math.round(window.innerHeight / 2.5) : 300;
+
+  const textSizePercent = ((textScale - 85) / (140 - 85)) * 100;
+  const zoomPercent = ((magnifierZoom - 1.5) / (4 - 1.5)) * 100;
 
   return (
     <div className="customer-page">
-      {/* Header */}
       <header className="customer-header">
         <div className="header-content">
           <h1>Team 32's Boba Bar</h1>
           <div className="header-actions">
-            <div className="text-size-control">
-              <label htmlFor="text-size-slider">Text Size</label>
-              <input
-                id="text-size-slider"
-                type="range"
-                min="85"
-                max="140"
-                step="5"
-                value={textScale}
-                onChange={(e) => setTextScale(Number(e.target.value))}
-              />
-              <span>{textScale}%</span>
+
+            <div className="accessibility-wrapper" ref={accessibilityPanelRef}>
+              <button
+                className="accessibility-toggle-btn"
+                onClick={() => setAccessibilityOpen(o => !o)}
+                aria-expanded={accessibilityOpen}
+                aria-haspopup="true"
+              >
+                <img 
+                  src="https://uxwing.com/wp-content/themes/uxwing/download/web-app-development/accessibility-icon.png" 
+                  alt="Accessibility" 
+                />
+                <span>Accessibility</span>
+                <span className={`a11y-caret${accessibilityOpen ? ' open' : ''}`}>▾</span>
+              </button>
+
+              <div 
+                className={`accessibility-panel ${accessibilityOpen ? 'open' : ''}`} 
+                style={{ padding: '1.5rem' }}
+              >
+                {/* Text Size */}
+                <section className="a11y-section">
+                  <div className="a11y-section-header">
+                    <span className="a11y-section-icon"></span>
+                    <span className="a11y-section-title">Text Size</span>
+                    <span className="a11y-section-value">{textScale}%</span>
+                  </div>
+                  <input type="range" min="85" max="140" step="5"
+                    value={textScale} onChange={e => setTextScale(Number(e.target.value))}
+                    className="a11y-slider"
+                    style={{ background: `linear-gradient(to right, #8b4513 ${textSizePercent}%, #e5d4b8 ${textSizePercent}%)` }} 
+                  />
+                </section>
+
+                <div className="a11y-divider" />
+
+                {/* Language */}
+                <section className="a11y-section">
+                  <div className="a11y-section-header">
+                    <span className="a11y-section-icon"></span>
+                    <span className="a11y-section-title">Language</span>
+                  </div>
+                  <div id={translateContainerId} className="google-translate-widget" />
+                </section>
+
+                <div className="a11y-divider" />
+
+                {/* Contrast (Extracted into new standalone setting) */}
+                <section className="a11y-section">
+                  <div className="a11y-section-header" style={{ marginBottom: 0 }}>
+                    <span className="a11y-section-icon"></span>
+                    <span className="a11y-section-title">Contrast (B&W)</span>
+                    <button className={`a11y-toggle${highContrastEnabled ? ' on' : ' off'}`} onClick={() => setHighContrastEnabled(v => !v)}>
+                      {highContrastEnabled ? 'ON' : 'OFF'}
+                    </button>
+                  </div>
+                </section>
+
+                <div className="a11y-divider" />
+
+                {/* Magnifier */}
+                <section className="a11y-section">
+                  <div className="a11y-section-header">
+                    <span className="a11y-section-icon"></span>
+                    <span className="a11y-section-title">Magnifier</span>
+                    <button className={`a11y-toggle${magnifierEnabled ? ' on' : ' off'}`} onClick={() => setMagnifierEnabled(v => !v)}>
+                      {magnifierEnabled ? 'ON' : 'OFF'}
+                    </button>
+                  </div>
+
+                  {magnifierEnabled && (
+                    <div className="magnifier-controls">
+                      <label className="a11y-control-label">Zoom &nbsp;<strong>{magnifierZoom}×</strong></label>
+                      <input type="range" min="1.5" max="4" step="0.5"
+                        value={magnifierZoom} onChange={e => setMagnifierZoom(Number(e.target.value))}
+                        className="a11y-slider"
+                        style={{ background: `linear-gradient(to right, #8b4513 ${zoomPercent}%, #e5d4b8 ${zoomPercent}%)` }}
+                      />
+                    </div>
+                  )}
+                </section>
+              </div>
             </div>
-            <div id="google_translate_element" className="google-translate-widget" />
-            <button className="exit-btn" onClick={() => navigate('/')}>
-              Exit
-            </button>
+
+            <button className="exit-btn" onClick={() => navigate('/')}>Exit</button>
           </div>
         </div>
       </header>
 
-      {/* Order Confirmation Notification */}
-      {showConfirmation && (
-        <div className="order-confirmation-notification">
-          <div className="confirmation-content">
-            <div className="confirmation-checkmark">✓</div>
-            <div className="confirmation-text">
-              <h3>Order Confirmed!</h3>
-              <p>Order #{orderNumber}</p>
-              <p className="confirmation-subtitle">Please proceed to the counter to pick up your order</p>
+      {/* Main Content Area */}
+      <div className="customer-content-wrapper">
+          {screen === SCREEN.MENU && (
+            <div className="customer-content">
+                <div className="category-tabs">
+                    {categories.map(cat => (
+                        <button key={cat} className={`category-tab${selectedCategory === cat ? ' active' : ''}`} onClick={() => setSelectedCategory(cat)}>{cat}</button>
+                    ))}
+                </div>
+                <div className="menu-grid">
+                    {visibleItems.map(item => (
+                        <button key={item.id} className="menu-item-card" onClick={() => handleSelectItem(item)}>
+                            <div className="item-name">{item.name}</div>
+                            <div className="item-price">{currency(item.cost)}</div>
+                        </button>
+                    ))}
+                </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Cart Badge */}
-      {screen === SCREEN.MENU && cartCount > 0 && (
-        <button className="cart-badge" onClick={() => setScreen(SCREEN.CART)}>
-          <span className="cart-icon">🛒</span>
-          <span className="cart-count">{cartCount}</span>
-          <span className="cart-total">{currency(cartTotal)}</span>
-        </button>
-      )}
-
-      {/* Menu Screen */}
-      {screen === SCREEN.MENU && (
-        <div className="customer-content">
-          {loading && <div style={{ textAlign: 'center', padding: '20px' }}>Loading menu...</div>}
-          
-          {!loading && (
-            <>
-              {/* Category Tabs */}
-              <div className="category-tabs">
-                {categories.map((cat) => (
-                  <button
-                    key={cat}
-                    className={`category-tab ${selectedCategory === cat ? 'active' : ''}`}
-                    onClick={() => setSelectedCategory(cat)}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-
-              {/* Menu Grid */}
-              <div className="menu-grid">
-                {visibleItems.map((item) => (
-                  <button
-                    key={item.id}
-                    className="menu-item-card"
-                    onClick={() => handleSelectItem(item)}
-                  >
-                    <div className="item-name">{item.name}</div>
-                    <div className="item-price">{currency(item.cost)}</div>
-                  </button>
-                ))}
-              </div>
-            </>
           )}
-        </div>
-      )}
+      </div>
 
-      {/* Customize Screen */}
-      {screen === SCREEN.CUSTOMIZE && currentItem && (() => {
-        const hasSizes = sizeOptions.length > 0;
-        const sizeStep = hasSizes ? 1 : null;
-        const sugarStep = hasSizes ? 2 : 1;
-        const iceStep = hasSizes ? 3 : 2;
-        const toppingsStep = hasSizes ? 4 : 3;
-
-        return (
-          <div className="customer-content customize-screen">
-            <div className="customize-header">
-              <h2>{currentItem.name}</h2>
-              <div className="customize-progress">Step {customizeStep} of {totalSteps}</div>
-            </div>
-
-            {hasSizes && customizeStep === sizeStep && (
-              <div className="customize-section">
-                <h3>Choose Size</h3>
-                <div className="option-grid">
-                  {sizeOptions.map((option) => (
-                    <button
-                      key={option.id}
-                      className={`option-btn ${selectedSize?.id === option.id ? 'selected' : ''}`}
-                      onClick={() => setSelectedSize(option)}
-                    >
-                      <div>{option.name}</div>
-                      {option.cost > 0 && <div className="option-cost">+{currency(option.cost)}</div>}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {customizeStep === sugarStep && (
-              <div className="customize-section">
-                <h3>Choose Sugar Level</h3>
-                <div className="option-grid">
-                  {sugarOptions.map((option) => (
-                    <button
-                      key={option.id}
-                      className={`option-btn ${selectedSugar?.id === option.id ? 'selected' : ''}`}
-                      onClick={() => setSelectedSugar(option)}
-                    >
-                      <div>{option.name}</div>
-                      {option.cost > 0 && <div className="option-cost">+{currency(option.cost)}</div>}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {customizeStep === iceStep && (
-              <div className="customize-section">
-                <h3>Choose Ice Level</h3>
-                <div className="option-grid">
-                  {iceOptions.map((option) => (
-                    <button
-                      key={option.id}
-                      className={`option-btn ${selectedIce?.id === option.id ? 'selected' : ''}`}
-                      onClick={() => setSelectedIce(option)}
-                    >
-                      <div>{option.name}</div>
-                      {option.cost > 0 && <div className="option-cost">+{currency(option.cost)}</div>}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {customizeStep === toppingsStep && (
-              <div className="customize-section">
-                <h3>Add Toppings (Optional)</h3>
-                <div className="option-grid">
-                  {toppingOptions.map((option) => {
-                    const isSelected = selectedToppings.some((t) => t.id === option.id);
-                    return (
-                      <button
-                        key={option.id}
-                        className={`option-btn ${isSelected ? 'selected' : ''}`}
-                        onClick={() => toggleTopping(option)}
-                      >
-                        <div>{option.name}</div>
-                        <div className="option-cost">+{currency(option.cost)}</div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="comments-section">
-                  <label>Special Instructions (Optional)</label>
-                  <input
-                    type="text"
-                    value={comments}
-                    onChange={(e) => setComments(e.target.value)}
-                    placeholder="e.g., less sweet, extra ice"
-                    className="comments-input"
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="customize-actions">
-              <button
-                className="btn-secondary"
-                onClick={() => {
-                  if (customizeStep === 1) {
-                    clearCustomization();
-                    setCurrentItem(null);
-                    setScreen(SCREEN.MENU);
-                  } else {
-                    setCustomizeStep(customizeStep - 1);
-                  }
-                }}
-              >
-                {customizeStep === 1 ? 'Cancel' : 'Back'}
-              </button>
-              <button
-                className="btn-primary"
-                onClick={() => {
-                  if (customizeStep === totalSteps) {
-                    addToCart();
-                  } else {
-                    setCustomizeStep(customizeStep + 1);
-                  }
-                }}
-              >
-                {customizeStep === totalSteps ? 'Add to Cart' : 'Next'}
-              </button>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* Cart Screen */}
-      {screen === SCREEN.CART && (
-        <div className="customer-content cart-screen">
-          <h2>Your Cart</h2>
-
-          {cart.length === 0 ? (
-            <div className="empty-cart">
-              <p>Your cart is empty</p>
-              <button className="btn-primary" onClick={() => setScreen(SCREEN.MENU)}>
-                Browse Menu
-              </button>
-            </div>
-          ) : (
-            <>
-              <div className="cart-items">
-                {cart.map((item, index) => (
-                  <div key={item.id} className="cart-item">
-                    <div className="cart-item-header">
-                      <span className="cart-item-number">{index + 1}.</span>
-                      <span className="cart-item-name">{item.name}</span>
-                      <span className="cart-item-price">{currency(item.price)}</span>
-                      <button
-                        className="remove-btn"
-                        onClick={() => removeFromCart(item.id)}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                    <div className="cart-item-details">
-                      {buildDisplayLines(item).map((line, i) => (
-                        <div key={i} className="cart-item-detail">{line}</div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="cart-total">
-                <span>Total:</span>
-                <span>{currency(cartTotal)}</span>
-              </div>
-
-              <div className="cart-actions">
-                <button className="btn-secondary" onClick={() => setScreen(SCREEN.MENU)}>
-                  Add More Items
-                </button>
-                <button className="btn-primary" onClick={() => setScreen(SCREEN.CHECKOUT)}>
-                  Proceed to Checkout
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Checkout Screen */}
-      {screen === SCREEN.CHECKOUT && (
-        <div className="customer-content checkout-screen">
-          <h2>Checkout</h2>
-
-          <div className="checkout-summary">
-            <div className="summary-row">
-              <span>Items:</span>
-              <span>{cartCount}</span>
-            </div>
-            <div className="summary-row total">
-              <span>Total:</span>
-              <span>{currency(cartTotal)}</span>
-            </div>
-          </div>
-
-          <div className="payment-methods">
-            <h3>Select Payment Method</h3>
-            <button className="payment-btn" onClick={completeOrder}>
-              💳 Credit/Debit Card
-            </button>
-            <button className="payment-btn" onClick={completeOrder}>
-              📱 Mobile Payment
-            </button>
-            <button className="payment-btn" onClick={completeOrder}>
-              🎁 Gift Card
-            </button>
-          </div>
-
-          <button className="btn-secondary full-width" onClick={() => setScreen(SCREEN.CART)}>
-            Back to Cart
-          </button>
+      {/* Magnifier Lens Overlay */}
+      {magnifierEnabled && (
+        <div
+          ref={magnifierRef}
+          className="magnifier-overlay"
+          data-html2canvas-ignore="true" 
+          style={{
+            position: 'fixed',
+            width: `${lensW}px`,
+            height: `${lensH}px`,
+            overflow: 'hidden',
+            borderRadius: '16px',
+            border: '4px solid #8b4513',
+            boxShadow: '0 8px 40px rgba(0,0,0,0.55)',
+            zIndex: 9998,
+            pointerEvents: 'none',
+            background: '#fff',
+            left: 0,
+            top: 0,
+          }}
+        >
+          <div ref={lensInnerRef} style={{ position: 'absolute', pointerEvents: 'none' }} />
+          <div className="magnifier-badge"> {magnifierZoom}×</div>
         </div>
       )}
     </div>
