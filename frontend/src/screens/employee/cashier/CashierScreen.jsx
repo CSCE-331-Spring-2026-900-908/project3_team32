@@ -268,7 +268,7 @@ export default function CashierPOS() {
                 localStorage.removeItem('employee');
                 localStorage.removeItem('user');
                 sessionStorage.clear();
-                navigate('/');
+                navigate('/login/employee');
               }}
             >
               Logout

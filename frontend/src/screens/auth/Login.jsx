@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FiShoppingBag, FiUsers, FiArrowLeft, FiCheck, FiLock } from 'react-icons/fi';
+import { FiShoppingBag, FiUsers, FiCheck, FiLock } from 'react-icons/fi';
 import './Login.css';
 
 function Login() {
@@ -18,10 +18,6 @@ function Login() {
   return (
     <div className={`login ${role}-login`}>
       <div className="login-card">
-        <button className="back-button" onClick={() => navigate('/')}>
-          <FiArrowLeft /> Back
-        </button>
-
         <Icon className="login-icon" />
         
         <h1>{title} Access</h1>

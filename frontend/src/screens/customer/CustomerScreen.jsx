@@ -388,7 +388,7 @@ export default function CustomerScreen() {
               </div>
             </div>
 
-            <button className="exit-btn" onClick={() => navigate('/')}>Exit</button>
+            <button className="exit-btn" onClick={() => navigate('/login/customer')}>Exit</button>
           </div>
         </div>
       </header>

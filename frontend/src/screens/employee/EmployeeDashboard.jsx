@@ -28,7 +28,7 @@ function EmployeeDashboard() {
               <p>Select your role to continue</p>
             </div>
           </div>
-          <button className="logout-btn" onClick={() => navigate('/')}>
+          <button className="logout-btn" onClick={() => navigate('/login/employee')}>
             <FiLogOut />
             <span>Logout</span>
           </button>

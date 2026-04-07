@@ -92,7 +92,7 @@ export default function ManagerScreen() {
               localStorage.removeItem('employee');
               localStorage.removeItem('user');
               sessionStorage.clear();
-              navigate('/');
+              navigate('/login/employee');
             }}
             className="logout-button"
           >
