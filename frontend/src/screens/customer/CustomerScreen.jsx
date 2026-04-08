@@ -25,7 +25,7 @@ function pointsFromAmount(amount) {
 
 function getRewardsStatus(points, isEmployee) {
   if (isEmployee) {
-    return { tier: 'Diamond', discountRate: 0.30, note: 'Employee discount', nextTierAt: null };
+    return { tier: 'Employee', discountRate: 0.50, note: 'Employee Exclusive - 50% Off', nextTierAt: null };
   }
   if (points >= DIAMOND_POINTS_THRESHOLD) {
     return { tier: 'Diamond', discountRate: 0.30, note: '', nextTierAt: null };
@@ -386,6 +386,7 @@ export default function CustomerScreen() {
     return Math.max(0, Math.min(100, pct));
   }, [rewardsStatus.nextTierAt, tierFloor, projectedPoints]);
   const rewardsTone = useMemo(() => {
+    if (rewardsStatus.tier === 'Employee') return 'employee';
     if (rewardsStatus.tier === 'Diamond') return 'diamond';
     if (rewardsStatus.tier === 'Platinum') return 'platinum';
     if (rewardsStatus.tier === 'Gold') return 'gold';
@@ -726,11 +727,17 @@ export default function CustomerScreen() {
                       </span>
                     </div>
                     {rewardsStatus.note && <div className="rewards-note rewards-note-employee">{rewardsStatus.note}</div>}
-                    <div className="tier-visual-row">
-                      <span className={`tier-chip ${['Gold', 'Platinum', 'Diamond'].includes(rewardsStatus.tier) ? 'active' : ''}`}>Gold</span>
-                      <span className={`tier-chip ${['Platinum', 'Diamond'].includes(rewardsStatus.tier) ? 'active' : ''}`}>Platinum</span>
-                      <span className={`tier-chip ${rewardsStatus.tier === 'Diamond' ? 'active' : ''}`}>Diamond</span>
-                    </div>
+                    {rewardsStatus.tier === 'Employee' ? (
+                      <div className="tier-visual-row">
+                        <span className="tier-chip tier-chip-employee active">Employee Only</span>
+                      </div>
+                    ) : (
+                      <div className="tier-visual-row">
+                        <span className={`tier-chip ${['Gold', 'Platinum', 'Diamond'].includes(rewardsStatus.tier) ? 'active' : ''}`}>Gold</span>
+                        <span className={`tier-chip ${['Platinum', 'Diamond'].includes(rewardsStatus.tier) ? 'active' : ''}`}>Platinum</span>
+                        <span className={`tier-chip ${rewardsStatus.tier === 'Diamond' ? 'active' : ''}`}>Diamond</span>
+                      </div>
+                    )}
                     <div className="rewards-progress">
                       <div className="rewards-progress-fill" style={{ width: `${tierProgressPercent}%` }} />
                     </div>

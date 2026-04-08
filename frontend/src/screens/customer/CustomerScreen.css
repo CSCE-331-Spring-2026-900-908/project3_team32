@@ -419,6 +419,11 @@
   background: #fffdf9;
 }
 
+.rewards-tone-employee {
+  border-color: #dc2626;
+  background: #fff1f2;
+}
+
 .rewards-tone-gold {
   border-color: #d4a017;
   background: #fff8dc;
@@ -447,6 +452,12 @@
   color: #8b4513;
   border-color: #d4a574;
   background: #fef3e2;
+}
+
+.rewards-tier-employee {
+  color: #7f1d1d;
+  border-color: #dc2626;
+  background: #fecdd3;
 }
 
 .rewards-tier-gold {
@@ -487,6 +498,18 @@
 .tier-chip.active {
   background: #8b4513;
   border-color: #8b4513;
+  color: white;
+}
+
+.tier-chip-employee {
+  border-color: #dc2626;
+  color: #7f1d1d;
+  background: #fecdd3;
+}
+
+.tier-chip-employee.active {
+  border-color: #b91c1c;
+  background: #dc2626;
   color: white;
 }
 
