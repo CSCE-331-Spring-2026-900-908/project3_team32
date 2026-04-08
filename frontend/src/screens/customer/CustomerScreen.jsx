@@ -5,12 +5,39 @@ import './CustomerScreen.css';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 const GOOGLE_TRANSLATE_SCRIPT_ID = 'google-translate-script';
+const TAX_RATE = 0.0825;
+const GOLD_POINTS_THRESHOLD = 1000;
+const PLATINUM_POINTS_THRESHOLD = GOLD_POINTS_THRESHOLD + 2500;
+const DIAMOND_POINTS_THRESHOLD = PLATINUM_POINTS_THRESHOLD + 5000;
+const REWARDS_WINDOW_MS = 365 * 24 * 60 * 60 * 1000;
 
 const LANGUAGE_CODE_ALIASES = { iw: 'he', jw: 'jv' };
 
 const SCREEN = { MENU: 'MENU', CUSTOMIZE: 'CUSTOMIZE', CART: 'CART', CHECKOUT: 'CHECKOUT' };
 
 function currency(value) { return `$${value.toFixed(2)}`; }
+
+function pointsFromAmount(amount) {
+  const numericAmount = Number(amount);
+  if (!Number.isFinite(numericAmount) || numericAmount <= 0) return 0;
+  return Math.floor(numericAmount) * 10;
+}
+
+function getRewardsStatus(points, isEmployee) {
+  if (isEmployee) {
+    return { tier: 'Diamond', discountRate: 0.30, note: 'Employee discount', nextTierAt: null };
+  }
+  if (points >= DIAMOND_POINTS_THRESHOLD) {
+    return { tier: 'Diamond', discountRate: 0.30, note: '', nextTierAt: null };
+  }
+  if (points >= PLATINUM_POINTS_THRESHOLD) {
+    return { tier: 'Platinum', discountRate: 0.20, note: '', nextTierAt: DIAMOND_POINTS_THRESHOLD };
+  }
+  if (points >= GOLD_POINTS_THRESHOLD) {
+    return { tier: 'Gold', discountRate: 0.10, note: '', nextTierAt: PLATINUM_POINTS_THRESHOLD };
+  }
+  return { tier: 'Member', discountRate: 0, note: '', nextTierAt: GOLD_POINTS_THRESHOLD };
+}
 
 function buildDisplayLines(item) {
   const lines = [];
@@ -34,12 +61,13 @@ function toNativeLanguageName(languageCode, fallback) {
 
 export default function CustomerScreen() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
   const [screen, setScreen] = useState(SCREEN.MENU);
   const [textScale, setTextScale] = useState(100);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [cart, setCart] = useState([]);
   const [currentItem, setCurrentItem] = useState(null);
+  const [editingCartItemId, setEditingCartItemId] = useState(null);
   const [customizeStep, setCustomizeStep] = useState(1);
   const [selectedSugar, setSelectedSugar] = useState(null);
   const [selectedIce, setSelectedIce] = useState(null);
@@ -57,6 +85,8 @@ export default function CustomerScreen() {
   const [sugarOptions, setSugarOptions] = useState([]);
   const [iceOptions, setIceOptions] = useState([]);
   const [toppingOptions, setToppingOptions] = useState([]);
+  const [customerOrders, setCustomerOrders] = useState([]);
+  const [isEmployeeRewardsUser, setIsEmployeeRewardsUser] = useState(false);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState(['All']);
 
@@ -103,6 +133,62 @@ export default function CustomerScreen() {
     }
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (!token || user?.type !== 'customer') {
+      setCustomerOrders([]);
+      return;
+    }
+
+    let cancelled = false;
+    async function loadCustomerOrders() {
+      try {
+        const response = await fetch(`${API_BASE}/customer/orders`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) throw new Error('Failed to load customer orders');
+        const data = await response.json();
+        if (!cancelled) setCustomerOrders(Array.isArray(data.orders) ? data.orders : []);
+      } catch (error) {
+        console.error('Failed to load customer orders:', error);
+        if (!cancelled) setCustomerOrders([]);
+      }
+    }
+
+    loadCustomerOrders();
+    return () => { cancelled = true; };
+  }, [token, user?.type]);
+
+  useEffect(() => {
+    const email = (user?.email || '').trim().toLowerCase();
+    if (!email) {
+      setIsEmployeeRewardsUser(false);
+      return;
+    }
+
+    let cancelled = false;
+    async function loadEmployeeMatch() {
+      try {
+        const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+        const response = await fetch(`${API_BASE}/employees`, { headers });
+        if (!response.ok) throw new Error('Failed to load employees');
+        const data = await response.json();
+        const employees = Array.isArray(data.employees) ? data.employees : [];
+        const isMatch = employees.some((emp) => {
+          const employeeEmail = (emp.google_email || '').trim().toLowerCase();
+          const position = String(emp.position || '');
+          return employeeEmail === email && ['Cashier', 'Manager', 'Shift Lead'].includes(position);
+        });
+        if (!cancelled) setIsEmployeeRewardsUser(isMatch);
+      } catch (error) {
+        console.error('Failed to load employee match:', error);
+        if (!cancelled) setIsEmployeeRewardsUser(false);
+      }
+    }
+
+    loadEmployeeMatch();
+    return () => { cancelled = true; };
+  }, [token, user?.email]);
 
   useEffect(() => {
     let labelInterval = null;
@@ -252,8 +338,59 @@ export default function CustomerScreen() {
     return menuItems.filter(item => item.category === selectedCategory);
   }, [selectedCategory, menuItems]);
 
-  const cartTotal = useMemo(() => cart.reduce((sum, item) => sum + item.price, 0), [cart]);
-  const cartCount = cart.length;
+  const cartTotal = useMemo(
+    () => cart.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0),
+    [cart],
+  );
+  const cartCount = useMemo(
+    () => cart.reduce((sum, item) => sum + (item.quantity || 1), 0),
+    [cart],
+  );
+  const isEmployeeDiscount = isEmployeeRewardsUser || user?.type === 'employee' || ['Manager', 'Shift Lead', 'Cashier'].includes(user?.position || '');
+
+  const priorYearOrders = useMemo(() => {
+    const cutoff = Date.now() - REWARDS_WINDOW_MS;
+    return customerOrders.filter((order) => {
+      const parsedDate = Date.parse(order.order_date);
+      return Number.isFinite(parsedDate) && parsedDate >= cutoff;
+    });
+  }, [customerOrders]);
+
+  const previousYearPoints = useMemo(
+    () => priorYearOrders.reduce((sum, order) => sum + pointsFromAmount(order.total_cost), 0),
+    [priorYearOrders],
+  );
+
+  const rewardsStatus = useMemo(
+    () => getRewardsStatus(previousYearPoints, isEmployeeDiscount),
+    [previousYearPoints, isEmployeeDiscount],
+  );
+
+  const discountAmount = useMemo(() => cartTotal * rewardsStatus.discountRate, [cartTotal, rewardsStatus.discountRate]);
+  const discountedSubtotal = useMemo(() => Math.max(0, cartTotal - discountAmount), [cartTotal, discountAmount]);
+  const checkoutTax = useMemo(() => discountedSubtotal * TAX_RATE, [discountedSubtotal]);
+  const checkoutTotal = useMemo(() => discountedSubtotal + checkoutTax, [discountedSubtotal, checkoutTax]);
+  const pointsFromCurrentOrder = useMemo(() => pointsFromAmount(discountedSubtotal), [discountedSubtotal]);
+  const projectedPoints = previousYearPoints + pointsFromCurrentOrder;
+  const pointsToNextTier = rewardsStatus.nextTierAt ? Math.max(0, rewardsStatus.nextTierAt - projectedPoints) : 0;
+  const tierFloor = useMemo(() => {
+    if (rewardsStatus.tier === 'Platinum') return PLATINUM_POINTS_THRESHOLD;
+    if (rewardsStatus.tier === 'Gold') return GOLD_POINTS_THRESHOLD;
+    return 0;
+  }, [rewardsStatus.tier]);
+  const tierProgressPercent = useMemo(() => {
+    if (!rewardsStatus.nextTierAt) return 100;
+    const span = rewardsStatus.nextTierAt - tierFloor;
+    if (span <= 0) return 100;
+    const pct = ((projectedPoints - tierFloor) / span) * 100;
+    return Math.max(0, Math.min(100, pct));
+  }, [rewardsStatus.nextTierAt, tierFloor, projectedPoints]);
+  const rewardsTone = useMemo(() => {
+    if (rewardsStatus.tier === 'Diamond') return 'diamond';
+    if (rewardsStatus.tier === 'Platinum') return 'platinum';
+    if (rewardsStatus.tier === 'Gold') return 'gold';
+    return 'member';
+  }, [rewardsStatus.tier]);
 
   function clearCustomization() {
     setSelectedSugar(null); setSelectedIce(null);
@@ -261,7 +398,47 @@ export default function CustomerScreen() {
   }
   
   function handleSelectItem(item) {
-    setCurrentItem(item); clearCustomization(); setScreen(SCREEN.CUSTOMIZE);
+    setEditingCartItemId(null);
+    setCurrentItem(item);
+    clearCustomization();
+    setScreen(SCREEN.CUSTOMIZE);
+  }
+
+  function handleCancelCustomization() {
+    clearCustomization();
+    setCurrentItem(null);
+    if (editingCartItemId) {
+      setEditingCartItemId(null);
+      setScreen(SCREEN.CART);
+      return;
+    }
+    setScreen(SCREEN.MENU);
+  }
+
+  function startEditCartItem(item) {
+    const menuItem = menuItems.find(menu => menu.id === item.menuItemId);
+    if (!menuItem) return;
+
+    const selectedIds = new Set(item.modificationIds || []);
+    const sugar = sugarOptions.find(opt => selectedIds.has(opt.id))
+      || sugarOptions.find(opt => opt.name === item.sugarLevel)
+      || null;
+    const ice = iceOptions.find(opt => selectedIds.has(opt.id))
+      || iceOptions.find(opt => opt.name === item.iceLevel)
+      || null;
+    const toppings = toppingOptions.filter(opt => selectedIds.has(opt.id));
+    const fallbackToppings = (item.toppingNames || []).length
+      ? toppingOptions.filter(opt => (item.toppingNames || []).includes(opt.name))
+      : [];
+
+    setEditingCartItemId(item.id);
+    setCurrentItem(menuItem);
+    setCustomizeStep(1);
+    setSelectedSugar(sugar);
+    setSelectedIce(ice);
+    setSelectedToppings(toppings.length ? toppings : fallbackToppings);
+    setComments(item.comments || '');
+    setScreen(SCREEN.CUSTOMIZE);
   }
 
   function toggleTopping(topping) {
@@ -272,21 +449,47 @@ export default function CustomerScreen() {
     });
   }
 
-  function addToCart() {
+  function saveCustomizedItem() {
     if (!currentItem) return;
     const totalPrice = currentItem.cost + (selectedSugar?.cost || 0) + (selectedIce?.cost || 0) + selectedToppings.reduce((sum, t) => sum + t.cost, 0);
     const modificationIds = [selectedSugar?.id, selectedIce?.id, ...selectedToppings.map(t => t.id)].filter(Boolean);
-    const item = {
-      id: Date.now(), menuItemId: currentItem.id, name: currentItem.name, price: totalPrice,
+    const itemPayload = {
+      menuItemId: currentItem.id, name: currentItem.name, price: totalPrice,
       sugarLevel: selectedSugar?.name || 'Regular', iceLevel: selectedIce?.name || 'Regular',
       toppingNames: selectedToppings.map(t => t.name), comments: comments.trim(), modificationIds
     };
+    if (editingCartItemId) {
+      setCart(prev => prev.map(item => (
+        item.id === editingCartItemId ? { ...item, ...itemPayload } : item
+      )));
+      clearCustomization();
+      setCurrentItem(null);
+      setEditingCartItemId(null);
+      setScreen(SCREEN.CART);
+      return;
+    }
+
+    const item = { id: Date.now(), quantity: 1, ...itemPayload };
     setCart(prev => [...prev, item]);
-    clearCustomization(); setCurrentItem(null); setScreen(SCREEN.MENU);
+    clearCustomization();
+    setCurrentItem(null);
+    setScreen(SCREEN.MENU);
   }
 
   function removeFromCart(itemId) { 
     setCart(prev => prev.filter(item => item.id !== itemId)); 
+  }
+
+  function updateCartQuantity(itemId, nextQuantity) {
+    const safeQuantity = Number(nextQuantity);
+    if (!Number.isFinite(safeQuantity)) return;
+    if (safeQuantity <= 0) {
+      removeFromCart(itemId);
+      return;
+    }
+    setCart(prev => prev.map(item => (
+      item.id === itemId ? { ...item, quantity: Math.round(safeQuantity) } : item
+    )));
   }
 
   function completeOrder(paymentType) {
@@ -294,12 +497,15 @@ export default function CustomerScreen() {
       try {
         const orderPayload = {
           employee_id: 1, payment_type: paymentType,
-          items: cart.map(item => ({ menu_item_id: item.menuItemId, quantity: 1, modification_ids: item.modificationIds || [], comments: item.comments || '' }))
+          items: cart.map(item => ({ menu_item_id: item.menuItemId, quantity: item.quantity || 1, modification_ids: item.modificationIds || [], comments: item.comments || '' }))
         };
-        const response = await fetch(`${API_BASE}/cashier/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(orderPayload) });
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers.Authorization = `Bearer ${token}`;
+        const response = await fetch(`${API_BASE}/cashier/orders`, { method: 'POST', headers, body: JSON.stringify(orderPayload) });
         if (!response.ok) { const errorData = await response.json().catch(() => ({})); throw new Error(errorData.error || 'Order submission failed'); }
         const result = await response.json();
         const orderNum = result.order?.order_id || Math.floor(1000 + Math.random() * 9000);
+        setCustomerOrders(prev => [{ order_id: orderNum, order_date: new Date().toISOString(), total_cost: discountedSubtotal }, ...prev]);
         setCart([]); setOrderNumber(orderNum); setScreen(SCREEN.MENU); setShowConfirmation(true);
         setTimeout(() => { setShowConfirmation(false); setOrderNumber(null); }, 5000);
       } catch (error) {
@@ -434,7 +640,7 @@ export default function CustomerScreen() {
           {screen === SCREEN.CUSTOMIZE && currentItem && (
             <div className="customer-content customize-screen">
               <div className="customize-header">
-                <h2>Customize: {currentItem.name}</h2>
+                <h2>{editingCartItemId ? 'Edit Item:' : 'Customize:'} {currentItem.name}</h2>
                 <span className="customize-progress">Step {customizeStep} of 2</span>
               </div>
 
@@ -463,7 +669,7 @@ export default function CustomerScreen() {
                     </div>
                   </div>
                   <div className="customize-actions">
-                    <button className="btn-secondary" onClick={() => setScreen(SCREEN.MENU)}>Cancel</button>
+                    <button className="btn-secondary" onClick={handleCancelCustomization}>Cancel</button>
                     <button className="btn-primary" onClick={() => setCustomizeStep(2)}>Next: Toppings</button>
                   </div>
                 </>
@@ -489,8 +695,8 @@ export default function CustomerScreen() {
                   </div>
                   <div className="customize-actions">
                     <button className="btn-secondary" onClick={() => setCustomizeStep(1)}>Back</button>
-                    <button className="btn-primary" onClick={addToCart}>
-                      Add to Cart - {currency(currentItem.cost + (selectedSugar?.cost || 0) + (selectedIce?.cost || 0) + selectedToppings.reduce((sum, t) => sum + t.cost, 0))}
+                    <button className="btn-primary" onClick={saveCustomizedItem}>
+                      {editingCartItemId ? 'Save Changes' : 'Add to Cart'} - {currency(currentItem.cost + (selectedSugar?.cost || 0) + (selectedIce?.cost || 0) + selectedToppings.reduce((sum, t) => sum + t.cost, 0))}
                     </button>
                   </div>
                 </>
@@ -500,22 +706,85 @@ export default function CustomerScreen() {
 
           {screen === SCREEN.CART && (
             <div className="customer-content cart-screen">
-              <h2>Your Order</h2>
+              <div className="cart-screen-top">
+                <button className="cart-back-btn" onClick={() => setScreen(SCREEN.MENU)}>Back</button>
+                <h2>Your Order</h2>
+              </div>
               {cart.length === 0 ? (
                 <div className="empty-cart">
                   <p>Your cart is empty.</p>
                   <button className="btn-primary" onClick={() => setScreen(SCREEN.MENU)}>Back to Menu</button>
                 </div>
               ) : (
-                <>
+                <div className="cart-screen-body">
+                  <div className={`rewards-summary rewards-tone-${rewardsTone}`}>
+                    <div className="rewards-line">
+                      <span>Rewards Status</span>
+                      <span className={`rewards-tier-badge rewards-tier-${rewardsTone}`}>
+                        {rewardsStatus.tier}
+                        {rewardsStatus.discountRate > 0 ? ` (${Math.round(rewardsStatus.discountRate * 100)}% off)` : ''}
+                      </span>
+                    </div>
+                    {rewardsStatus.note && <div className="rewards-note rewards-note-employee">{rewardsStatus.note}</div>}
+                    <div className="tier-visual-row">
+                      <span className={`tier-chip ${['Gold', 'Platinum', 'Diamond'].includes(rewardsStatus.tier) ? 'active' : ''}`}>Gold</span>
+                      <span className={`tier-chip ${['Platinum', 'Diamond'].includes(rewardsStatus.tier) ? 'active' : ''}`}>Platinum</span>
+                      <span className={`tier-chip ${rewardsStatus.tier === 'Diamond' ? 'active' : ''}`}>Diamond</span>
+                    </div>
+                    <div className="rewards-progress">
+                      <div className="rewards-progress-fill" style={{ width: `${tierProgressPercent}%` }} />
+                    </div>
+                    <div className="rewards-line">
+                      <span>Points (last 12 months)</span>
+                      <span>{previousYearPoints}</span>
+                    </div>
+                    <div className="rewards-line">
+                      <span>Points from this order</span>
+                      <span>+{pointsFromCurrentOrder}</span>
+                    </div>
+                    {rewardsStatus.nextTierAt && (
+                      <div className="rewards-line">
+                        <span>Points to next tier (after this cart)</span>
+                        <span>{pointsToNextTier}</span>
+                      </div>
+                    )}
+                    {!rewardsStatus.nextTierAt && (
+                      <div className="rewards-line">
+                        <span>Progress</span>
+                        <span>Top tier reached</span>
+                      </div>
+                    )}
+                  </div>
                   <div className="cart-items">
+                    <h3 className="cart-items-title">Menu Items</h3>
                     {cart.map((item, index) => (
                       <div key={item.id} className="cart-item">
                         <div className="cart-item-header">
                           <span className="cart-item-number">{index + 1}.</span>
                           <span className="cart-item-name">{item.name}</span>
-                          <span className="cart-item-price">{currency(item.price)}</span>
+                          <span className="cart-item-price">{currency(item.price * (item.quantity || 1))}</span>
                           <button className="remove-btn" onClick={() => removeFromCart(item.id)}>×</button>
+                        </div>
+                        <div className="cart-item-controls">
+                          <span className="cart-item-unit-price">Each: {currency(item.price)}</span>
+                          <div className="qty-controls">
+                            <button
+                              className="qty-btn"
+                              onClick={() => updateCartQuantity(item.id, (item.quantity || 1) - 1)}
+                              aria-label="Decrease quantity"
+                            >
+                              -
+                            </button>
+                            <span className="qty-value">{item.quantity || 1}</span>
+                            <button
+                              className="qty-btn"
+                              onClick={() => updateCartQuantity(item.id, (item.quantity || 1) + 1)}
+                              aria-label="Increase quantity"
+                            >
+                              +
+                            </button>
+                          </div>
+                          <button className="cart-edit-btn" onClick={() => startEditCartItem(item)}>Edit</button>
                         </div>
                         <div className="cart-item-details">
                           {buildDisplayLines(item).map((line, i) => (
@@ -526,14 +795,28 @@ export default function CustomerScreen() {
                     ))}
                   </div>
                   <div className="cart-total">
-                    <span>Total</span>
-                    <span>{currency(cartTotal)}</span>
+                    <div className="cart-total-line">
+                      <span>{rewardsStatus.discountRate > 0 ? 'Subtotal' : 'Total'}</span>
+                      <span>{currency(cartTotal)}</span>
+                    </div>
+                    {rewardsStatus.discountRate > 0 && (
+                      <>
+                        <div className="cart-total-line">
+                          <span>Discount ({Math.round(rewardsStatus.discountRate * 100)}%)</span>
+                          <span>-{currency(discountAmount)}</span>
+                        </div>
+                        <div className="cart-total-line cart-total-line-final">
+                          <span>Discounted Total</span>
+                          <span>{currency(discountedSubtotal)}</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                   <div className="cart-actions">
                     <button className="btn-secondary" onClick={() => setScreen(SCREEN.MENU)}>Add More Items</button>
                     <button className="btn-primary" onClick={() => setScreen(SCREEN.CHECKOUT)}>Proceed to Checkout</button>
                   </div>
-                </>
+                </div>
               )}
             </div>
           )}
@@ -546,13 +829,19 @@ export default function CustomerScreen() {
                   <span>Items ({cartCount})</span>
                   <span>{currency(cartTotal)}</span>
                 </div>
+                {rewardsStatus.discountRate > 0 && (
+                  <div className="summary-row">
+                    <span>Rewards Discount ({Math.round(rewardsStatus.discountRate * 100)}%)</span>
+                    <span>-{currency(discountAmount)}</span>
+                  </div>
+                )}
                 <div className="summary-row">
                   <span>Tax (8.25%)</span>
-                  <span>{currency(cartTotal * 0.0825)}</span>
+                  <span>{currency(checkoutTax)}</span>
                 </div>
                 <div className="summary-row total">
                   <span>Total</span>
-                  <span>{currency(cartTotal * 1.0825)}</span>
+                  <span>{currency(checkoutTotal)}</span>
                 </div>
               </div>
               <div className="payment-methods">
