@@ -81,8 +81,13 @@ export default function CustomerScreen() {
           id: item.menu_item_id, name: item.name,
           cost: Number(item.cost), category: item.category || 'Other'
         })));
-        const uniqueCategories = [...new Set(items.map(item => item.category || 'Other'))];
-        setCategories(['All', ...uniqueCategories]);
+        const CATEGORY_ORDER = ['Milk Tea', 'Fruit Tea', 'Fresh Brew', 'Matcha', 'Ice Blended', 'Specialty'];
+        const rawCategories = [...new Set(items.map(item => item.category || 'Other'))];
+        const sortedCategories = [
+          ...CATEGORY_ORDER.filter(c => rawCategories.includes(c)),
+          ...rawCategories.filter(c => !CATEGORY_ORDER.includes(c)),
+        ];
+        setCategories(['All', ...sortedCategories]);
         const modRes = await fetch(`${API_BASE}/cashier/modifications`);
         const modData = await modRes.json();
         setSugarOptions((modData.sugar || []).map(m => ({ id: m.modification_type_id, name: m.name, cost: Number(m.cost) })));

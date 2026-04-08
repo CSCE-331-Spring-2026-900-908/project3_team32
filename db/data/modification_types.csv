@@ -1,0 +1,23 @@
+modification_type_id,name,cost
+1,0% Sugar,0.0
+2,25% Sugar,0.0
+3,50% Sugar,0.0
+4,75% Sugar,0.0
+5,100% Sugar,0.0
+6,125% Sugar,0.0
+7,No Ice,0.0
+8,Less Ice,0.0
+9,Regular Ice,0.0
+10,Extra Ice,0.0
+11,Add Tapioca Pearls,0.75
+12,Add Crystal Boba,0.75
+13,Add Popping Boba (Strawberry),0.75
+14,Add Popping Boba (Mango),0.75
+15,Add Honey Jelly,0.75
+16,Add Lychee Jelly,0.75
+17,Add Coffee Jelly,0.75
+18,Add Pudding,0.75
+19,Add Ice Cream,1.0
+20,Add Creama,0.75
+21,Regular Size,0.0
+22,Large Size,1.5

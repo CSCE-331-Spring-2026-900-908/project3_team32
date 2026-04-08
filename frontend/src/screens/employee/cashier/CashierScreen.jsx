@@ -75,9 +75,13 @@ export default function CashierPOS() {
           category: item.category || 'Other'
         })));
         
-        // Extract unique categories
-        const uniqueCategories = [...new Set(items.map(item => item.category || 'Other'))];
-        setCategories(uniqueCategories);
+        const CATEGORY_ORDER = ['Milk Tea', 'Fruit Tea', 'Fresh Brew', 'Matcha', 'Ice Blended', 'Specialty'];
+        const rawCategories = [...new Set(items.map(item => item.category || 'Other'))];
+        const sortedCategories = [
+          ...CATEGORY_ORDER.filter(c => rawCategories.includes(c)),
+          ...rawCategories.filter(c => !CATEGORY_ORDER.includes(c)),
+        ];
+        setCategories(sortedCategories);
         
         // Fetch modifications
         const modRes = await fetch(`${API_BASE}/cashier/modifications`);

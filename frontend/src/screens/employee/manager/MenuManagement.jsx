@@ -1,7 +1,7 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { apiRequest, unwrapList } from './managerApi.js';
 
-const CATEGORIES = ['Milk Tea', 'Fruit Tea', 'Smoothies', 'Lattes', 'Specialty', 'Seasonal'];
+const CATEGORIES = ['Milk Tea', 'Fruit Tea', 'Fresh Brew', 'Matcha', 'Ice Blended', 'Specialty'];
 
 const cardStyle = {
   border: '1px solid #ddd',
