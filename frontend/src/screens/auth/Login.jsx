@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
-import { FiShoppingBag, FiUsers, FiArrowLeft } from 'react-icons/fi';
+import { FiShoppingBag, FiUsers } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext.jsx';
 import './Login.css';
 
@@ -90,10 +90,6 @@ function Login() {
   return (
     <div className={`login ${role}-login`}>
       <div className="login-card">
-        <button className="back-button" onClick={() => navigate('/')}>
-          <FiArrowLeft />
-        </button>
-
         <Icon className="login-icon" />
         <h1>{title} Access</h1>
         <p className="login-subtitle">
