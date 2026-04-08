@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext.jsx';
 import './CustomerScreen.css';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -33,6 +34,7 @@ function toNativeLanguageName(languageCode, fallback) {
 
 export default function CustomerScreen() {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [screen, setScreen] = useState(SCREEN.MENU);
   const [textScale, setTextScale] = useState(100);
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -393,7 +395,19 @@ export default function CustomerScreen() {
               </div>
             </div>
 
-            <button className="exit-btn" onClick={() => navigate('/login/customer')}>Exit</button>
+            {user && (
+              <div className="customer-user-badge">
+                {user.picture ? (
+                  <img src={user.picture} alt="" className="customer-user-avatar" referrerPolicy="no-referrer" />
+                ) : (
+                  <div className="customer-user-avatar customer-user-avatar-fallback">
+                    {(user.name || user.email || '?')[0].toUpperCase()}
+                  </div>
+                )}
+                <span className="customer-user-name">{user.name || user.email}</span>
+              </div>
+            )}
+            <button className="exit-btn" onClick={() => { logout(); navigate('/login/customer'); }}>Exit</button>
           </div>
         </div>
       </header>

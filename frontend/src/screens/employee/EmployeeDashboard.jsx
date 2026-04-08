@@ -1,22 +1,18 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiUsers, FiDollarSign, FiLogOut, FiArrowRight } from 'react-icons/fi';
-import ManagerScreen from './manager/ManagerScreen';
-import CashierScreen from './cashier/CashierScreen';
+import { useAuth } from '../../context/AuthContext.jsx';
 import './EmployeeDashboard.css';
 
 function EmployeeDashboard() {
   const navigate = useNavigate();
-  const [view, setView] = useState('dashboard');
+  const { user, logout } = useAuth();
 
-  if (view === 'manager') {
-    return <ManagerScreen />;
+  function handleLogout() {
+    logout();
+    navigate('/login/employee', { replace: true });
   }
 
-  if (view === 'cashier') {
-    return <CashierScreen />;
-  }
-  
   return (
     <div className="employee-dashboard">
       <div className="dashboard-container">
@@ -25,17 +21,17 @@ function EmployeeDashboard() {
             <FiUsers className="header-icon" />
             <div>
               <h1>Employee Dashboard</h1>
-              <p>Select your role to continue</p>
+              <p>Welcome, {user?.name || 'Employee'} &mdash; {user?.position}</p>
             </div>
           </div>
-          <button className="logout-btn" onClick={() => navigate('/login/employee')}>
+          <button className="logout-btn" onClick={handleLogout}>
             <FiLogOut />
             <span>Logout</span>
           </button>
         </header>
 
         <div className="role-cards">
-          <button className="role-card cashier-card" onClick={() => setView('cashier')}>
+          <button className="role-card cashier-card" onClick={() => navigate('/employee/cashier')}>
             <div className="role-card-content">
               <FiDollarSign className="role-icon" />
               <h2>Cashier</h2>
@@ -44,7 +40,7 @@ function EmployeeDashboard() {
             <FiArrowRight className="role-arrow" />
           </button>
 
-          <button className="role-card manager-card" onClick={() => setView('manager')}>
+          <button className="role-card manager-card" onClick={() => navigate('/employee/manager')}>
             <div className="role-card-content">
               <FiUsers className="role-icon" />
               <h2>Manager</h2>

@@ -1,12 +1,45 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import jwt from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
 import pool from './config/database.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// ── JWT helpers ────────────────────────────────────────────────────────────────
+
+function signToken(payload) {
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '8h' });
+}
+
+/**
+ * requireAuth(roles?)
+ * Pass an array of allowed position strings, e.g. ['Manager', 'Shift Lead'].
+ * Omit roles to allow any authenticated user.
+ */
+function requireAuth(roles) {
+  return (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    try {
+      const decoded = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET);
+      req.user = decoded;
+      if (roles && roles.length > 0 && !roles.includes(decoded.position)) {
+        return res.status(403).json({ error: 'Insufficient permissions' });
+      }
+      next();
+    } catch {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+  };
+}
 
 // Middleware
 app.use(cors());
@@ -34,6 +67,111 @@ app.get('/health', async (req, res) => {
 // API Routes (to be implemented)
 app.get('/api', (req, res) => {
   res.json({ message: 'Sharetea POS API' });
+});
+
+// ── Dev-only bypass (never enabled in production) ─────────────────────────────
+if (process.env.NODE_ENV !== 'production') {
+  app.post('/api/auth/dev/login', async (req, res) => {
+    const { role } = req.body;
+    if (role === 'customer') {
+      const result = await pool.query(
+        `INSERT INTO customer (google_id, email, name, picture)
+         VALUES ('dev-customer-001', 'dev@example.com', 'Dev Customer', NULL)
+         ON CONFLICT (google_id) DO UPDATE SET name = EXCLUDED.name
+         RETURNING customer_id, email, name`,
+      );
+      const customer = result.rows[0];
+      const token = signToken({ type: 'customer', customer_id: customer.customer_id, email: customer.email, name: customer.name });
+      return res.json({ token, user: customer });
+    }
+    // Default to first Manager employee for employee dev bypass
+    const result = await pool.query(
+      `SELECT employee_id, name, position FROM employee WHERE position = 'Manager' LIMIT 1`,
+    );
+    if (!result.rowCount) return res.status(404).json({ error: 'No manager employee found in DB' });
+    const emp = result.rows[0];
+    const token = signToken({ type: 'employee', employee_id: emp.employee_id, name: emp.name, position: emp.position });
+    return res.json({ token, user: emp });
+  });
+}
+
+// ── Auth routes ────────────────────────────────────────────────────────────────
+
+async function verifyGoogleToken(credential) {
+  const ticket = await googleClient.verifyIdToken({
+    idToken: credential,
+    audience: process.env.GOOGLE_CLIENT_ID,
+  });
+  return ticket.getPayload();
+}
+
+// Customer Google login — creates account on first sign-in
+app.post('/api/auth/google/customer', async (req, res, next) => {
+  const { credential } = req.body;
+  if (!credential) return res.status(400).json({ error: 'credential is required' });
+
+  try {
+    const payload = await verifyGoogleToken(credential);
+    const { sub: googleId, email, name, picture } = payload;
+
+    const result = await pool.query(
+      `INSERT INTO customer (google_id, email, name, picture)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (google_id) DO UPDATE
+         SET email = EXCLUDED.email,
+             name  = EXCLUDED.name,
+             picture = EXCLUDED.picture
+       RETURNING customer_id, email, name, picture`,
+      [googleId, email, name, picture],
+    );
+
+    const customer = result.rows[0];
+    const token = signToken({
+      type: 'customer',
+      customer_id: customer.customer_id,
+      email: customer.email,
+      name: customer.name,
+      picture: customer.picture,
+    });
+
+    res.json({ token, user: customer });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Employee Google login — must already have google_email pre-registered
+app.post('/api/auth/google/employee', async (req, res, next) => {
+  const { credential } = req.body;
+  if (!credential) return res.status(400).json({ error: 'credential is required' });
+
+  try {
+    const payload = await verifyGoogleToken(credential);
+    const { email } = payload;
+
+    const result = await pool.query(
+      'SELECT employee_id, name, position, hire_date, google_email FROM employee WHERE google_email = $1',
+      [email],
+    );
+
+    if (!result.rowCount) {
+      return res.status(403).json({
+        error: 'No employee account found for this Google email. Contact your manager.',
+      });
+    }
+
+    const employee = result.rows[0];
+    const token = signToken({
+      type: 'employee',
+      employee_id: employee.employee_id,
+      name: employee.name,
+      position: employee.position,
+    });
+
+    res.json({ token, user: { ...employee } });
+  } catch (error) {
+    next(error);
+  }
 });
 
 function parseDateInput(value) {
@@ -282,7 +420,7 @@ app.delete('/api/inventory/:id', async (req, res, next) => {
 app.get('/api/employees', async (req, res, next) => {
   try {
     const result = await pool.query(
-      'SELECT employee_id, name, position, hire_date FROM employee ORDER BY employee_id',
+      'SELECT employee_id, name, position, hire_date, google_email FROM employee ORDER BY employee_id',
     );
     res.json({ employees: result.rows });
   } catch (error) {
@@ -291,17 +429,17 @@ app.get('/api/employees', async (req, res, next) => {
 });
 
 app.post('/api/employees', async (req, res, next) => {
-  const { employee_id, name, position, hire_date } = req.body;
+  const { employee_id, name, position, hire_date, google_email } = req.body;
   if (!employee_id || !name || !position || !parseDateInput(hire_date)) {
     return res.status(400).json({ error: 'employee_id, name, position, hire_date are required' });
   }
 
   try {
     const result = await pool.query(
-      `INSERT INTO employee (employee_id, name, position, hire_date)
-       VALUES ($1, $2, $3, $4)
-       RETURNING employee_id, name, position, hire_date`,
-      [Number(employee_id), name.trim(), position.trim(), hire_date],
+      `INSERT INTO employee (employee_id, name, position, hire_date, google_email)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING employee_id, name, position, hire_date, google_email`,
+      [Number(employee_id), name.trim(), position.trim(), hire_date, google_email?.trim() || null],
     );
     res.status(201).json({ employee: result.rows[0] });
   } catch (error) {
@@ -310,7 +448,7 @@ app.post('/api/employees', async (req, res, next) => {
 });
 
 app.put('/api/employees/:id', async (req, res, next) => {
-  const { name, position, hire_date } = req.body;
+  const { name, position, hire_date, google_email } = req.body;
   if (!name || !position || !parseDateInput(hire_date)) {
     return res.status(400).json({ error: 'name, position, hire_date are required' });
   }
@@ -318,10 +456,10 @@ app.put('/api/employees/:id', async (req, res, next) => {
   try {
     const result = await pool.query(
       `UPDATE employee
-       SET name = $1, position = $2, hire_date = $3
-       WHERE employee_id = $4
-       RETURNING employee_id, name, position, hire_date`,
-      [name.trim(), position.trim(), hire_date, req.params.id],
+       SET name = $1, position = $2, hire_date = $3, google_email = $4
+       WHERE employee_id = $5
+       RETURNING employee_id, name, position, hire_date, google_email`,
+      [name.trim(), position.trim(), hire_date, google_email?.trim() || null, req.params.id],
     );
     if (!result.rowCount) return res.status(404).json({ error: 'Employee not found' });
     res.json({ employee: result.rows[0] });
@@ -382,6 +520,20 @@ app.post('/api/cashier/orders', async (req, res, next) => {
   const employeeId = Number(req.body?.employee_id);
   const paymentType = String(req.body?.payment_type || 'CARD').trim() || 'CARD';
   const items = Array.isArray(req.body?.items) ? req.body.items : [];
+
+  // Optionally attach a customer to this order (customer kiosk orders)
+  let customerId = null;
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith('Bearer ')) {
+    try {
+      const decoded = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET);
+      if (decoded.type === 'customer' && decoded.customer_id) {
+        customerId = decoded.customer_id;
+      }
+    } catch {
+      // Non-fatal: unrecognized token just means no customer link
+    }
+  }
 
   if (!Number.isInteger(employeeId) || employeeId <= 0) {
     return res.status(400).json({ error: 'employee_id must be a positive integer' });
@@ -456,10 +608,10 @@ app.post('/api/cashier/orders', async (req, res, next) => {
     });
 
     const orderResult = await client.query(
-      `INSERT INTO customer_order (order_id, order_date, total_cost, employee_id, payment_type)
-       VALUES ((SELECT COALESCE(MAX(order_id), 0) + 1 FROM customer_order), NOW(), $1, $2, $3)
-       RETURNING order_id, order_date, total_cost, employee_id, payment_type`,
-      [totalCost, employeeId, paymentType],
+      `INSERT INTO customer_order (order_id, order_date, total_cost, employee_id, payment_type, customer_id)
+       VALUES ((SELECT COALESCE(MAX(order_id), 0) + 1 FROM customer_order), NOW(), $1, $2, $3, $4)
+       RETURNING order_id, order_date, total_cost, employee_id, payment_type, customer_id`,
+      [totalCost, employeeId, paymentType, customerId],
     );
     const order = orderResult.rows[0];
 
@@ -493,6 +645,43 @@ app.post('/api/cashier/orders', async (req, res, next) => {
     next(error);
   } finally {
     client.release();
+  }
+});
+
+// Customer order history (requires customer JWT)
+app.get('/api/customer/orders', requireAuth(), async (req, res, next) => {
+  if (req.user.type !== 'customer') {
+    return res.status(403).json({ error: 'Customer account required' });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT
+         co.order_id,
+         co.order_date,
+         co.total_cost,
+         co.payment_type,
+         json_agg(
+           json_build_object(
+             'order_item_id', oi.order_item_id,
+             'menu_item_id',  oi.menu_item_id,
+             'name',          m.name,
+             'quantity',      oi.quantity,
+             'item_price',    oi.item_price
+           ) ORDER BY oi.order_item_id
+         ) AS items
+       FROM customer_order co
+       JOIN order_item oi ON co.order_id = oi.order_id
+       JOIN menu_item m ON oi.menu_item_id = m.menu_item_id
+       WHERE co.customer_id = $1
+       GROUP BY co.order_id
+       ORDER BY co.order_date DESC`,
+      [req.user.customer_id],
+    );
+
+    res.json({ orders: result.rows });
+  } catch (error) {
+    next(error);
   }
 });
 

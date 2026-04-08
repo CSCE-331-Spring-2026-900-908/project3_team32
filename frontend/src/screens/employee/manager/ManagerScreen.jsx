@@ -1,6 +1,6 @@
-﻿import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useAuth } from '../../../context/AuthContext.jsx';
 import MenuManagement from './MenuManagement.jsx';
 import InventoryManagement from './InventoryManagement.jsx';
 import EmployeeManager from './EmployeeManager.jsx';
@@ -27,6 +27,7 @@ const PANELS = {
 
 export default function ManagerScreen() {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [active, setActive] = useState('MENU');
   const [weather, setWeather] = useState(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
@@ -86,13 +87,16 @@ export default function ManagerScreen() {
         </nav>
 
         <div className="sidebar-footer">
+          {user && (
+            <div className="sidebar-user">
+              <span className="sidebar-user-name">{user.name}</span>
+              <span className="sidebar-user-role">{user.position}</span>
+            </div>
+          )}
           <button
             onClick={() => {
-              localStorage.removeItem('role');
-              localStorage.removeItem('employee');
-              localStorage.removeItem('user');
-              sessionStorage.clear();
-              navigate('/login/employee');
+              logout();
+              navigate('/login/employee', { replace: true });
             }}
             className="logout-button"
           >

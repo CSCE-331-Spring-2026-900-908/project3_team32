@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { apiRequest, unwrapList } from './managerApi.js';
 
 export default function EmployeeManager() {
@@ -8,7 +8,7 @@ export default function EmployeeManager() {
   const [selectedId, setSelectedId] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [mode, setMode] = useState('add');
-  const [form, setForm] = useState({ employee_id: '', name: '', position: '', hire_date: '' });
+  const [form, setForm] = useState({ employee_id: '', name: '', position: '', hire_date: '', google_email: '' });
 
   const selected = useMemo(
     () => employees.find((employee) => Number(employee.employee_id) === Number(selectedId)) || null,
@@ -26,6 +26,7 @@ export default function EmployeeManager() {
         name: row.name,
         position: row.position,
         hire_date: String(row.hire_date ?? row.hireDate ?? '').slice(0, 10),
+        google_email: row.google_email ?? '',
       }));
       setEmployees(rows);
     } catch (err) {
@@ -41,7 +42,7 @@ export default function EmployeeManager() {
 
   function openAdd() {
     setMode('add');
-    setForm({ employee_id: '', name: '', position: '', hire_date: '' });
+    setForm({ employee_id: '', name: '', position: '', hire_date: '', google_email: '' });
     setShowForm(true);
   }
 
@@ -56,6 +57,7 @@ export default function EmployeeManager() {
       name: employee.name,
       position: employee.position,
       hire_date: employee.hire_date,
+      google_email: employee.google_email ?? '',
     });
     setShowForm(true);
   }
@@ -79,6 +81,7 @@ export default function EmployeeManager() {
       name: form.name.trim(),
       position: form.position.trim(),
       hire_date: form.hire_date,
+      google_email: form.google_email.trim() || null,
     };
 
     try {
@@ -170,6 +173,15 @@ export default function EmployeeManager() {
                 required
               />
             </label>
+            <label>
+              Google Email (for login)
+              <input
+                type="email"
+                placeholder="employee@gmail.com"
+                value={form.google_email}
+                onChange={(e) => setForm((prev) => ({ ...prev, google_email: e.target.value }))}
+              />
+            </label>
           </div>
           <div className="manager-form-actions">
             <button type="submit" className="manager-btn manager-btn-primary">Save</button>
@@ -187,6 +199,7 @@ export default function EmployeeManager() {
             <th>Name</th>
             <th>Position</th>
             <th>Hire Date</th>
+            <th>Google Email</th>
           </tr>
         </thead>
         <tbody>
@@ -203,6 +216,7 @@ export default function EmployeeManager() {
                 <td>{employee.name}</td>
                 <td>{employee.position}</td>
                 <td>{employee.hire_date}</td>
+                <td>{employee.google_email || <span style={{ color: '#aaa' }}>Not set</span>}</td>
               </tr>
             );
           })}
