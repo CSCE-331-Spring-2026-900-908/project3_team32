@@ -10,10 +10,12 @@ const GOLD_POINTS_THRESHOLD = 1000;
 const PLATINUM_POINTS_THRESHOLD = GOLD_POINTS_THRESHOLD + 2500;
 const DIAMOND_POINTS_THRESHOLD = PLATINUM_POINTS_THRESHOLD + 5000;
 const REWARDS_WINDOW_MS = 365 * 24 * 60 * 60 * 1000;
+const WEEKDAY_FORMATTER = new Intl.DateTimeFormat('en-US', { weekday: 'short' });
+const FULL_DATE_FORMATTER = new Intl.DateTimeFormat('en-US');
 
 const LANGUAGE_CODE_ALIASES = { iw: 'he', jw: 'jv' };
 
-const SCREEN = { MENU: 'MENU', CUSTOMIZE: 'CUSTOMIZE', CART: 'CART', CHECKOUT: 'CHECKOUT' };
+const SCREEN = { HOME: 'HOME', MENU: 'MENU', CUSTOMIZE: 'CUSTOMIZE', CART: 'CART', CHECKOUT: 'CHECKOUT' };
 
 function currency(value) { return `$${value.toFixed(2)}`; }
 
@@ -59,12 +61,61 @@ function toNativeLanguageName(languageCode, fallback) {
   } catch { return fallback; }
 }
 
+function describeWeatherCode(weatherCode) {
+  const code = Number(weatherCode);
+  const codeMap = {
+    0: 'Sunny',
+    1: 'Mostly clear',
+    2: 'Partly cloudy',
+    3: 'Cloudy',
+    45: 'Foggy',
+    48: 'Rime fog',
+    51: 'Light drizzle',
+    53: 'Drizzle',
+    55: 'Heavy drizzle',
+    56: 'Freezing drizzle',
+    57: 'Heavy freezing drizzle',
+    61: 'Light rain',
+    63: 'Rain',
+    65: 'Heavy rain',
+    66: 'Freezing rain',
+    67: 'Heavy freezing rain',
+    71: 'Light snow',
+    73: 'Snow',
+    75: 'Heavy snow',
+    77: 'Snow grains',
+    80: 'Light showers',
+    81: 'Showers',
+    82: 'Heavy showers',
+    85: 'Light snow showers',
+    86: 'Heavy snow showers',
+    95: 'Thunderstorm',
+    96: 'Thunderstorm and hail',
+    99: 'Heavy hail storm',
+  };
+  return codeMap[code] || 'Weather unavailable';
+}
+
+function formatWeekdayLabel(dateString) {
+  if (!dateString) return '';
+  const parsed = new Date(`${dateString}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return WEEKDAY_FORMATTER.format(parsed);
+}
+
+function formatFullDateLabel(dateString) {
+  if (!dateString) return '';
+  const parsed = new Date(`${dateString}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return FULL_DATE_FORMATTER.format(parsed);
+}
+
 export default function CustomerScreen() {
   const navigate = useNavigate();
   const { user, token, logout } = useAuth();
-  const [screen, setScreen] = useState(SCREEN.MENU);
+  const [screen, setScreen] = useState(SCREEN.HOME);
   const [textScale, setTextScale] = useState(100);
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [cart, setCart] = useState([]);
   const [currentItem, setCurrentItem] = useState(null);
   const [editingCartItemId, setEditingCartItemId] = useState(null);
@@ -89,8 +140,12 @@ export default function CustomerScreen() {
   const [toppingOptions, setToppingOptions] = useState([]);
   const [customerOrders, setCustomerOrders] = useState([]);
   const [isEmployeeRewardsUser, setIsEmployeeRewardsUser] = useState(false);
+  const [weather, setWeather] = useState(null);
+  const [weeklyWeather, setWeeklyWeather] = useState([]);
+  const [weatherLoading, setWeatherLoading] = useState(true);
+  const [weatherError, setWeatherError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [categories, setCategories] = useState(['All']);
+  const [categories, setCategories] = useState([]);
 
   const magnifierRef = useRef(null);
   const lensInnerRef = useRef(null);
@@ -121,7 +176,8 @@ export default function CustomerScreen() {
           ...CATEGORY_ORDER.filter(c => rawCategories.includes(c)),
           ...rawCategories.filter(c => !CATEGORY_ORDER.includes(c)),
         ];
-        setCategories(['All', ...sortedCategories]);
+        setCategories(sortedCategories);
+        setSelectedCategory((prev) => (prev ? prev : (sortedCategories[0] || '')));
         const modRes = await fetch(`${API_BASE}/cashier/modifications`);
         const modData = await modRes.json();
         setSugarOptions((modData.sugar || []).map(m => ({ id: m.modification_type_id, name: m.name, cost: Number(m.cost) })));
@@ -134,6 +190,66 @@ export default function CustomerScreen() {
       }
     }
     loadData();
+  }, []);
+
+  useEffect(() => {
+    let timerId = null;
+    let cancelled = false;
+
+    async function loadWeather() {
+      try {
+        setWeatherLoading(true);
+
+        const currentResponse = await fetch(`${API_BASE}/external/weather?city=College%20Station,US`);
+        if (!currentResponse.ok) throw new Error('Failed to load current weather');
+        const currentData = await currentResponse.json();
+        if (cancelled) return;
+
+        setWeather(currentData);
+        setWeatherError('');
+
+        let nextWeekly = Array.isArray(currentData.dailyForecast) ? currentData.dailyForecast.slice(0, 7) : [];
+        if (!nextWeekly.length) {
+          try {
+            const weeklyResponse = await fetch('https://api.open-meteo.com/v1/forecast?latitude=30.6280&longitude=-96.3344&daily=weather_code,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto&forecast_days=7');
+            if (weeklyResponse.ok) {
+              const weeklyData = await weeklyResponse.json();
+              const daily = weeklyData.daily || {};
+              const times = Array.isArray(daily.time) ? daily.time : [];
+              const codes = Array.isArray(daily.weather_code) ? daily.weather_code : [];
+              const maxTemps = Array.isArray(daily.temperature_2m_max) ? daily.temperature_2m_max : [];
+              const minTemps = Array.isArray(daily.temperature_2m_min) ? daily.temperature_2m_min : [];
+              nextWeekly = times.map((date, index) => ({
+                date,
+                weatherCode: Number(codes[index] ?? -1),
+                description: describeWeatherCode(codes[index]),
+                maxTemp: Number(maxTemps[index]),
+                minTemp: Number(minTemps[index]),
+              }));
+            }
+          } catch (error) {
+            console.error('Weekly weather fetch failed:', error);
+          }
+        }
+
+        if (!cancelled) setWeeklyWeather(nextWeekly);
+      } catch (error) {
+        console.error('Failed to load customer weather:', error);
+        if (cancelled) return;
+        setWeather(null);
+        setWeeklyWeather([]);
+        setWeatherError('Weather unavailable');
+      } finally {
+        if (!cancelled) setWeatherLoading(false);
+      }
+    }
+
+    loadWeather();
+    timerId = window.setInterval(loadWeather, 10 * 60 * 1000);
+    return () => {
+      cancelled = true;
+      if (timerId) window.clearInterval(timerId);
+    };
   }, []);
 
   useEffect(() => {
@@ -355,10 +471,9 @@ export default function CustomerScreen() {
   }, [magnifierEnabled]);
 
 
-  const visibleItems = useMemo(() => {
-    if (selectedCategory === 'All') return menuItems;
-    return menuItems.filter(item => item.category === selectedCategory);
-  }, [selectedCategory, menuItems]);
+  const visibleItems = useMemo(() => (
+    menuItems.filter((item) => item.category === selectedCategory)
+  ), [selectedCategory, menuItems]);
 
   const cartTotal = useMemo(
     () => cart.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0),
@@ -435,7 +550,7 @@ export default function CustomerScreen() {
       setScreen(SCREEN.CART);
       return;
     }
-    setScreen(SCREEN.MENU);
+    setScreen(SCREEN.HOME);
   }
 
   function startEditCartItem(item) {
@@ -496,7 +611,7 @@ export default function CustomerScreen() {
     setCart(prev => [...prev, item]);
     clearCustomization();
     setCurrentItem(null);
-    setScreen(SCREEN.MENU);
+    setScreen(SCREEN.HOME);
   }
 
   function removeFromCart(itemId) { 
@@ -646,9 +761,54 @@ export default function CustomerScreen() {
         </div>
       </header>
 
-      <div className="customer-content-wrapper">
+      <div className={`customer-content-wrapper${screen === SCREEN.MENU && cartCount > 0 ? ' menu-has-floating-cart-space' : ''}`}>
+          {screen === SCREEN.HOME && (
+            <div className="customer-content customer-home">
+              <div className="customer-home-intro">
+                <p>Select a section to get started</p>
+              </div>
+
+              <div className="customer-home-sections">
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    className="home-section-btn"
+                    onClick={() => {
+                      setSelectedCategory(cat);
+                      setScreen(SCREEN.MENU);
+                    }}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              <div className="customer-home-weather">
+                <div className="customer-home-weather-current">
+                  {weatherLoading ? 'Loading weather...' : weather
+                    ? `${Math.round(weather.temperature)}°F • ${weather.description || describeWeatherCode(weather.weatherCode)}`
+                    : weatherError || 'Weather unavailable'}
+                </div>
+                {weeklyWeather.length > 0 && (
+                  <div className="customer-home-weekly">
+                    {weeklyWeather.map((day) => (
+                      <div key={day.date} className="customer-home-day">
+                        <span className="customer-home-day-label">{formatWeekdayLabel(day.date)}</span>
+                        <span className="customer-home-day-date">{formatFullDateLabel(day.date)}</span>
+                        <span className="customer-home-day-temps">
+                          {Math.round(day.maxTemp)}° / {Math.round(day.minTemp)}°
+                        </span>
+                        <span className="customer-home-day-desc">{day.description || describeWeatherCode(day.weatherCode)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {screen === SCREEN.MENU && (
-            <div className="customer-content">
+            <div className={`customer-content menu-screen${cartCount > 0 ? ' has-floating-cart-space' : ''}`}>
                 <div className="category-tabs">
                   <button 
                     className={`category-tab${selectedCategory === 'All' ? ' active' : ''}`} 
@@ -701,7 +861,10 @@ export default function CustomerScreen() {
           {screen === SCREEN.CUSTOMIZE && currentItem && (
             <div className="customer-content customize-screen">
               <div className="customize-header">
-                <h2>{editingCartItemId ? 'Edit Item:' : 'Customize:'} {currentItem.name}</h2>
+                <div className="customize-header-left">
+                  <button className="cart-back-btn" onClick={handleCancelCustomization}>Back</button>
+                  <h2>{editingCartItemId ? 'Edit Item:' : 'Customize:'} {currentItem.name}</h2>
+                </div>
                 <span className="customize-progress">Step {customizeStep} of 2</span>
               </div>
 
@@ -768,13 +931,13 @@ export default function CustomerScreen() {
           {screen === SCREEN.CART && (
             <div className="customer-content cart-screen">
               <div className="cart-screen-top">
-                <button className="cart-back-btn" onClick={() => setScreen(SCREEN.MENU)}>Back</button>
+                <button className="cart-back-btn" onClick={() => setScreen(SCREEN.HOME)}>Back</button>
                 <h2>Your Order</h2>
               </div>
               {cart.length === 0 ? (
                 <div className="empty-cart">
                   <p>Your cart is empty.</p>
-                  <button className="btn-primary" onClick={() => setScreen(SCREEN.MENU)}>Back to Menu</button>
+                  <button className="btn-primary" onClick={() => setScreen(SCREEN.HOME)}>Back to Start</button>
                 </div>
               ) : (
                 <div className="cart-screen-body">
@@ -880,7 +1043,7 @@ export default function CustomerScreen() {
                     )}
                   </div>
                   <div className="cart-actions">
-                    <button className="btn-secondary" onClick={() => setScreen(SCREEN.MENU)}>Add More Items</button>
+                    <button className="btn-secondary" onClick={() => setScreen(SCREEN.HOME)}>Add More Items</button>
                     <button className="btn-primary" onClick={() => setScreen(SCREEN.CHECKOUT)}>Proceed to Checkout</button>
                   </div>
                 </div>
@@ -890,6 +1053,9 @@ export default function CustomerScreen() {
 
           {screen === SCREEN.CHECKOUT && (
             <div className="customer-content checkout-screen">
+              <div className="section-top-row">
+                <button className="cart-back-btn" onClick={() => setScreen(SCREEN.HOME)}>Back</button>
+              </div>
               <h2>Checkout</h2>
               <div className="checkout-summary">
                 <div className="summary-row">
@@ -956,7 +1122,7 @@ export default function CustomerScreen() {
   );
 
   return (
-    <div className="customer-page">
+    <div className={`customer-page${textScale > 100 ? ' scaled-text' : ''}`}>
       {renderAppContent(false)}
 
       {magnifierEnabled && (
