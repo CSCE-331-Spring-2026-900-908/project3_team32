@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiCreditCard, FiDollarSign, FiGift } from 'react-icons/fi';
+import { useAuth } from '../../../context/AuthContext.jsx';
 import './CashierScreen.css';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -32,6 +33,7 @@ function buildDisplayLines(item) {
 
 export default function CashierPOS() {
   const navigate = useNavigate();
+  const { user, token, logout } = useAuth();
   const [screen, setScreen] = useState(SCREEN.HOME);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [orderItems, setOrderItems] = useState([]);
@@ -200,8 +202,14 @@ export default function CashierPOS() {
   function completeOrder(paymentMethod) {
     async function submitOrder() {
       try {
+        const employeeId = Number(user?.employee_id);
+        if (!Number.isInteger(employeeId) || employeeId <= 0) {
+          setStatusMessage('Unable to identify logged-in employee. Please sign in again.');
+          return;
+        }
+
         const orderPayload = {
-          employee_id: 1, // TODO: Get from logged-in employee
+          employee_id: employeeId,
           payment_type: paymentMethod.toUpperCase(),
           items: orderItems.map(item => ({
             menu_item_id: item.menuItemId,
@@ -212,10 +220,13 @@ export default function CashierPOS() {
         };
         
         console.log('Submitting order:', orderPayload); // Debug log
-        
+
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers.Authorization = `Bearer ${token}`;
+
         const response = await fetch(`${API_BASE}/cashier/orders`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify(orderPayload)
         });
         
@@ -268,6 +279,7 @@ export default function CashierPOS() {
             <button
               className="secondary-action"
               onClick={() => {
+                logout();
                 localStorage.removeItem('role');
                 localStorage.removeItem('employee');
                 localStorage.removeItem('user');

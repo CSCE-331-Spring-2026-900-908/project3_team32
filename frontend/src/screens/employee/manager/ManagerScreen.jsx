@@ -89,6 +89,7 @@ export default function ManagerScreen() {
         <div className="sidebar-footer">
           {user && (
             <div className="sidebar-user">
+              <span className="sidebar-user-title">Currently Signed In</span>
               <span className="sidebar-user-name">{user.name}</span>
               <span className="sidebar-user-role">{user.position}</span>
             </div>
