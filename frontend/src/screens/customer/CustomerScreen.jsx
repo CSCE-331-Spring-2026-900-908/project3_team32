@@ -82,6 +82,8 @@ export default function CustomerScreen() {
   const [highContrastEnabled, setHighContrastEnabled] = useState(false);
 
   const [menuItems, setMenuItems] = useState([]);
+  const [favoriteItems, setFavoriteItems] = useState([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [sugarOptions, setSugarOptions] = useState([]);
   const [iceOptions, setIceOptions] = useState([]);
   const [toppingOptions, setToppingOptions] = useState([]);
@@ -157,7 +159,27 @@ export default function CustomerScreen() {
 
     loadCustomerOrders();
     return () => { cancelled = true; };
-  }, [token, user?.type]);
+  }, [token, user?.type, refreshTrigger]);
+
+  useEffect(() => {
+    if (user && token && user.type === 'customer') {
+      fetch(`${API_BASE}/customer/favorites`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (!data.error && Array.isArray(data)) {
+            const safeFavorites = data.map(item => ({
+               ...item,
+               id: item.menu_item_id,
+               cost: Number(item.cost)
+            }));
+            setFavoriteItems(safeFavorites);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [user, token, refreshTrigger]);
 
   useEffect(() => {
     const email = (user?.email || '').trim().toLowerCase();
@@ -497,7 +519,7 @@ export default function CustomerScreen() {
     async function submitOrder() {
       try {
         const orderPayload = {
-          employee_id: 1, payment_type: paymentType,
+          employee_id: 1, payment_type: paymentType, customer_email: user?.email, customer_name: user?.name, google_id: user?.sub || user?.id || user?.email,
           items: cart.map(item => ({ menu_item_id: item.menuItemId, quantity: item.quantity || 1, modification_ids: item.modificationIds || [], comments: item.comments || '' }))
         };
         const headers = { 'Content-Type': 'application/json' };
@@ -508,6 +530,7 @@ export default function CustomerScreen() {
         const orderNum = result.order?.order_id || Math.floor(1000 + Math.random() * 9000);
         setCustomerOrders(prev => [{ order_id: orderNum, order_date: new Date().toISOString(), total_cost: discountedSubtotal }, ...prev]);
         setCart([]); setOrderNumber(orderNum); setScreen(SCREEN.MENU); setShowConfirmation(true);
+        setRefreshTrigger(prev => prev + 1);
         setTimeout(() => { setShowConfirmation(false); setOrderNumber(null); }, 5000);
       } catch (error) {
         console.error('Order submission error:', error);
@@ -519,6 +542,10 @@ export default function CustomerScreen() {
 
   const textSizePercent = ((textScale - 85) / (140 - 85)) * 100;
   const zoomPercent = ((magnifierZoom - 1.5) / (4 - 1.5)) * 100;
+
+  const itemsToDisplay = selectedCategory === 'Favorites' 
+    ? favoriteItems 
+    : menuItems.filter(item => selectedCategory === 'All' || item.category === selectedCategory);
 
   const renderAppContent = (isMagnified = false) => (
     <>
@@ -623,17 +650,50 @@ export default function CustomerScreen() {
           {screen === SCREEN.MENU && (
             <div className="customer-content">
                 <div className="category-tabs">
-                    {categories.map(cat => (
-                        <button key={cat} className={`category-tab${selectedCategory === cat ? ' active' : ''}`} onClick={() => setSelectedCategory(cat)}>{cat}</button>
-                    ))}
+                  <button 
+                    className={`category-tab${selectedCategory === 'All' ? ' active' : ''}`} 
+                    onClick={() => setSelectedCategory('All')}
+                  >
+                    All
+                  </button>
+                  {(
+                    <button 
+                      className={`category-tab${selectedCategory === 'Favorites' ? ' active' : ''}`} 
+                      onClick={() => setSelectedCategory('Favorites')}
+                    >
+                      Favorites
+                    </button>
+                  )}
+                  {categories.filter(cat => cat !== 'All').map(cat => (
+                    <button 
+                      key={cat} 
+                      className={`category-tab${selectedCategory === cat ? ' active' : ''}`} 
+                      onClick={() => setSelectedCategory(cat)}
+                    >
+                      {cat}
+                    </button>
+                  ))}
                 </div>
                 <div className="menu-grid">
-                    {visibleItems.map(item => (
-                        <button key={item.id} className="menu-item-card" onClick={() => handleSelectItem(item)}>
-                            <div className="item-name">{item.name}</div>
-                            <div className="item-price">{currency(item.cost)}</div>
-                        </button>
-                    ))}
+                  {loading ? (
+                    <p className="loading-text">Loading menu...</p>
+                  ) : selectedCategory === 'Favorites' && itemsToDisplay.length === 0 ? (
+                    <div style={{ padding: '2rem', textAlign: 'center', width: '100%', gridColumn: '1 / -1' }}>
+                        <h3>No Favorites Yet!</h3>
+                        <p>Place an order to start building your favorites list.</p>
+                    </div>
+                  ) : (
+                    itemsToDisplay.map(item => (
+                      <button
+                        key={item.id || item.menu_item_id}
+                        className="menu-item-card"
+                        onClick={() => handleSelectItem(item)}
+                      >
+                        <div className="item-name">{item.name}</div>
+                        <div className="item-price">{currency(item.cost)}</div>
+                      </button>
+                    ))
+                  )}  
                 </div>
             </div>
           )}

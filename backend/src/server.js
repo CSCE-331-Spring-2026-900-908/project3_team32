@@ -531,6 +531,33 @@ app.get('/api/cashier/modifications', async (req, res, next) => {
   }
 });
 
+app.get('/api/customer/favorites', requireAuth(), async (req, res, next) => {
+  const email = req.user?.email;
+  console.log("Fetching favorites for email:", email);
+  if (!email) {
+    return res.status(401).json({ error: 'User email not found.' });
+  }
+  try {
+    const result = await pool.query(
+      `SELECT m.menu_item_id, m.name, m.cost, m.category, SUM(oi.quantity) as order_count
+       FROM customer_order co
+       JOIN customer c ON co.customer_id = c.customer_id
+       JOIN order_item oi ON co.order_id = oi.order_id
+       JOIN menu_item m ON oi.menu_item_id = m.menu_item_id
+       WHERE c.email = $1
+       GROUP BY m.menu_item_id, m.name, m.cost, m.category
+       ORDER BY order_count DESC
+       LIMIT 6`,
+      [email]
+    );
+    console.log(`=> Found ${result.rows.length} favorite drinks!`);
+    res.json(result.rows);
+  } catch (error) {
+    console.error("=> Favorites SQL Error:", error.message);
+    res.json([]); 
+  }
+});
+
 app.post('/api/cashier/orders', async (req, res, next) => {
   const employeeId = Number(req.body?.employee_id);
   const paymentType = String(req.body?.payment_type || 'CARD').trim() || 'CARD';
@@ -1148,6 +1175,32 @@ app.post('/api/reports/z-report', async (req, res, next) => {
     );
 
     await client.query('COMMIT');
+    if (req.body.customer_email) {
+      try {
+          const email = req.body.customer_email;
+          const name = req.body.customer_name || email.split('@')[0];
+          const googleId = req.body.google_id || email;
+          console.log(`Attempting to link order ${orderId} to email: ${email}`);
+          let custRes = await pool.query(`SELECT customer_id FROM customer WHERE email = $1 LIMIT 1`, [email]);
+          let custId = custRes.rows[0]?.customer_id;
+          if (!custId) {
+              console.log(`=> Customer not found. Auto-registering: ${email}`);
+              const insertRes = await pool.query(
+                  `INSERT INTO customer (email, name, google_id) VALUES ($1, $2, $3) RETURNING customer_id`,
+                  [email, name, googleId]
+              );
+              custId = insertRes.rows[0].customer_id;
+          }
+          console.log(`=> Linking order to customer_id: ${custId}`);
+          await pool.query(
+            `UPDATE customer_order SET customer_id = $1 WHERE order_id = $2`,
+            [custId, orderId]
+          );
+          console.log("=> Successfully linked order to customer!");
+      } catch (linkError) {
+          console.error("=> FAILED TO LINK CUSTOMER:", linkError.message);
+      }
+   }
 
     res.json({
       totalOrders: totals.rows[0]?.total_orders || 0,
