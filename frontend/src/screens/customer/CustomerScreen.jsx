@@ -17,7 +17,11 @@ const LANGUAGE_CODE_ALIASES = { iw: 'he', jw: 'jv' };
 
 const SCREEN = { HOME: 'HOME', MENU: 'MENU', CUSTOMIZE: 'CUSTOMIZE', CART: 'CART', CHECKOUT: 'CHECKOUT' };
 
-function currency(value) { return `$${value.toFixed(2)}`; }
+function currency(value) {
+  const num = Number(value);
+  if (isNaN(num)) return '$0.00';
+  return `$${num.toFixed(2)}`;
+}
 
 function pointsFromAmount(amount) {
   const numericAmount = Number(amount);
@@ -115,7 +119,7 @@ export default function CustomerScreen() {
   const { user, token, logout } = useAuth();
   const [screen, setScreen] = useState(SCREEN.HOME);
   const [textScale, setTextScale] = useState(100);
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('Favorites');
   const [cart, setCart] = useState([]);
   const [currentItem, setCurrentItem] = useState(null);
   const [editingCartItemId, setEditingCartItemId] = useState(null);
@@ -133,7 +137,8 @@ export default function CustomerScreen() {
   const [highContrastEnabled, setHighContrastEnabled] = useState(false);
 
   const [menuItems, setMenuItems] = useState([]);
-  const [favoriteItems, setFavoriteItems] = useState([]);
+  const [mostOrderedItems, setMostOrderedItems] = useState([]);
+  const [savedFavorites, setSavedFavorites] = useState([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [sugarOptions, setSugarOptions] = useState([]);
   const [iceOptions, setIceOptions] = useState([]);
@@ -145,7 +150,7 @@ export default function CustomerScreen() {
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [weatherError, setWeatherError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState(['Favorites', 'Most Ordered']);
 
   const magnifierRef = useRef(null);
   const lensInnerRef = useRef(null);
@@ -176,8 +181,7 @@ export default function CustomerScreen() {
           ...CATEGORY_ORDER.filter(c => rawCategories.includes(c)),
           ...rawCategories.filter(c => !CATEGORY_ORDER.includes(c)),
         ];
-        setCategories(sortedCategories);
-        setSelectedCategory((prev) => (prev ? prev : (sortedCategories[0] || '')));
+        setCategories(['Favorites', 'Most Ordered', ...sortedCategories]);
         const modRes = await fetch(`${API_BASE}/cashier/modifications`);
         const modData = await modRes.json();
         setSugarOptions((modData.sugar || []).map(m => ({ id: m.modification_type_id, name: m.name, cost: Number(m.cost) })));
@@ -279,18 +283,33 @@ export default function CustomerScreen() {
 
   useEffect(() => {
     if (user && token && user.type === 'customer') {
-      fetch(`${API_BASE}/customer/favorites`, {
+      fetch(`${API_BASE}/customer/most-ordered`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
         .then(res => res.json())
         .then(data => {
           if (!data.error && Array.isArray(data)) {
-            const safeFavorites = data.map(item => ({
+            const safeItems = data.map(item => ({
                ...item,
                id: item.menu_item_id,
                cost: Number(item.cost)
             }));
-            setFavoriteItems(safeFavorites);
+            setMostOrderedItems(safeItems);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [user, token, refreshTrigger]);
+
+  useEffect(() => {
+    if (user && token && user.type === 'customer') {
+      fetch(`${API_BASE}/customer/saved-favorites`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (!data.error && Array.isArray(data)) {
+            setSavedFavorites(data);
           }
         })
         .catch(console.error);
@@ -655,11 +674,45 @@ export default function CustomerScreen() {
     submitOrder();
   }
 
+  const getFavoriteMatch = (item) => {
+    const { id, ...itemData } = item;
+    const cartStr = JSON.stringify(itemData);
+    return savedFavorites.find(f => JSON.stringify(f.item_data) === cartStr);
+  };
+  const handleToggleFavorite = async (item) => {
+    if (!user || !token) return;
+    const existingFav = getFavoriteMatch(item);
+    const { id, ...itemData } = item;
+    try {
+        if (existingFav) {
+            await fetch(`${API_BASE}/customer/saved-favorites/${existingFav.favorite_id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+        } else {
+            const payload = {
+                customer_email: user.email,
+                customer_name: user.name,
+                google_id: user.sub || user.id || user.email,
+                item_data: itemData
+            };
+            await fetch(`${API_BASE}/customer/saved-favorites`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(payload)
+            });
+        }
+        setRefreshTrigger(p => p + 1);
+    } catch (error) {
+        console.error("Failed to toggle favorite", error);
+    }
+  };
+
   const textSizePercent = ((textScale - 85) / (140 - 85)) * 100;
   const zoomPercent = ((magnifierZoom - 1.5) / (4 - 1.5)) * 100;
 
   const itemsToDisplay = selectedCategory === 'Favorites' 
-    ? favoriteItems 
+    ? savedFavorites 
     : menuItems.filter(item => selectedCategory === 'All' || item.category === selectedCategory);
 
   const renderAppContent = (isMagnified = false) => (
@@ -810,21 +863,7 @@ export default function CustomerScreen() {
           {screen === SCREEN.MENU && (
             <div className={`customer-content menu-screen${cartCount > 0 ? ' has-floating-cart-space' : ''}`}>
                 <div className="category-tabs">
-                  <button 
-                    className={`category-tab${selectedCategory === 'All' ? ' active' : ''}`} 
-                    onClick={() => setSelectedCategory('All')}
-                  >
-                    All
-                  </button>
-                  {(
-                    <button 
-                      className={`category-tab${selectedCategory === 'Favorites' ? ' active' : ''}`} 
-                      onClick={() => setSelectedCategory('Favorites')}
-                    >
-                      Favorites
-                    </button>
-                  )}
-                  {categories.filter(cat => cat !== 'All').map(cat => (
+                  {categories.map(cat => (
                     <button 
                       key={cat} 
                       className={`category-tab${selectedCategory === cat ? ' active' : ''}`} 
@@ -837,11 +876,69 @@ export default function CustomerScreen() {
                 <div className="menu-grid">
                   {loading ? (
                     <p className="loading-text">Loading menu...</p>
-                  ) : selectedCategory === 'Favorites' && itemsToDisplay.length === 0 ? (
-                    <div style={{ padding: '2rem', textAlign: 'center', width: '100%', gridColumn: '1 / -1' }}>
-                        <h3>No Favorites Yet!</h3>
-                        <p>Place an order to start building your favorites list.</p>
-                    </div>
+                  ) : selectedCategory === 'Favorites' ? (
+                    savedFavorites.length === 0 ? (
+                      <div style={{ padding: '2rem', textAlign: 'center', width: '100%', gridColumn: '1 / -1' }}>
+                         <h3>No Favorites Yet!</h3>
+                         <p>Add items to your cart and click the heart icon to save your favorite drinks.</p>
+                      </div>
+                    ) : (
+                      savedFavorites.map(fav => {
+                        const item = fav.item_data;
+                        return (
+                          <div key={fav.favorite_id} className="menu-item-card" style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', padding: '15px', cursor: 'default' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                              <h3 style={{ margin: 0, fontSize: '1.1rem', paddingRight: '10px' }}>{item.name}</h3>
+                              <button 
+                                onClick={() => handleToggleFavorite(item)} 
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
+                                title="Remove from Favorites"
+                              >
+                                <svg viewBox="0 0 24 24" fill="#ff4b4b" height="28" width="28">
+                                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                                </svg>
+                              </button>
+                            </div>
+                            <div style={{ fontSize: '0.85rem', color: '#555', flex: 1, marginBottom: '15px' }}>
+                              {buildDisplayLines(item).map((line, i) => <div key={i}>{line}</div>)}
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                              <strong style={{ fontSize: '1.1rem' }}>{currency(item.price || item.baseCost)}</strong>
+                              <button 
+                                onClick={() => setCart(prev => [...prev, { ...item, id: Date.now() }])} 
+                                style={{ 
+                                  backgroundColor: '#8b4513', 
+                                  color: 'white', 
+                                  border: 'none',
+                                  padding: '6px 14px', 
+                                  fontSize: '0.85rem', 
+                                  borderRadius: '8px', 
+                                  fontWeight: 'bold',
+                                  cursor: 'pointer',
+                                  margin: 0,
+                                  flex: 'none'
+                                }}
+                              >
+                                Add to Cart
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )
+                  ) : selectedCategory === 'Most Ordered' ? (
+                    mostOrderedItems.length === 0 ? (
+                      <div style={{ padding: '2rem', textAlign: 'center', width: '100%', gridColumn: '1 / -1' }}>
+                         <h3>No past orders found.</h3>
+                      </div>
+                    ) : (
+                      mostOrderedItems.map(item => (
+                        <button key={item.id} className="menu-item-card" onClick={() => handleSelectItem(item)}>
+                          <div className="item-name">{item.name}</div>
+                          <div className="item-price">{currency(item.cost)}</div>
+                        </button>
+                      ))
+                    )
                   ) : (
                     itemsToDisplay.map(item => (
                       <button
@@ -934,7 +1031,7 @@ export default function CustomerScreen() {
                 <button className="cart-back-btn" onClick={() => setScreen(SCREEN.HOME)}>Back</button>
                 <h2>Your Order</h2>
               </div>
-              {cart.length === 0 ? (
+              {cartCount === 0 ? (
                 <div className="empty-cart">
                   <p>Your cart is empty.</p>
                   <button className="btn-primary" onClick={() => setScreen(SCREEN.HOME)}>Back to Start</button>
@@ -1015,6 +1112,17 @@ export default function CustomerScreen() {
                             </button>
                           </div>
                           <button className="cart-edit-btn" onClick={() => startEditCartItem(item)}>Edit</button>
+                          <button 
+                            onClick={() => handleToggleFavorite(item)} 
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 10px', color: getFavoriteMatch(item) ? '#ff4b4b' : '#aaa', display: 'flex', alignItems: 'center' }}
+                            title={getFavoriteMatch(item) ? "Remove from Favorites" : "Save as Favorite"}
+                          >
+                            {getFavoriteMatch(item) ? (
+                              <svg viewBox="0 0 24 24" fill="currentColor" height="24" width="24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                            ) : (
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" height="24" width="24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                            )}
+                          </button>
                         </div>
                         <div className="cart-item-details">
                           {buildDisplayLines(item).map((line, i) => (

@@ -531,30 +531,20 @@ app.get('/api/cashier/modifications', async (req, res, next) => {
   }
 });
 
-app.get('/api/customer/favorites', requireAuth(), async (req, res, next) => {
-  const email = req.user?.email;
-  console.log("Fetching favorites for email:", email);
-  if (!email) {
-    return res.status(401).json({ error: 'User email not found.' });
-  }
+app.get('/api/cashier/most-ordered', async (req, res, next) => {
   try {
     const result = await pool.query(
       `SELECT m.menu_item_id, m.name, m.cost, m.category, SUM(oi.quantity) as order_count
-       FROM customer_order co
-       JOIN customer c ON co.customer_id = c.customer_id
-       JOIN order_item oi ON co.order_id = oi.order_id
+       FROM order_item oi
        JOIN menu_item m ON oi.menu_item_id = m.menu_item_id
-       WHERE c.email = $1
        GROUP BY m.menu_item_id, m.name, m.cost, m.category
        ORDER BY order_count DESC
-       LIMIT 6`,
-      [email]
+       LIMIT 9`
     );
-    console.log(`=> Found ${result.rows.length} favorite drinks!`);
     res.json(result.rows);
   } catch (error) {
-    console.error("=> Favorites SQL Error:", error.message);
-    res.json([]); 
+    console.error("Cashier Most Ordered Error:", error);
+    res.status(500).json({ error: 'Failed to fetch global most ordered' });
   }
 });
 
@@ -1180,25 +1170,25 @@ app.post('/api/reports/z-report', async (req, res, next) => {
           const email = req.body.customer_email;
           const name = req.body.customer_name || email.split('@')[0];
           const googleId = req.body.google_id || email;
-          console.log(`Attempting to link order ${orderId} to email: ${email}`);
+          console.log(`[CHECKOUT] Attempting to link order ${orderId} to email: ${email}`);
           let custRes = await pool.query(`SELECT customer_id FROM customer WHERE email = $1 LIMIT 1`, [email]);
           let custId = custRes.rows[0]?.customer_id;
           if (!custId) {
-              console.log(`=> Customer not found. Auto-registering: ${email}`);
+              console.log(`[CHECKOUT] Customer not found. Auto-registering: ${email}`);
               const insertRes = await pool.query(
                   `INSERT INTO customer (email, name, google_id) VALUES ($1, $2, $3) RETURNING customer_id`,
                   [email, name, googleId]
               );
               custId = insertRes.rows[0].customer_id;
           }
-          console.log(`=> Linking order to customer_id: ${custId}`);
           await pool.query(
             `UPDATE customer_order SET customer_id = $1 WHERE order_id = $2`,
             [custId, orderId]
           );
-          console.log("=> Successfully linked order to customer!");
+          console.log(`[CHECKOUT] Successfully linked order ${orderId} to customer_id ${custId}`);
+          
       } catch (linkError) {
-          console.error("=> FAILED TO LINK CUSTOMER:", linkError.message);
+          console.error("[CHECKOUT] FAILED TO LINK CUSTOMER:", linkError.message);
       }
    }
 
@@ -1216,6 +1206,97 @@ app.post('/api/reports/z-report', async (req, res, next) => {
     next(error);
   } finally {
     client.release();
+  }
+});
+
+app.get('/api/customer/most-ordered', requireAuth(), async (req, res, next) => {
+  const email = req.user?.email;
+  if (!email) return res.status(401).json({ error: 'User email not found.' });
+
+  try {
+    const result = await pool.query(
+      `SELECT m.menu_item_id, m.name, m.cost, m.category, SUM(oi.quantity) as order_count
+       FROM customer_order co
+       JOIN customer c ON co.customer_id = c.customer_id
+       JOIN order_item oi ON co.order_id = oi.order_id
+       JOIN menu_item m ON oi.menu_item_id = m.menu_item_id
+       WHERE c.email = $1
+       GROUP BY m.menu_item_id, m.name, m.cost, m.category
+       ORDER BY order_count DESC
+       LIMIT 12
+       `,
+      [email]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Most Ordered SQL Error:", error.message);
+    res.json([]); 
+  }
+});
+
+app.get('/api/customer/saved-favorites', requireAuth(), async (req, res, next) => {
+  const email = req.user?.email;
+  if (!email) return res.status(401).json({ error: 'User email not found.' });
+  try {
+    const result = await pool.query(
+      `SELECT f.favorite_id, f.item_data
+       FROM customer_favorite f
+       JOIN customer c ON f.customer_id = c.customer_id
+       WHERE c.email = $1
+       ORDER BY f.favorite_id DESC`,
+      [email]
+    );
+    const parsed = result.rows.map(row => {
+        let safeData = row.item_data;
+        if (typeof row.item_data === 'string') {
+            try { safeData = JSON.parse(row.item_data); } catch(e) {}
+        }
+        return {
+            favorite_id: row.favorite_id,
+            item_data: safeData
+        };
+    });
+    res.json(parsed);
+  } catch (error) {
+    console.error("Saved Favorites Fetch Error:", error.message);
+    res.json([]);
+  }
+});
+
+app.post('/api/customer/saved-favorites', requireAuth(), async (req, res, next) => {
+  const email = req.body.customer_email;
+  const name = req.body.customer_name || email.split('@')[0];
+  const googleId = req.body.google_id || email;
+  const itemDataStr = JSON.stringify(req.body.item_data);
+
+  try {
+      let custRes = await pool.query(`SELECT customer_id FROM customer WHERE email = $1 LIMIT 1`, [email]);
+      let custId = custRes.rows[0]?.customer_id;
+      if (!custId) {
+          const insertRes = await pool.query(
+              `INSERT INTO customer (email, name, google_id) VALUES ($1, $2, $3) RETURNING customer_id`,
+              [email, name, googleId]
+          );
+          custId = insertRes.rows[0].customer_id;
+      }
+      const favRes = await pool.query(
+          `INSERT INTO customer_favorite (customer_id, item_data) VALUES ($1, $2) RETURNING favorite_id`,
+          [custId, itemDataStr]
+      );
+      res.json({ favorite_id: favRes.rows[0].favorite_id });
+  } catch (err) {
+      console.error("Failed to save favorite:", err.message);
+      res.status(500).json({ error: 'Failed to save favorite' });
+  }
+});
+
+app.delete('/api/customer/saved-favorites/:id', requireAuth(), async (req, res, next) => {
+  try {
+      await pool.query(`DELETE FROM customer_favorite WHERE favorite_id = $1`, [req.params.id]);
+      res.json({ success: true });
+  } catch (err) {
+      console.error("Failed to delete favorite:", err.message);
+      res.status(500).json({ error: 'Failed to delete favorite' });
   }
 });
 
