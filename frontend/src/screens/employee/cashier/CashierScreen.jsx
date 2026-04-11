@@ -8,10 +8,10 @@ const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 const SCREEN = {
   HOME: 'HOME',
-  ITEM_SELECT: 'ITEM_SELECT',
+  ITEM_SELECT: 'MENU ITEMS',
   SIZE: 'SIZE',
-  SUGAR: 'SUGAR',
-  ICE: 'ICE',
+  SUGAR: 'SUGAR LEVEL',
+  ICE: 'ICE LEVEL',
   TOPPINGS: 'TOPPINGS',
   CHECKOUT: 'CHECKOUT',
   CONFIRMATION: 'CONFIRMATION',
@@ -488,7 +488,6 @@ export default function CashierPOS() {
               <h2>Complete Payment</h2>
             </div>
             
-            {/* Order Summary */}
             <div className="checkout-order-summary">
               <h3>Order Summary</h3>
               <div className="checkout-order-list">
