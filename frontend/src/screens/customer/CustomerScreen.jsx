@@ -10,18 +10,12 @@ const GOLD_POINTS_THRESHOLD = 1000;
 const PLATINUM_POINTS_THRESHOLD = GOLD_POINTS_THRESHOLD + 2500;
 const DIAMOND_POINTS_THRESHOLD = PLATINUM_POINTS_THRESHOLD + 5000;
 const REWARDS_WINDOW_MS = 365 * 24 * 60 * 60 * 1000;
-const WEEKDAY_FORMATTER = new Intl.DateTimeFormat('en-US', { weekday: 'short' });
-const FULL_DATE_FORMATTER = new Intl.DateTimeFormat('en-US');
 
 const LANGUAGE_CODE_ALIASES = { iw: 'he', jw: 'jv' };
 
-const SCREEN = { HOME: 'HOME', MENU: 'MENU', CUSTOMIZE: 'CUSTOMIZE', CART: 'CART', CHECKOUT: 'CHECKOUT' };
+const SCREEN = { MENU: 'MENU', CUSTOMIZE: 'CUSTOMIZE', CART: 'CART', CHECKOUT: 'CHECKOUT' };
 
-function currency(value) {
-  const num = Number(value);
-  if (isNaN(num)) return '$0.00';
-  return `$${num.toFixed(2)}`;
-}
+function currency(value) { return `$${value.toFixed(2)}`; }
 
 function pointsFromAmount(amount) {
   const numericAmount = Number(amount);
@@ -65,61 +59,12 @@ function toNativeLanguageName(languageCode, fallback) {
   } catch { return fallback; }
 }
 
-function describeWeatherCode(weatherCode) {
-  const code = Number(weatherCode);
-  const codeMap = {
-    0: 'Sunny',
-    1: 'Mostly clear',
-    2: 'Partly cloudy',
-    3: 'Cloudy',
-    45: 'Foggy',
-    48: 'Rime fog',
-    51: 'Light drizzle',
-    53: 'Drizzle',
-    55: 'Heavy drizzle',
-    56: 'Freezing drizzle',
-    57: 'Heavy freezing drizzle',
-    61: 'Light rain',
-    63: 'Rain',
-    65: 'Heavy rain',
-    66: 'Freezing rain',
-    67: 'Heavy freezing rain',
-    71: 'Light snow',
-    73: 'Snow',
-    75: 'Heavy snow',
-    77: 'Snow grains',
-    80: 'Light showers',
-    81: 'Showers',
-    82: 'Heavy showers',
-    85: 'Light snow showers',
-    86: 'Heavy snow showers',
-    95: 'Thunderstorm',
-    96: 'Thunderstorm and hail',
-    99: 'Heavy hail storm',
-  };
-  return codeMap[code] || 'Weather unavailable';
-}
-
-function formatWeekdayLabel(dateString) {
-  if (!dateString) return '';
-  const parsed = new Date(`${dateString}T12:00:00`);
-  if (Number.isNaN(parsed.getTime())) return '';
-  return WEEKDAY_FORMATTER.format(parsed);
-}
-
-function formatFullDateLabel(dateString) {
-  if (!dateString) return '';
-  const parsed = new Date(`${dateString}T12:00:00`);
-  if (Number.isNaN(parsed.getTime())) return '';
-  return FULL_DATE_FORMATTER.format(parsed);
-}
-
 export default function CustomerScreen() {
   const navigate = useNavigate();
   const { user, token, logout } = useAuth();
-  const [screen, setScreen] = useState(SCREEN.HOME);
+  const [screen, setScreen] = useState(SCREEN.MENU);
   const [textScale, setTextScale] = useState(100);
-  const [selectedCategory, setSelectedCategory] = useState('Favorites');
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [cart, setCart] = useState([]);
   const [currentItem, setCurrentItem] = useState(null);
   const [editingCartItemId, setEditingCartItemId] = useState(null);
@@ -135,27 +80,16 @@ export default function CustomerScreen() {
   const [magnifierEnabled, setMagnifierEnabled] = useState(false);
   const [magnifierZoom, setMagnifierZoom] = useState(2);
   const [highContrastEnabled, setHighContrastEnabled] = useState(false);
+  const [fontSize, setFontSize] = useState(100);
 
   const [menuItems, setMenuItems] = useState([]);
-  const [mostOrderedItems, setMostOrderedItems] = useState([]);
-  const [savedFavorites, setSavedFavorites] = useState([]);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [sugarOptions, setSugarOptions] = useState([]);
   const [iceOptions, setIceOptions] = useState([]);
   const [toppingOptions, setToppingOptions] = useState([]);
   const [customerOrders, setCustomerOrders] = useState([]);
   const [isEmployeeRewardsUser, setIsEmployeeRewardsUser] = useState(false);
-  const [weather, setWeather] = useState(null);
-  const [weeklyWeather, setWeeklyWeather] = useState([]);
-  const [weatherLoading, setWeatherLoading] = useState(true);
-  const [weatherError, setWeatherError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [categories, setCategories] = useState(['Favorites', 'Most Ordered']);
-  const isGuestCustomer = user?.type === 'customer' && user?.guest === true;
-  const displayCategories = useMemo(
-    () => (isGuestCustomer ? categories.filter((cat) => cat !== 'Favorites' && cat !== 'Most Ordered') : categories),
-    [categories, isGuestCustomer],
-  );
+  const [categories, setCategories] = useState(['All']);
 
   const magnifierRef = useRef(null);
   const lensInnerRef = useRef(null);
@@ -186,7 +120,7 @@ export default function CustomerScreen() {
           ...CATEGORY_ORDER.filter(c => rawCategories.includes(c)),
           ...rawCategories.filter(c => !CATEGORY_ORDER.includes(c)),
         ];
-        setCategories(['Favorites', 'Most Ordered', ...sortedCategories]);
+        setCategories(['All', ...sortedCategories]);
         const modRes = await fetch(`${API_BASE}/cashier/modifications`);
         const modData = await modRes.json();
         setSugarOptions((modData.sugar || []).map(m => ({ id: m.modification_type_id, name: m.name, cost: Number(m.cost) })));
@@ -202,74 +136,7 @@ export default function CustomerScreen() {
   }, []);
 
   useEffect(() => {
-    if (!displayCategories.length) return;
-    if (!displayCategories.includes(selectedCategory)) {
-      setSelectedCategory(displayCategories[0]);
-    }
-  }, [displayCategories, selectedCategory]);
-
-  useEffect(() => {
-    let timerId = null;
-    let cancelled = false;
-
-    async function loadWeather() {
-      try {
-        setWeatherLoading(true);
-
-        const currentResponse = await fetch(`${API_BASE}/external/weather?city=College%20Station,US`);
-        if (!currentResponse.ok) throw new Error('Failed to load current weather');
-        const currentData = await currentResponse.json();
-        if (cancelled) return;
-
-        setWeather(currentData);
-        setWeatherError('');
-
-        let nextWeekly = Array.isArray(currentData.dailyForecast) ? currentData.dailyForecast.slice(0, 7) : [];
-        if (!nextWeekly.length) {
-          try {
-            const weeklyResponse = await fetch('https://api.open-meteo.com/v1/forecast?latitude=30.6280&longitude=-96.3344&daily=weather_code,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto&forecast_days=7');
-            if (weeklyResponse.ok) {
-              const weeklyData = await weeklyResponse.json();
-              const daily = weeklyData.daily || {};
-              const times = Array.isArray(daily.time) ? daily.time : [];
-              const codes = Array.isArray(daily.weather_code) ? daily.weather_code : [];
-              const maxTemps = Array.isArray(daily.temperature_2m_max) ? daily.temperature_2m_max : [];
-              const minTemps = Array.isArray(daily.temperature_2m_min) ? daily.temperature_2m_min : [];
-              nextWeekly = times.map((date, index) => ({
-                date,
-                weatherCode: Number(codes[index] ?? -1),
-                description: describeWeatherCode(codes[index]),
-                maxTemp: Number(maxTemps[index]),
-                minTemp: Number(minTemps[index]),
-              }));
-            }
-          } catch (error) {
-            console.error('Weekly weather fetch failed:', error);
-          }
-        }
-
-        if (!cancelled) setWeeklyWeather(nextWeekly);
-      } catch (error) {
-        console.error('Failed to load customer weather:', error);
-        if (cancelled) return;
-        setWeather(null);
-        setWeeklyWeather([]);
-        setWeatherError('Weather unavailable');
-      } finally {
-        if (!cancelled) setWeatherLoading(false);
-      }
-    }
-
-    loadWeather();
-    timerId = window.setInterval(loadWeather, 10 * 60 * 1000);
-    return () => {
-      cancelled = true;
-      if (timerId) window.clearInterval(timerId);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!token || user?.type !== 'customer' || isGuestCustomer) {
+    if (!token || user?.type !== 'customer') {
       setCustomerOrders([]);
       return;
     }
@@ -291,53 +158,9 @@ export default function CustomerScreen() {
 
     loadCustomerOrders();
     return () => { cancelled = true; };
-  }, [token, user?.type, refreshTrigger, isGuestCustomer]);
+  }, [token, user?.type]);
 
   useEffect(() => {
-    if (user && token && user.type === 'customer' && !isGuestCustomer) {
-      fetch(`${API_BASE}/customer/most-ordered`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (!data.error && Array.isArray(data)) {
-            const safeItems = data.map(item => ({
-               ...item,
-               id: item.menu_item_id,
-               cost: Number(item.cost)
-            }));
-            setMostOrderedItems(safeItems);
-          }
-        })
-        .catch(console.error);
-    } else if (isGuestCustomer) {
-      setMostOrderedItems([]);
-    }
-  }, [user, token, refreshTrigger, isGuestCustomer]);
-
-  useEffect(() => {
-    if (user && token && user.type === 'customer' && !isGuestCustomer) {
-      fetch(`${API_BASE}/customer/saved-favorites`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (!data.error && Array.isArray(data)) {
-            setSavedFavorites(data);
-          }
-        })
-        .catch(console.error);
-    } else if (isGuestCustomer) {
-      setSavedFavorites([]);
-    }
-  }, [user, token, refreshTrigger, isGuestCustomer]);
-
-  useEffect(() => {
-    if (isGuestCustomer) {
-      setIsEmployeeRewardsUser(false);
-      return;
-    }
-
     const email = (user?.email || '').trim().toLowerCase();
     if (!email) {
       setIsEmployeeRewardsUser(false);
@@ -366,7 +189,7 @@ export default function CustomerScreen() {
 
     loadEmployeeMatch();
     return () => { cancelled = true; };
-  }, [token, user?.email, isGuestCustomer]);
+  }, [token, user?.email]);
 
   useEffect(() => {
     let labelInterval = null;
@@ -436,6 +259,12 @@ export default function CustomerScreen() {
     root.style.fontSize = `${textScale}%`;
     return () => { root.style.fontSize = prev; };
   }, [textScale]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--a11y-font-size', `${fontSize}%`);
+    return () => { root.style.removeProperty('--a11y-font-size'); };
+  }, [fontSize]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -511,9 +340,10 @@ export default function CustomerScreen() {
   }, [magnifierEnabled]);
 
 
-  const visibleItems = useMemo(() => (
-    menuItems.filter((item) => item.category === selectedCategory)
-  ), [selectedCategory, menuItems]);
+  const visibleItems = useMemo(() => {
+    if (selectedCategory === 'All') return menuItems;
+    return menuItems.filter(item => item.category === selectedCategory);
+  }, [selectedCategory, menuItems]);
 
   const cartTotal = useMemo(
     () => cart.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0),
@@ -523,11 +353,7 @@ export default function CustomerScreen() {
     () => cart.reduce((sum, item) => sum + (item.quantity || 1), 0),
     [cart],
   );
-  const isEmployeeDiscount = !isGuestCustomer && (
-    isEmployeeRewardsUser
-    || user?.type === 'employee'
-    || ['Manager', 'Shift Lead', 'Cashier'].includes(user?.position || '')
-  );
+  const isEmployeeDiscount = isEmployeeRewardsUser || user?.type === 'employee' || ['Manager', 'Shift Lead', 'Cashier'].includes(user?.position || '');
 
   const priorYearOrders = useMemo(() => {
     const cutoff = Date.now() - REWARDS_WINDOW_MS;
@@ -594,7 +420,7 @@ export default function CustomerScreen() {
       setScreen(SCREEN.CART);
       return;
     }
-    setScreen(SCREEN.HOME);
+    setScreen(SCREEN.MENU);
   }
 
   function startEditCartItem(item) {
@@ -655,7 +481,7 @@ export default function CustomerScreen() {
     setCart(prev => [...prev, item]);
     clearCustomization();
     setCurrentItem(null);
-    setScreen(SCREEN.HOME);
+    setScreen(SCREEN.MENU);
   }
 
   function removeFromCart(itemId) { 
@@ -678,7 +504,7 @@ export default function CustomerScreen() {
     async function submitOrder() {
       try {
         const orderPayload = {
-          employee_id: 1, payment_type: paymentType, customer_email: user?.email, customer_name: user?.name, google_id: user?.sub || user?.id || user?.email,
+          employee_id: 1, payment_type: paymentType,
           items: cart.map(item => ({ menu_item_id: item.menuItemId, quantity: item.quantity || 1, modification_ids: item.modificationIds || [], comments: item.comments || '' }))
         };
         const headers = { 'Content-Type': 'application/json' };
@@ -689,7 +515,6 @@ export default function CustomerScreen() {
         const orderNum = result.order?.order_id || Math.floor(1000 + Math.random() * 9000);
         setCustomerOrders(prev => [{ order_id: orderNum, order_date: new Date().toISOString(), total_cost: discountedSubtotal }, ...prev]);
         setCart([]); setOrderNumber(orderNum); setScreen(SCREEN.MENU); setShowConfirmation(true);
-        setRefreshTrigger(prev => prev + 1);
         setTimeout(() => { setShowConfirmation(false); setOrderNumber(null); }, 5000);
       } catch (error) {
         console.error('Order submission error:', error);
@@ -699,46 +524,8 @@ export default function CustomerScreen() {
     submitOrder();
   }
 
-  const getFavoriteMatch = (item) => {
-    const { id, ...itemData } = item;
-    const cartStr = JSON.stringify(itemData);
-    return savedFavorites.find(f => JSON.stringify(f.item_data) === cartStr);
-  };
-  const handleToggleFavorite = async (item) => {
-    if (!user || !token || isGuestCustomer) return;
-    const existingFav = getFavoriteMatch(item);
-    const { id, ...itemData } = item;
-    try {
-        if (existingFav) {
-            await fetch(`${API_BASE}/customer/saved-favorites/${existingFav.favorite_id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-        } else {
-            const payload = {
-                customer_email: user.email,
-                customer_name: user.name,
-                google_id: user.sub || user.id || user.email,
-                item_data: itemData
-            };
-            await fetch(`${API_BASE}/customer/saved-favorites`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(payload)
-            });
-        }
-        setRefreshTrigger(p => p + 1);
-    } catch (error) {
-        console.error("Failed to toggle favorite", error);
-    }
-  };
-
   const textSizePercent = ((textScale - 85) / (140 - 85)) * 100;
   const zoomPercent = ((magnifierZoom - 1.5) / (4 - 1.5)) * 100;
-
-  const itemsToDisplay = selectedCategory === 'Favorites' 
-    ? savedFavorites 
-    : menuItems.filter(item => selectedCategory === 'All' || item.category === selectedCategory);
 
   const renderAppContent = (isMagnified = false) => (
     <>
@@ -819,6 +606,29 @@ export default function CustomerScreen() {
                     </div>
                   )}
                 </section>
+
+                <div className="a11y-divider" />
+
+                <section className="a11y-section">
+                  <div className="a11y-section-header" style={{ marginBottom: 0 }}>
+                    <span className="a11y-section-title">Font Size</span>
+                    <div className="a11y-font-stepper">
+                      <button
+                        className="a11y-step-btn"
+                        onClick={() => setFontSize(v => Math.max(50, v - 10))}
+                        disabled={fontSize <= 50}
+                        aria-label="Decrease font size"
+                      >−</button>
+                      <span className="a11y-step-value">{fontSize}%</span>
+                      <button
+                        className="a11y-step-btn"
+                        onClick={() => setFontSize(v => Math.min(200, v + 10))}
+                        disabled={fontSize >= 200}
+                        aria-label="Increase font size"
+                      >+</button>
+                    </div>
+                  </div>
+                </section>
               </div>
             </div>
 
@@ -839,143 +649,21 @@ export default function CustomerScreen() {
         </div>
       </header>
 
-      <div className={`customer-content-wrapper${screen === SCREEN.MENU && cartCount > 0 ? ' menu-has-floating-cart-space' : ''}`}>
-          {screen === SCREEN.HOME && (
-            <div className="customer-content customer-home">
-              <div className="customer-home-intro">
-                <p>Select a section to get started</p>
-              </div>
-
-              <div className="customer-home-sections">
-                {displayCategories.map((cat) => (
-                  <button
-                    key={cat}
-                    className="home-section-btn"
-                    onClick={() => {
-                      setSelectedCategory(cat);
-                      setScreen(SCREEN.MENU);
-                    }}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-
-              <div className="customer-home-weather">
-                <div className="customer-home-weather-current">
-                  {weatherLoading ? 'Loading weather...' : weather
-                    ? `${Math.round(weather.temperature)}°F • ${weather.description || describeWeatherCode(weather.weatherCode)}`
-                    : weatherError || 'Weather unavailable'}
-                </div>
-                {weeklyWeather.length > 0 && (
-                  <div className="customer-home-weekly">
-                    {weeklyWeather.map((day) => (
-                      <div key={day.date} className="customer-home-day">
-                        <span className="customer-home-day-label">{formatWeekdayLabel(day.date)}</span>
-                        <span className="customer-home-day-date">{formatFullDateLabel(day.date)}</span>
-                        <span className="customer-home-day-temps">
-                          {Math.round(day.maxTemp)}° / {Math.round(day.minTemp)}°
-                        </span>
-                        <span className="customer-home-day-desc">{day.description || describeWeatherCode(day.weatherCode)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
+      <div className="customer-content-wrapper">
           {screen === SCREEN.MENU && (
-            <div className={`customer-content menu-screen${cartCount > 0 ? ' has-floating-cart-space' : ''}`}>
+            <div className="customer-content">
                 <div className="category-tabs">
-                  {displayCategories.map(cat => (
-                    <button 
-                      key={cat} 
-                      className={`category-tab${selectedCategory === cat ? ' active' : ''}`} 
-                      onClick={() => setSelectedCategory(cat)}
-                    >
-                      {cat}
-                    </button>
-                  ))}
+                    {categories.map(cat => (
+                        <button key={cat} className={`category-tab${selectedCategory === cat ? ' active' : ''}`} onClick={() => setSelectedCategory(cat)}>{cat}</button>
+                    ))}
                 </div>
                 <div className="menu-grid">
-                  {loading ? (
-                    <p className="loading-text">Loading menu...</p>
-                  ) : selectedCategory === 'Favorites' ? (
-                    savedFavorites.length === 0 ? (
-                      <div style={{ padding: '2rem', textAlign: 'center', width: '100%', gridColumn: '1 / -1' }}>
-                         <h3>No Favorites Yet!</h3>
-                         <p>Add items to your cart and click the heart icon to save your favorite drinks.</p>
-                      </div>
-                    ) : (
-                      savedFavorites.map(fav => {
-                        const item = fav.item_data;
-                        return (
-                          <div key={fav.favorite_id} className="menu-item-card" style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', padding: '15px', cursor: 'default' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                              <h3 style={{ margin: 0, fontSize: '1.1rem', paddingRight: '10px' }}>{item.name}</h3>
-                              <button 
-                                onClick={() => handleToggleFavorite(item)} 
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
-                                title="Remove from Favorites"
-                              >
-                                <svg viewBox="0 0 24 24" fill="#ff4b4b" height="28" width="28">
-                                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                                </svg>
-                              </button>
-                            </div>
-                            <div style={{ fontSize: '0.85rem', color: '#555', flex: 1, marginBottom: '15px' }}>
-                              {buildDisplayLines(item).map((line, i) => <div key={i}>{line}</div>)}
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
-                              <strong style={{ fontSize: '1.1rem' }}>{currency(item.price || item.baseCost)}</strong>
-                              <button 
-                                onClick={() => setCart(prev => [...prev, { ...item, id: Date.now() }])} 
-                                style={{ 
-                                  backgroundColor: '#8b4513', 
-                                  color: 'white', 
-                                  border: 'none',
-                                  padding: '6px 14px', 
-                                  fontSize: '0.85rem', 
-                                  borderRadius: '8px', 
-                                  fontWeight: 'bold',
-                                  cursor: 'pointer',
-                                  margin: 0,
-                                  flex: 'none'
-                                }}
-                              >
-                                Add to Cart
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )
-                  ) : selectedCategory === 'Most Ordered' ? (
-                    mostOrderedItems.length === 0 ? (
-                      <div style={{ padding: '2rem', textAlign: 'center', width: '100%', gridColumn: '1 / -1' }}>
-                         <h3>No past orders found.</h3>
-                      </div>
-                    ) : (
-                      mostOrderedItems.map(item => (
+                    {visibleItems.map(item => (
                         <button key={item.id} className="menu-item-card" onClick={() => handleSelectItem(item)}>
-                          <div className="item-name">{item.name}</div>
-                          <div className="item-price">{currency(item.cost)}</div>
+                            <div className="item-name">{item.name}</div>
+                            <div className="item-price">{currency(item.cost)}</div>
                         </button>
-                      ))
-                    )
-                  ) : (
-                    itemsToDisplay.map(item => (
-                      <button
-                        key={item.id || item.menu_item_id}
-                        className="menu-item-card"
-                        onClick={() => handleSelectItem(item)}
-                      >
-                        <div className="item-name">{item.name}</div>
-                        <div className="item-price">{currency(item.cost)}</div>
-                      </button>
-                    ))
-                  )}  
+                    ))}
                 </div>
             </div>
           )}
@@ -983,10 +671,7 @@ export default function CustomerScreen() {
           {screen === SCREEN.CUSTOMIZE && currentItem && (
             <div className="customer-content customize-screen">
               <div className="customize-header">
-                <div className="customize-header-left">
-                  <button className="cart-back-btn" onClick={handleCancelCustomization}>Back</button>
-                  <h2>{editingCartItemId ? 'Edit Item:' : 'Customize:'} {currentItem.name}</h2>
-                </div>
+                <h2>{editingCartItemId ? 'Edit Item:' : 'Customize:'} {currentItem.name}</h2>
                 <span className="customize-progress">Step {customizeStep} of 2</span>
               </div>
 
@@ -1053,17 +738,16 @@ export default function CustomerScreen() {
           {screen === SCREEN.CART && (
             <div className="customer-content cart-screen">
               <div className="cart-screen-top">
-                <button className="cart-back-btn" onClick={() => setScreen(SCREEN.HOME)}>Back</button>
+                <button className="cart-back-btn" onClick={() => setScreen(SCREEN.MENU)}>Back</button>
                 <h2>Your Order</h2>
               </div>
-              {cartCount === 0 ? (
+              {cart.length === 0 ? (
                 <div className="empty-cart">
                   <p>Your cart is empty.</p>
-                  <button className="btn-primary" onClick={() => setScreen(SCREEN.HOME)}>Back to Start</button>
+                  <button className="btn-primary" onClick={() => setScreen(SCREEN.MENU)}>Back to Menu</button>
                 </div>
               ) : (
-                <div className={`cart-screen-body${isGuestCustomer ? ' cart-screen-body-no-rewards' : ''}`}>
-                  {!isGuestCustomer && (
+                <div className="cart-screen-body">
                   <div className={`rewards-summary rewards-tone-${rewardsTone}`}>
                     <div className="rewards-line">
                       <span>Rewards Status</span>
@@ -1108,7 +792,6 @@ export default function CustomerScreen() {
                       </div>
                     )}
                   </div>
-                  )}
                   <div className="cart-items">
                     <h3 className="cart-items-title">Menu Items</h3>
                     {cart.map((item, index) => (
@@ -1139,19 +822,6 @@ export default function CustomerScreen() {
                             </button>
                           </div>
                           <button className="cart-edit-btn" onClick={() => startEditCartItem(item)}>Edit</button>
-                          {!isGuestCustomer && (
-                            <button 
-                              onClick={() => handleToggleFavorite(item)} 
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 10px', color: getFavoriteMatch(item) ? '#ff4b4b' : '#aaa', display: 'flex', alignItems: 'center' }}
-                              title={getFavoriteMatch(item) ? "Remove from Favorites" : "Save as Favorite"}
-                            >
-                              {getFavoriteMatch(item) ? (
-                                <svg viewBox="0 0 24 24" fill="currentColor" height="24" width="24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                              ) : (
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" height="24" width="24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                              )}
-                            </button>
-                          )}
                         </div>
                         <div className="cart-item-details">
                           {buildDisplayLines(item).map((line, i) => (
@@ -1180,7 +850,7 @@ export default function CustomerScreen() {
                     )}
                   </div>
                   <div className="cart-actions">
-                    <button className="btn-secondary" onClick={() => setScreen(SCREEN.HOME)}>Add More Items</button>
+                    <button className="btn-secondary" onClick={() => setScreen(SCREEN.MENU)}>Add More Items</button>
                     <button className="btn-primary" onClick={() => setScreen(SCREEN.CHECKOUT)}>Proceed to Checkout</button>
                   </div>
                 </div>
@@ -1190,9 +860,6 @@ export default function CustomerScreen() {
 
           {screen === SCREEN.CHECKOUT && (
             <div className="customer-content checkout-screen">
-              <div className="section-top-row">
-                <button className="cart-back-btn" onClick={() => setScreen(SCREEN.HOME)}>Back</button>
-              </div>
               <h2>Checkout</h2>
               <div className="checkout-summary">
                 <div className="summary-row">
@@ -1259,7 +926,7 @@ export default function CustomerScreen() {
   );
 
   return (
-    <div className={`customer-page${textScale > 100 ? ' scaled-text' : ''}`}>
+    <div className="customer-page">
       {renderAppContent(false)}
 
       {magnifierEnabled && (
