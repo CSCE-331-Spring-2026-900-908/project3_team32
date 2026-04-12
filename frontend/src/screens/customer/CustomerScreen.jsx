@@ -768,7 +768,7 @@ export default function CustomerScreen() {
               >
                 <section className="a11y-section">
                   <div className="a11y-section-header">
-                    <span className="a11y-section-title">Text Size</span>
+                    <span className="a11y-section-title">UI Size</span>
                     <span className="a11y-section-value">{textScale}%</span>
                   </div>
                   <input type="range" min="85" max="140" step="5"
