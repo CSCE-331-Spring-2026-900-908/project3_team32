@@ -14,6 +14,8 @@ const SCREEN = {
   ICE: 'ICE LEVEL',
   TOPPINGS: 'TOPPINGS',
   CHECKOUT: 'CHECKOUT',
+  TIP: 'TIP',              
+  FINAL_TOTAL: 'FINAL_TOTAL', 
   CONFIRMATION: 'CONFIRMATION',
 };
 
@@ -50,6 +52,10 @@ export default function CashierPOS() {
   const [completedOrderId, setCompletedOrderId] = useState(null);
   const [completedOrderTotal, setCompletedOrderTotal] = useState(0);
   const [completedPaymentMethod, setCompletedPaymentMethod] = useState('');
+  const [tipAmount, setTipAmount] = useState(0);
+  const [pendingPaymentMethod, setPendingPaymentMethod] = useState(null);
+  const [showCustomTip, setShowCustomTip] = useState(false);
+  const [customTipValue, setCustomTipValue] = useState('');
   
   // API data
   const [menuItems, setMenuItems] = useState([]);
@@ -199,6 +205,23 @@ export default function CashierPOS() {
     setOrderItems((prev) => prev.filter((item) => item.id !== itemId));
   }
 
+  function handlePaymentSelection(method) {
+    if (method === 'Card' || method === 'Gift Card') {
+      setPendingPaymentMethod(method);
+      setShowCustomTip(false);
+      setCustomTipValue('');
+      setScreen(SCREEN.TIP);
+    } else {
+      setTipAmount(0);
+      completeOrder(method);
+    }
+  }
+
+  function handleTipSelection(amount) {
+    setTipAmount(amount);
+    setScreen(SCREEN.FINAL_TOTAL);
+  }
+
   function completeOrder(paymentMethod) {
     async function submitOrder() {
       try {
@@ -241,7 +264,7 @@ export default function CashierPOS() {
         
         // Store order details for confirmation screen
         setCompletedOrderId(completedOrder);
-        setCompletedOrderTotal(orderTotal);
+        setCompletedOrderTotal(orderTotal + tipAmount);
         setCompletedPaymentMethod(paymentMethod);
         
         // Show confirmation screen
@@ -264,33 +287,44 @@ export default function CashierPOS() {
     setCompletedOrderId(null);
     setCompletedOrderTotal(0);
     setCompletedPaymentMethod('');
+    setTipAmount(0);
+    setPendingPaymentMethod(null);
+    setShowCustomTip(false);
+    setCustomTipValue('');
     setScreen(SCREEN.HOME);
   }
+
+  console.log("Current User Data:", user);
 
   return (
     <div className="cashier-page">
       <div className="cashier-shell">
-        <header className="cashier-header">
-          <div>
-            <h1>Cashier</h1>
-          </div>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div className="cashier-pill">{screen}</div>
-            <button
-              className="secondary-action"
-              onClick={() => {
-                logout();
-                localStorage.removeItem('role');
-                localStorage.removeItem('employee');
-                localStorage.removeItem('user');
-                sessionStorage.clear();
-                navigate('/login/employee');
-              }}
-            >
-              Logout
-            </button>
-          </div>
-        </header>
+      <header className="cashier-header">
+        <div className="header-left">
+          <h1>Cashier</h1>
+        </div>
+
+        <div className="header-right">
+          <div className="cashier-pill">{screen}</div>
+
+          {user && (
+            <div className="cashier-user-block">
+              <span className="cashier-user-label">Signed In As</span>
+              <span className="cashier-user-name">{user.name || 'Brian Qiu'}</span>
+              <span className="cashier-user-role">{user.position || user.role || 'Cashier'}</span>
+            </div>
+          )}
+          <button 
+            className="cashier-exit-button" 
+            onClick={() => {
+              logout();
+              navigate('/login/employee', { replace: true });
+            }}
+          >
+            Exit
+          </button>
+        </div>
+      </header>
 
         {screen === SCREEN.HOME && (
           <div className="cashier-grid">
@@ -516,20 +550,114 @@ export default function CashierPOS() {
             <div className="payment-section">
               <h3>Select Payment Method</h3>
               <div className="checkout-grid">
-                <button className="payment-method-btn" onClick={() => completeOrder('Card')}>
+                <button className="payment-method-btn" onClick={() => handlePaymentSelection('Card')}>
                   <FiCreditCard className="payment-icon" />
                   <span className="payment-label">Card</span>
                 </button>
-                <button className="payment-method-btn" onClick={() => completeOrder('Cash')}>
+                <button className="payment-method-btn" onClick={() => handlePaymentSelection('Cash')}>
                   <FiDollarSign className="payment-icon" />
                   <span className="payment-label">Cash</span>
                 </button>
-                <button className="payment-method-btn" onClick={() => completeOrder('Gift Card')}>
+                <button className="payment-method-btn" onClick={() => handlePaymentSelection('Gift Card')}>
                   <FiGift className="payment-icon" />
                   <span className="payment-label">Gift Card</span>
                 </button>
               </div>
             </div>
+          </section>
+        )}
+
+        {screen === SCREEN.TIP && (
+          <div className="tip-overlay">
+            <div className="tip-modal">
+              <h2>Select Tip Amount</h2>
+              
+              {!showCustomTip ? (
+                <div className="tip-options">
+                  <button className="tip-button" onClick={() => handleTipSelection(orderTotal * 0.20)}>
+                    20%
+                    <span className="tip-amount-label">{currency(orderTotal * 0.20)}</span>
+                  </button>
+                  <button className="tip-button" onClick={() => handleTipSelection(orderTotal * 0.25)}>
+                    25%
+                    <span className="tip-amount-label">{currency(orderTotal * 0.25)}</span>
+                  </button>
+                  <button className="tip-button" onClick={() => handleTipSelection(orderTotal * 0.30)}>
+                    30%
+                    <span className="tip-amount-label">{currency(orderTotal * 0.30)}</span>
+                  </button>
+                  <button className="tip-button" onClick={() => setShowCustomTip(true)}>
+                    Custom
+                    <span className="tip-amount-label">Enter Custom Amount</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="custom-tip-container">
+                  <div className="custom-tip-input-wrapper">
+                    <span className="custom-tip-currency">$</span>
+                    <input
+                      type="number"
+                      className="custom-tip-input"
+                      value={customTipValue}
+                      onChange={(e) => setCustomTipValue(e.target.value)}
+                      placeholder="0.00"
+                      min="0"
+                      step="0.01"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="custom-tip-actions">
+                    <button 
+                      className="secondary-action" 
+                      style={{ padding: '20px', fontSize: '1.5rem', flex: 1 }} 
+                      onClick={() => setShowCustomTip(false)}
+                    >
+                      Back
+                    </button>
+                    <button 
+                      className="primary-action" 
+                      style={{ padding: '20px', fontSize: '1.5rem', flex: 2, background: '#8b4513', color: 'white', border: 'none' }} 
+                      onClick={() => handleTipSelection(Number(customTipValue) || 0)}
+                    >
+                      Confirm Tip
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <button className="tip-cancel-btn" onClick={() => setScreen(SCREEN.CHECKOUT)}>Cancel Payment</button>
+            </div>
+          </div>
+        )}
+
+        {screen === SCREEN.FINAL_TOTAL && (
+          <section className="cashier-panel checkout-panel">
+             <div className="checkout-header">
+                <button className="cancel-checkout-btn" onClick={() => setScreen(SCREEN.TIP)}>Back</button>
+                <h2>Final Total</h2>
+             </div>
+             <div className="checkout-order-summary" style={{ padding: '30px' }}>
+                <div style={{ fontSize: '1.25rem', marginBottom: '15px', display: 'flex', justifyContent: 'space-between', color: '#495057' }}>
+                  <span>Subtotal:</span>
+                  <span>{currency(orderTotal)}</span>
+                </div>
+                <div style={{ fontSize: '1.25rem', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', color: '#495057' }}>
+                  <span>Tip:</span>
+                  <span>{currency(tipAmount)}</span>
+                </div>
+                <div style={{ fontSize: '2.5rem', fontWeight: '800', borderTop: '2px solid #dee2e6', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', color: '#8b4513' }}>
+                  <span>Total:</span>
+                  <span>{currency(orderTotal + tipAmount)}</span>
+                </div>
+             </div>
+             <button 
+                className="payment-method-btn" 
+                style={{ width: '100%', padding: '24px', fontSize: '1.5rem', marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '15px', background: '#8b4513', color: 'white', borderColor: '#8b4513' }} 
+                onClick={() => completeOrder(pendingPaymentMethod)}
+             >
+                <FiCreditCard size={32} />
+                <span>Tap to Pay {currency(orderTotal + tipAmount)}</span>
+             </button>
           </section>
         )}
 

@@ -479,7 +479,6 @@
   transform: scale(1.1);
 }
 
-/* Order Confirmation Modal */
 .confirmation-overlay {
   position: fixed;
   top: 0;
@@ -573,4 +572,247 @@
 
 .confirmation-btn:active {
   transform: scale(0.98);
+}
+
+.tip-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.tip-modal {
+  width: 85vw;
+  height: 85vh;
+  background: white;
+  border-radius: 24px;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
+}
+
+.tip-modal h2 {
+  font-size: 3.5rem;
+  font-weight: 800;
+  color: #212529;
+  text-align: center;
+  margin-top: 20px;
+  margin-bottom: 40px;
+}
+
+.tip-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 30px;
+  flex: 1;
+  margin-bottom: 20px;
+}
+
+.tip-button {
+  background: #f8f9fa;
+  border: 4px solid #dee2e6;
+  border-radius: 20px;
+  font-size: 3rem;
+  font-weight: 800;
+  color: #212529;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+}
+
+.tip-button:hover {
+  background: #fef3e2;
+  border-color: #8b4513;
+  color: #8b4513;
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(139, 69, 19, 0.15);
+}
+
+.tip-amount-label {
+  font-size: 2rem;
+  color: #6c757d;
+  font-weight: 600;
+}
+
+.tip-button:hover .tip-amount-label {
+  color: #8b4513;
+}
+
+.tip-cancel-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #6c757d;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 20px;
+  margin-top: auto;
+  align-self: center;
+}
+
+.custom-tip-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 60px;
+}
+
+.custom-tip-input-wrapper {
+  display: flex;
+  align-items: center;
+  font-size: 5rem;
+  color: #212529;
+  font-weight: 800;
+  border-bottom: 4px solid #dee2e6;
+  padding-bottom: 10px;
+}
+
+.custom-tip-currency {
+  margin-right: 15px;
+  color: #8b4513;
+}
+
+.custom-tip-input {
+  border: none;
+  outline: none;
+  font-size: 5rem;
+  font-weight: 800;
+  color: #212529;
+  width: 300px;
+  background: transparent;
+  text-align: center;
+}
+
+.custom-tip-input::-webkit-outer-spin-button,
+.custom-tip-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.custom-tip-input[type=number] {
+  -moz-appearance: textfield;
+}
+
+.custom-tip-actions {
+  display: flex;
+  gap: 20px;
+  width: 100%;
+  max-width: 600px;
+}
+
+.cashier-user-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  padding: 6px 16px 6px 6px;
+  border-radius: 999px;
+  font-weight: 600;
+  color: #495057;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #dee2e6;
+  background: transparent !important;
+}
+
+.user-avatar-fallback {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #8b4513;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.user-name {
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.cashier-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-left: 2px solid #dee2e6;
+  padding-left: 16px;
+  margin-left: 4px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.cashier-user-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: right;
+}
+
+.cashier-user-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cashier-user-name {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #212529;
+}
+
+.cashier-user-role {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+.cashier-exit-button {
+  padding: 10px 20px;
+  background: white;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #495057;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cashier-exit-button:hover {
+  background: #f8f9fa;
+  border-color: #ced4da;
+  color: #212529;
 }
