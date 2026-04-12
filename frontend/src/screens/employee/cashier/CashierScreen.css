@@ -816,3 +816,136 @@
   border-color: #ced4da;
   color: #212529;
 }
+
+/* ── Today's Orders dropdown ────────────────────────────────── */
+.today-orders-wrapper {
+  position: relative;
+}
+
+.today-orders-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: white;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #495057;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.today-orders-btn:hover {
+  background: #f8f9fa;
+  border-color: #8b4513;
+  color: #8b4513;
+}
+
+.today-orders-caret {
+  font-size: 0.8rem;
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+
+.today-orders-caret.open {
+  transform: rotate(180deg);
+}
+
+.today-orders-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  width: 320px;
+  max-height: 440px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.13);
+  z-index: 9000;
+  padding: 8px 0;
+}
+
+.today-orders-empty {
+  padding: 24px 18px;
+  color: #6c757d;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.today-order-entry {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.15s;
+}
+
+.today-order-entry:last-child {
+  border-bottom: none;
+}
+
+.today-order-entry.completed {
+  background: #f6fff8;
+  opacity: 0.7;
+}
+
+.today-order-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.today-order-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.today-order-number {
+  display: block;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #212529;
+  margin-bottom: 6px;
+}
+
+.today-order-entry.completed .today-order-number {
+  text-decoration: line-through;
+  color: #6c757d;
+}
+
+.today-order-items {
+  list-style: disc;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.today-order-items li {
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: #495057;
+  line-height: 1.6;
+}
+
+.today-order-entry.completed .today-order-items li {
+  text-decoration: line-through;
+  color: #aaa;
+}
+
+.today-order-check {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 2px;
+  cursor: pointer;
+}
+
+.today-order-check input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: #8b4513;
+  cursor: pointer;
+}
