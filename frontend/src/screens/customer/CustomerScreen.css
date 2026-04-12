@@ -1133,11 +1133,6 @@
   }
 }
 
-/* Apply --a11y-font-size to all text-bearing elements without resizing layout containers */
-.customer-page * {
-  font-size: calc(var(--a11y-font-size, 100%) / 100 * 1em);
-}
-
 /* Stepper control for Font Size */
 .a11y-font-stepper {
   display: flex;

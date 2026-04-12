@@ -261,9 +261,10 @@ export default function CustomerScreen() {
   }, [textScale]);
 
   useEffect(() => {
-    const root = document.documentElement;
-    root.style.setProperty('--a11y-font-size', `${fontSize}%`);
-    return () => { root.style.removeProperty('--a11y-font-size'); };
+    const el = document.querySelector('.customer-page');
+    if (!el) return;
+    el.style.fontSize = `${fontSize}%`;
+    return () => { el.style.fontSize = ''; };
   }, [fontSize]);
 
   useEffect(() => {
