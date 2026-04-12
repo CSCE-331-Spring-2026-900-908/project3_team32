@@ -260,12 +260,7 @@ export default function CustomerScreen() {
     return () => { root.style.fontSize = prev; };
   }, [textScale]);
 
-  useEffect(() => {
-    const el = document.querySelector('.customer-page');
-    if (!el) return;
-    el.style.fontSize = `${fontSize}%`;
-    return () => { el.style.fontSize = ''; };
-  }, [fontSize]);
+  // fontSize is applied directly via inline style on the customer-page div below
 
   useEffect(() => {
     const root = document.documentElement;
@@ -927,7 +922,7 @@ export default function CustomerScreen() {
   );
 
   return (
-    <div className="customer-page">
+    <div className="customer-page" style={{ '--font-scale': fontSize / 100 }}>
       {renderAppContent(false)}
 
       {magnifierEnabled && (
