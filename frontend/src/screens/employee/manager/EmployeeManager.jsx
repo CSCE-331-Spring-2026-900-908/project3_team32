@@ -172,15 +172,12 @@ export default function EmployeeManager() {
             </label>
             <label>
               Position
-              <select
+              <input
+                type="text"
                 value={form.position}
                 onChange={(e) => setForm((prev) => ({ ...prev, position: e.target.value }))}
                 required
-              >
-                <option value="">Select position</option>
-                <option value="Cashier">Cashier</option>
-                <option value="Manager">Manager</option>
-              </select>
+              />
             </label>
             <label>
               Hire Date (YYYY-MM-DD)

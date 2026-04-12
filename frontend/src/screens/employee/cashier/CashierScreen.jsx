@@ -56,6 +56,9 @@ export default function CashierPOS() {
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState(null);
   const [showCustomTip, setShowCustomTip] = useState(false);
   const [customTipValue, setCustomTipValue] = useState('');
+  const [todayOrders, setTodayOrders] = useState([]);
+  const [completedOrders, setCompletedOrders] = useState(new Set());
+  const [ordersDropdownOpen, setOrdersDropdownOpen] = useState(false);
   
   // API data
   const [menuItems, setMenuItems] = useState([]);
@@ -129,6 +132,26 @@ export default function CashierPOS() {
     
     loadData();
   }, []);
+
+  useEffect(() => {
+    async function loadTodayOrders() {
+      try {
+        const headers = {};
+        if (token) headers.Authorization = `Bearer ${token}`;
+        const res = await fetch(`${API_BASE}/cashier/orders/today`, { headers });
+        if (!res.ok) return;
+        const data = await res.json();
+        const orders = data.orders || data || [];
+        setTodayOrders(orders.map(order => ({
+          id: order.order_id,
+          items: (order.items || []).map(i => i.name || i.menu_item_name || `Item ${i.menu_item_id}`),
+        })));
+      } catch {
+        // silently fail — dropdown will just be empty until an order is placed
+      }
+    }
+    loadTodayOrders();
+  }, [token]);
 
   const mostCommonItems = useMemo(() => menuItems.slice(0, 9), [menuItems]);
   const visibleItems = useMemo(() => {
@@ -266,6 +289,12 @@ export default function CashierPOS() {
         setCompletedOrderId(completedOrder);
         setCompletedOrderTotal(orderTotal + tipAmount);
         setCompletedPaymentMethod(paymentMethod);
+
+        // Add to today's orders dropdown
+        setTodayOrders(prev => [...prev, {
+          id: completedOrder,
+          items: orderItems.map(i => i.name),
+        }]);
         
         // Show confirmation screen
         setScreen(SCREEN.CONFIRMATION);
@@ -318,6 +347,54 @@ export default function CashierPOS() {
           </div>
 
           <div className="header-right">
+            <div className="today-orders-wrapper">
+              <button
+                className="today-orders-btn"
+                onClick={() => setOrdersDropdownOpen(o => !o)}
+                aria-expanded={ordersDropdownOpen}
+              >
+                Today's Orders
+                <span className={`today-orders-caret${ordersDropdownOpen ? ' open' : ''}`}>▾</span>
+              </button>
+
+              {ordersDropdownOpen && (
+                <div className="today-orders-dropdown">
+                  {todayOrders.length === 0 ? (
+                    <div className="today-orders-empty">No orders placed today yet.</div>
+                  ) : (
+                    todayOrders.map(order => (
+                      <div key={order.id} className={`today-order-entry${completedOrders.has(order.id) ? ' completed' : ''}`}>
+                        <div className="today-order-main">
+                          <div className="today-order-info">
+                            <span className="today-order-number">Order #{order.id}</span>
+                            <ul className="today-order-items">
+                              {order.items.map((item, i) => (
+                                <li key={i}>{item}</li>
+                              ))}
+                            </ul>
+                          </div>
+                          <label className="today-order-check" title="Mark as completed">
+                            <input
+                              type="checkbox"
+                              checked={completedOrders.has(order.id)}
+                              onChange={() => {
+                                setCompletedOrders(prev => {
+                                  const next = new Set(prev);
+                                  if (next.has(order.id)) next.delete(order.id);
+                                  else next.add(order.id);
+                                  return next;
+                                });
+                              }}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="cashier-pill">{screen}</div>
 
             {user && (
