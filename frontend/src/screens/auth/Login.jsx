@@ -92,6 +92,29 @@ function Login() {
     setError('Google sign-in was cancelled or failed. Please try again.');
   }
 
+  async function handleGuestSignIn() {
+    if (!isCustomer) return;
+    setError('');
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/auth/guest/customer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Guest sign-in failed. Please try again.');
+        return;
+      }
+      login(data.token);
+      navigate('/customer', { replace: true });
+    } catch {
+      setError('Network error. Please check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleEmployeePinLogin(event) {
     event.preventDefault();
     if (isCustomer) return;
@@ -189,7 +212,7 @@ function Login() {
         <h1>{title} Access</h1>
         <p className="login-subtitle">
           {isCustomer
-            ? 'Sign in with Google to start your order and track order history'
+            ? 'Sign in with Google, or continue as guest to place an order quickly'
             : 'Staff authentication - use your registered Google account or employee PIN'}
         </p>
 
@@ -220,25 +243,31 @@ function Login() {
             loading ? (
               <div className="login-loading">Signing you in...</div>
             ) : (
-              DEV_MODE ? (
-                <div className="google-login-wrapper">
-                  <button className="login-button" onClick={handleDevBypass}>
-                    Dev Bypass - Skip Google Login
-                  </button>
-                </div>
-              ) : (
-                <div className="google-login-wrapper">
-                  <GoogleLogin
-                    onSuccess={handleGoogleSuccess}
-                    onError={handleGoogleError}
-                    useOneTap={false}
-                    theme="outline"
-                    size="large"
-                    text="signin_with"
-                    shape="rectangular"
-                  />
-                </div>
-              )
+              <div className="customer-login-actions">
+                {DEV_MODE ? (
+                  <div className="google-login-wrapper">
+                    <button className="login-button" onClick={handleDevBypass}>
+                      Dev Bypass - Skip Google Login
+                    </button>
+                  </div>
+                ) : (
+                  <div className="google-login-wrapper">
+                    <GoogleLogin
+                      onSuccess={handleGoogleSuccess}
+                      onError={handleGoogleError}
+                      useOneTap={false}
+                      theme="outline"
+                      size="large"
+                      text="signin_with"
+                      shape="rectangular"
+                    />
+                  </div>
+                )}
+                <button className="login-button guest-login-btn" onClick={handleGuestSignIn}>
+                  Continue as Guest
+                </button>
+                <div className="guest-login-note">Guest mode hides favorites, past orders, and rewards.</div>
+              </div>
             )
           ) : (
             <>

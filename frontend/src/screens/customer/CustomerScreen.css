@@ -629,6 +629,13 @@
   overflow: hidden;
 }
 
+.cart-screen-body-no-rewards {
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "items total"
+    "items actions";
+}
+
 .empty-cart {
   text-align: center;
   padding: 4rem 2rem;

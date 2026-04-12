@@ -189,6 +189,27 @@ app.post('/api/auth/google/customer', async (req, res, next) => {
   }
 });
 
+// Customer guest login — no account required
+app.post('/api/auth/guest/customer', async (req, res) => {
+  const guestSessionId = `guest-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+  const token = signToken({
+    type: 'customer',
+    guest: true,
+    guest_session_id: guestSessionId,
+    name: 'Guest',
+  });
+
+  res.json({
+    token,
+    user: {
+      type: 'customer',
+      guest: true,
+      name: 'Guest',
+      guest_session_id: guestSessionId,
+    },
+  });
+});
+
 // Employee Google login — must already have google_email pre-registered
 app.post('/api/auth/google/employee', async (req, res, next) => {
   const { credential } = req.body;

@@ -151,6 +151,11 @@ export default function CustomerScreen() {
   const [weatherError, setWeatherError] = useState('');
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState(['Favorites', 'Most Ordered']);
+  const isGuestCustomer = user?.type === 'customer' && user?.guest === true;
+  const displayCategories = useMemo(
+    () => (isGuestCustomer ? categories.filter((cat) => cat !== 'Favorites' && cat !== 'Most Ordered') : categories),
+    [categories, isGuestCustomer],
+  );
 
   const magnifierRef = useRef(null);
   const lensInnerRef = useRef(null);
@@ -195,6 +200,13 @@ export default function CustomerScreen() {
     }
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (!displayCategories.length) return;
+    if (!displayCategories.includes(selectedCategory)) {
+      setSelectedCategory(displayCategories[0]);
+    }
+  }, [displayCategories, selectedCategory]);
 
   useEffect(() => {
     let timerId = null;
@@ -257,7 +269,7 @@ export default function CustomerScreen() {
   }, []);
 
   useEffect(() => {
-    if (!token || user?.type !== 'customer') {
+    if (!token || user?.type !== 'customer' || isGuestCustomer) {
       setCustomerOrders([]);
       return;
     }
@@ -279,10 +291,10 @@ export default function CustomerScreen() {
 
     loadCustomerOrders();
     return () => { cancelled = true; };
-  }, [token, user?.type, refreshTrigger]);
+  }, [token, user?.type, refreshTrigger, isGuestCustomer]);
 
   useEffect(() => {
-    if (user && token && user.type === 'customer') {
+    if (user && token && user.type === 'customer' && !isGuestCustomer) {
       fetch(`${API_BASE}/customer/most-ordered`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -298,11 +310,13 @@ export default function CustomerScreen() {
           }
         })
         .catch(console.error);
+    } else if (isGuestCustomer) {
+      setMostOrderedItems([]);
     }
-  }, [user, token, refreshTrigger]);
+  }, [user, token, refreshTrigger, isGuestCustomer]);
 
   useEffect(() => {
-    if (user && token && user.type === 'customer') {
+    if (user && token && user.type === 'customer' && !isGuestCustomer) {
       fetch(`${API_BASE}/customer/saved-favorites`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -313,10 +327,17 @@ export default function CustomerScreen() {
           }
         })
         .catch(console.error);
+    } else if (isGuestCustomer) {
+      setSavedFavorites([]);
     }
-  }, [user, token, refreshTrigger]);
+  }, [user, token, refreshTrigger, isGuestCustomer]);
 
   useEffect(() => {
+    if (isGuestCustomer) {
+      setIsEmployeeRewardsUser(false);
+      return;
+    }
+
     const email = (user?.email || '').trim().toLowerCase();
     if (!email) {
       setIsEmployeeRewardsUser(false);
@@ -345,7 +366,7 @@ export default function CustomerScreen() {
 
     loadEmployeeMatch();
     return () => { cancelled = true; };
-  }, [token, user?.email]);
+  }, [token, user?.email, isGuestCustomer]);
 
   useEffect(() => {
     let labelInterval = null;
@@ -502,7 +523,11 @@ export default function CustomerScreen() {
     () => cart.reduce((sum, item) => sum + (item.quantity || 1), 0),
     [cart],
   );
-  const isEmployeeDiscount = isEmployeeRewardsUser || user?.type === 'employee' || ['Manager', 'Shift Lead', 'Cashier'].includes(user?.position || '');
+  const isEmployeeDiscount = !isGuestCustomer && (
+    isEmployeeRewardsUser
+    || user?.type === 'employee'
+    || ['Manager', 'Shift Lead', 'Cashier'].includes(user?.position || '')
+  );
 
   const priorYearOrders = useMemo(() => {
     const cutoff = Date.now() - REWARDS_WINDOW_MS;
@@ -680,7 +705,7 @@ export default function CustomerScreen() {
     return savedFavorites.find(f => JSON.stringify(f.item_data) === cartStr);
   };
   const handleToggleFavorite = async (item) => {
-    if (!user || !token) return;
+    if (!user || !token || isGuestCustomer) return;
     const existingFav = getFavoriteMatch(item);
     const { id, ...itemData } = item;
     try {
@@ -822,7 +847,7 @@ export default function CustomerScreen() {
               </div>
 
               <div className="customer-home-sections">
-                {categories.map((cat) => (
+                {displayCategories.map((cat) => (
                   <button
                     key={cat}
                     className="home-section-btn"
@@ -863,7 +888,7 @@ export default function CustomerScreen() {
           {screen === SCREEN.MENU && (
             <div className={`customer-content menu-screen${cartCount > 0 ? ' has-floating-cart-space' : ''}`}>
                 <div className="category-tabs">
-                  {categories.map(cat => (
+                  {displayCategories.map(cat => (
                     <button 
                       key={cat} 
                       className={`category-tab${selectedCategory === cat ? ' active' : ''}`} 
@@ -1037,7 +1062,8 @@ export default function CustomerScreen() {
                   <button className="btn-primary" onClick={() => setScreen(SCREEN.HOME)}>Back to Start</button>
                 </div>
               ) : (
-                <div className="cart-screen-body">
+                <div className={`cart-screen-body${isGuestCustomer ? ' cart-screen-body-no-rewards' : ''}`}>
+                  {!isGuestCustomer && (
                   <div className={`rewards-summary rewards-tone-${rewardsTone}`}>
                     <div className="rewards-line">
                       <span>Rewards Status</span>
@@ -1082,6 +1108,7 @@ export default function CustomerScreen() {
                       </div>
                     )}
                   </div>
+                  )}
                   <div className="cart-items">
                     <h3 className="cart-items-title">Menu Items</h3>
                     {cart.map((item, index) => (
@@ -1112,17 +1139,19 @@ export default function CustomerScreen() {
                             </button>
                           </div>
                           <button className="cart-edit-btn" onClick={() => startEditCartItem(item)}>Edit</button>
-                          <button 
-                            onClick={() => handleToggleFavorite(item)} 
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 10px', color: getFavoriteMatch(item) ? '#ff4b4b' : '#aaa', display: 'flex', alignItems: 'center' }}
-                            title={getFavoriteMatch(item) ? "Remove from Favorites" : "Save as Favorite"}
-                          >
-                            {getFavoriteMatch(item) ? (
-                              <svg viewBox="0 0 24 24" fill="currentColor" height="24" width="24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                            ) : (
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" height="24" width="24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                            )}
-                          </button>
+                          {!isGuestCustomer && (
+                            <button 
+                              onClick={() => handleToggleFavorite(item)} 
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 10px', color: getFavoriteMatch(item) ? '#ff4b4b' : '#aaa', display: 'flex', alignItems: 'center' }}
+                              title={getFavoriteMatch(item) ? "Remove from Favorites" : "Save as Favorite"}
+                            >
+                              {getFavoriteMatch(item) ? (
+                                <svg viewBox="0 0 24 24" fill="currentColor" height="24" width="24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                              ) : (
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" height="24" width="24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                              )}
+                            </button>
+                          )}
                         </div>
                         <div className="cart-item-details">
                           {buildDisplayLines(item).map((line, i) => (
