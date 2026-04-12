@@ -11,6 +11,40 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+function normalizeEmployeePin(value) {
+  if (value === undefined || value === null) return null;
+  const normalized = String(value).trim();
+  if (!normalized) return null;
+  return normalized;
+}
+
+function isValidEmployeePin(pin) {
+  return /^\d{4}$/.test(pin);
+}
+
+async function ensureEmployeeAuthSchema() {
+  await pool.query('ALTER TABLE employee ADD COLUMN IF NOT EXISTS google_email VARCHAR(255)');
+  await pool.query('ALTER TABLE employee ADD COLUMN IF NOT EXISTS employee_pin VARCHAR(4)');
+  await pool.query(
+    `DO $$
+     BEGIN
+       IF NOT EXISTS (
+         SELECT 1
+         FROM pg_constraint
+         WHERE conname = 'employee_pin_format_chk'
+       ) THEN
+         ALTER TABLE employee
+           ADD CONSTRAINT employee_pin_format_chk
+           CHECK (employee_pin IS NULL OR employee_pin ~ '^[0-9]{4}$');
+       END IF;
+     END $$;`,
+  );
+}
+
+await ensureEmployeeAuthSchema().catch((error) => {
+  console.error('Failed to ensure employee auth schema:', error.message);
+});
+
 // ── JWT helpers ────────────────────────────────────────────────────────────────
 
 function signToken(payload) {
@@ -173,6 +207,43 @@ app.post('/api/auth/google/employee', async (req, res, next) => {
       return res.status(403).json({
         error: 'No employee account found for this Google email. Contact your manager.',
       });
+    }
+
+    const employee = result.rows[0];
+    const token = signToken({
+      type: 'employee',
+      employee_id: employee.employee_id,
+      name: employee.name,
+      position: employee.position,
+    });
+
+    res.json({ token, user: { ...employee } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Employee PIN login — uses 4-digit PIN only
+app.post('/api/auth/pin/employee', async (req, res, next) => {
+  const pin = normalizeEmployeePin(req.body?.pin);
+
+  if (!pin || !isValidEmployeePin(pin)) {
+    return res.status(400).json({ error: 'pin must be a 4-digit code' });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT employee_id, name, position, hire_date, google_email
+       FROM employee
+       WHERE employee_pin = $1`,
+      [pin],
+    );
+
+    if (!result.rowCount) {
+      return res.status(401).json({ error: 'Invalid PIN' });
+    }
+    if (result.rowCount > 1) {
+      return res.status(409).json({ error: 'PIN is assigned to multiple employees. Ask manager to reset PINs.' });
     }
 
     const employee = result.rows[0];
@@ -435,7 +506,10 @@ app.delete('/api/inventory/:id', async (req, res, next) => {
 app.get('/api/employees', async (req, res, next) => {
   try {
     const result = await pool.query(
-      'SELECT employee_id, name, position, hire_date, google_email FROM employee ORDER BY employee_id',
+      `SELECT employee_id, name, position, hire_date, google_email, employee_pin,
+              (employee_pin IS NOT NULL) AS pin_set
+       FROM employee
+       ORDER BY employee_id`,
     );
     res.json({ employees: result.rows });
   } catch (error) {
@@ -445,16 +519,30 @@ app.get('/api/employees', async (req, res, next) => {
 
 app.post('/api/employees', async (req, res, next) => {
   const { employee_id, name, position, hire_date, google_email } = req.body;
+  const pin = normalizeEmployeePin(req.body?.employee_pin);
   if (!employee_id || !name || !position || !parseDateInput(hire_date)) {
     return res.status(400).json({ error: 'employee_id, name, position, hire_date are required' });
   }
+  if (pin && !isValidEmployeePin(pin)) {
+    return res.status(400).json({ error: 'employee_pin must be exactly 4 digits' });
+  }
 
   try {
+    if (pin) {
+      const pinInUse = await pool.query(
+        'SELECT employee_id FROM employee WHERE employee_pin = $1 LIMIT 1',
+        [pin],
+      );
+      if (pinInUse.rowCount) {
+        return res.status(409).json({ error: 'This PIN is already assigned to another employee' });
+      }
+    }
+
     const result = await pool.query(
-      `INSERT INTO employee (employee_id, name, position, hire_date, google_email)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING employee_id, name, position, hire_date, google_email`,
-      [Number(employee_id), name.trim(), position.trim(), hire_date, google_email?.trim() || null],
+      `INSERT INTO employee (employee_id, name, position, hire_date, google_email, employee_pin)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING employee_id, name, position, hire_date, google_email, employee_pin, (employee_pin IS NOT NULL) AS pin_set`,
+      [Number(employee_id), name.trim(), position.trim(), hire_date, google_email?.trim() || null, pin],
     );
     res.status(201).json({ employee: result.rows[0] });
   } catch (error) {
@@ -468,13 +556,43 @@ app.put('/api/employees/:id', async (req, res, next) => {
     return res.status(400).json({ error: 'name, position, hire_date are required' });
   }
 
+  const hasPinField = Object.prototype.hasOwnProperty.call(req.body, 'employee_pin');
+  const pin = normalizeEmployeePin(req.body?.employee_pin);
+  if (hasPinField && pin && !isValidEmployeePin(pin)) {
+    return res.status(400).json({ error: 'employee_pin must be exactly 4 digits' });
+  }
+
   try {
+    if (hasPinField && pin) {
+      const pinInUse = await pool.query(
+        'SELECT employee_id FROM employee WHERE employee_pin = $1 AND employee_id <> $2 LIMIT 1',
+        [pin, req.params.id],
+      );
+      if (pinInUse.rowCount) {
+        return res.status(409).json({ error: 'This PIN is already assigned to another employee' });
+      }
+    }
+
+    const values = [name.trim(), position.trim(), hire_date, google_email?.trim() || null];
+    const setClauses = [
+      'name = $1',
+      'position = $2',
+      'hire_date = $3',
+      'google_email = $4',
+    ];
+
+    if (hasPinField) {
+      values.push(pin);
+      setClauses.push(`employee_pin = $${values.length}`);
+    }
+
+    values.push(req.params.id);
     const result = await pool.query(
       `UPDATE employee
-       SET name = $1, position = $2, hire_date = $3, google_email = $4
-       WHERE employee_id = $5
-       RETURNING employee_id, name, position, hire_date, google_email`,
-      [name.trim(), position.trim(), hire_date, google_email?.trim() || null, req.params.id],
+       SET ${setClauses.join(', ')}
+       WHERE employee_id = $${values.length}
+       RETURNING employee_id, name, position, hire_date, google_email, employee_pin, (employee_pin IS NOT NULL) AS pin_set`,
+      values,
     );
     if (!result.rowCount) return res.status(404).json({ error: 'Employee not found' });
     res.json({ employee: result.rows[0] });

@@ -27,7 +27,7 @@ const PANELS = {
 
 export default function ManagerScreen() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isManager } = useAuth();
   const [active, setActive] = useState('MENU');
   const [weather, setWeather] = useState(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
@@ -59,6 +59,16 @@ export default function ManagerScreen() {
       if (timerId) window.clearInterval(timerId);
     };
   }, []);
+
+  function handleExit() {
+    if (isManager) {
+      navigate('/employee', { replace: true });
+      return;
+    }
+
+    logout();
+    navigate('/login/employee', { replace: true });
+  }
 
   return (
     <div className="manager-screen">
@@ -95,13 +105,10 @@ export default function ManagerScreen() {
             </div>
           )}
           <button
-            onClick={() => {
-              logout();
-              navigate('/login/employee', { replace: true });
-            }}
+            onClick={handleExit}
             className="logout-button"
           >
-            Logout
+            Exit
           </button>
         </div>
       </aside>

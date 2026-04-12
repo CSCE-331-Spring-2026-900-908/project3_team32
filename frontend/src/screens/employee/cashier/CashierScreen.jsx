@@ -35,7 +35,7 @@ function buildDisplayLines(item) {
 
 export default function CashierPOS() {
   const navigate = useNavigate();
-  const { user, token, logout } = useAuth();
+  const { user, token, logout, isManager } = useAuth();
   const [screen, setScreen] = useState(SCREEN.HOME);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [orderItems, setOrderItems] = useState([]);
@@ -295,36 +295,46 @@ export default function CashierPOS() {
   }
 
   console.log("Current User Data:", user);
+  function handleExit() {
+    if (isManager) {
+      navigate('/employee', { replace: true });
+      return;
+    }
+
+    logout();
+    localStorage.removeItem('role');
+    localStorage.removeItem('employee');
+    localStorage.removeItem('user');
+    sessionStorage.clear();
+    navigate('/login/employee', { replace: true });
+  }
 
   return (
     <div className="cashier-page">
       <div className="cashier-shell">
-      <header className="cashier-header">
-        <div className="header-left">
-          <h1>Cashier</h1>
-        </div>
+        <header className="cashier-header">
+          <div className="header-left">
+            <h1>Cashier</h1>
+          </div>
 
-        <div className="header-right">
-          <div className="cashier-pill">{screen}</div>
+          <div className="header-right">
+            <div className="cashier-pill">{screen}</div>
 
-          {user && (
-            <div className="cashier-user-block">
-              <span className="cashier-user-label">Signed In As</span>
-              <span className="cashier-user-name">{user.name || 'Brian Qiu'}</span>
-              <span className="cashier-user-role">{user.position || user.role || 'Cashier'}</span>
-            </div>
-          )}
-          <button 
-            className="cashier-exit-button" 
-            onClick={() => {
-              logout();
-              navigate('/login/employee', { replace: true });
-            }}
-          >
-            Exit
-          </button>
-        </div>
-      </header>
+            {user && (
+              <div className="cashier-user-block">
+                <span className="cashier-user-label">Signed In As</span>
+                <span className="cashier-user-name">{user.name || 'Brian Qiu'}</span>
+                <span className="cashier-user-role">{user.position || user.role || 'Cashier'}</span>
+              </div>
+            )}
+            <button
+              className="cashier-exit-button"
+              onClick={handleExit}
+            >
+              Exit
+            </button>
+          </div>
+        </header>
 
         {screen === SCREEN.HOME && (
           <div className="cashier-grid">
