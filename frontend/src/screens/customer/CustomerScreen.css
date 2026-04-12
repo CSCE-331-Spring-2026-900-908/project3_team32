@@ -10,6 +10,8 @@
   color: white;
   padding: 1.5rem 2rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 700;
 }
 
 .header-content {
@@ -1179,4 +1181,215 @@
   background: #fef3e2;
   padding: 0.25rem 0.75rem;
   border-radius: 20px;
+}
+
+/* ── Customize Modal ─────────────────────────────────────── */
+
+.customize-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* push card below the sticky header (~5.5rem tall) */
+  padding: 5.75rem 1rem 1rem;
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.customize-modal-card {
+  background: white;
+  border-radius: 28px;
+  width: min(620px, 100%);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.3);
+  animation: modalSlideUp 0.25s ease-out;
+}
+
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+.customize-modal-image-placeholder {
+  width: 100%;
+  height: 200px;
+  background: #8b4513;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle radial glow behind the icon */
+.customize-modal-image-placeholder::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 60%, rgba(255,255,255,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.customize-modal-image-icon {
+  font-size: 6rem;
+  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.25));
+  position: relative;
+}
+
+.customize-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: white;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  z-index: 10;
+  line-height: 1;
+}
+
+.customize-modal-close:hover {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.customize-modal-item-info {
+  padding: 1.2rem 1.5rem 1rem;
+  flex-shrink: 0;
+  border-bottom: 2px solid #f0e8da;
+}
+
+.customize-modal-item-name {
+  margin: 0 0 0.3rem 0;
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #2c2c2c;
+  line-height: 1.2;
+}
+
+.customize-modal-item-description {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  color: #888;
+  line-height: 1.5;
+}
+
+.customize-modal-base-price {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #8b4513;
+}
+
+.customize-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.customize-modal-body .customize-section {
+  margin-bottom: 0.5rem;
+}
+
+.customize-modal-body .customize-section h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #8b4513;
+  margin: 0 0 0.75rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.customize-modal-body .option-grid {
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0;
+}
+
+.customize-modal-body .option-btn {
+  padding: 1rem;
+  font-size: 0.95rem;
+}
+
+.customize-modal-body .comments-section {
+  margin-top: 0.25rem;
+}
+
+.customize-modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 2px solid #f0e8da;
+  flex-shrink: 0;
+  background: white;
+}
+
+.customize-modal-add-btn {
+  width: 100%;
+  padding: 1.1rem 1.5rem;
+  background: #8b4513;
+  color: white;
+  border: none;
+  border-radius: 16px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  letter-spacing: 0.01em;
+}
+
+.customize-modal-add-btn:hover {
+  background: #6b3410;
+  transform: translateY(-2px);
+}
+
+/* Inside the magnifier lens the overlay needs position:absolute (fixed
+   breaks in transformed containers) with viewport-sized dimensions so the
+   flex-centered card lands at the same coordinates as the real overlay. */
+.magnified-content .customize-modal-overlay {
+  position: absolute;
+  inset: auto;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  padding: 5.75rem 1rem 1rem;
+}
+
+@media (max-width: 480px) {
+  .customize-modal-overlay {
+    padding-top: 5rem;
+  }
+  .customize-modal-image-placeholder {
+    height: 150px;
+  }
+  .customize-modal-body .option-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  }
 }

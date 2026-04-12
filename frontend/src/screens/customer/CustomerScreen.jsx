@@ -75,6 +75,7 @@ export default function CustomerScreen() {
   const [comments, setComments] = useState('');
   const [orderNumber, setOrderNumber] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [customizeModalOpen, setCustomizeModalOpen] = useState(false);
 
   const [accessibilityOpen, setAccessibilityOpen] = useState(false);
   const [magnifierEnabled, setMagnifierEnabled] = useState(false);
@@ -353,6 +354,7 @@ export default function CustomerScreen() {
 
       syncFixedElement('real-cart-badge', 'magnified-cart-badge');
       syncFixedElement('real-confirmation', 'magnified-confirmation');
+      syncFixedElement('real-customize-modal', 'magnified-customize-modal');
     }
 
     function handleMouseMove(e) {
@@ -445,18 +447,18 @@ export default function CustomerScreen() {
     setEditingCartItemId(null);
     setCurrentItem(item);
     clearCustomization();
-    setScreen(SCREEN.CUSTOMIZE);
+    const defaultSugar = sugarOptions.find(opt => opt.name.includes('50')) || null;
+    const defaultIce = iceOptions.find(opt => opt.name.toLowerCase().includes('regular')) || null;
+    setSelectedSugar(defaultSugar);
+    setSelectedIce(defaultIce);
+    setCustomizeModalOpen(true);
   }
 
   function handleCancelCustomization() {
     clearCustomization();
     setCurrentItem(null);
-    if (editingCartItemId) {
-      setEditingCartItemId(null);
-      setScreen(SCREEN.CART);
-      return;
-    }
-    setScreen(SCREEN.MENU);
+    setEditingCartItemId(null);
+    setCustomizeModalOpen(false);
   }
 
   function startEditCartItem(item) {
@@ -482,7 +484,7 @@ export default function CustomerScreen() {
     setSelectedIce(ice);
     setSelectedToppings(toppings.length ? toppings : fallbackToppings);
     setComments(item.comments || '');
-    setScreen(SCREEN.CUSTOMIZE);
+    setCustomizeModalOpen(true);
   }
 
   function toggleTopping(topping) {
@@ -509,7 +511,7 @@ export default function CustomerScreen() {
       clearCustomization();
       setCurrentItem(null);
       setEditingCartItemId(null);
-      setScreen(SCREEN.CART);
+      setCustomizeModalOpen(false);
       return;
     }
 
@@ -517,7 +519,7 @@ export default function CustomerScreen() {
     setCart(prev => [...prev, item]);
     clearCustomization();
     setCurrentItem(null);
-    setScreen(SCREEN.MENU);
+    setCustomizeModalOpen(false);
   }
 
   function removeFromCart(itemId) { 
@@ -704,72 +706,6 @@ export default function CustomerScreen() {
             </div>
           )}
 
-          {screen === SCREEN.CUSTOMIZE && currentItem && (
-            <div className="customer-content customize-screen">
-              <div className="customize-header">
-                <h2>{editingCartItemId ? 'Edit Item:' : 'Customize:'} {currentItem.name}</h2>
-                <span className="customize-progress">Step {customizeStep} of 2</span>
-              </div>
-
-              {customizeStep === 1 ? (
-                <>
-                  <div className="customize-section">
-                    <h3>Sugar Level</h3>
-                    <div className="option-grid">
-                      {sugarOptions.map(opt => (
-                        <button key={opt.id} className={`option-btn ${selectedSugar?.id === opt.id ? 'selected' : ''}`} onClick={() => setSelectedSugar(opt)}>
-                          {opt.name}
-                          {opt.cost > 0 && <div className="option-cost">+{currency(opt.cost)}</div>}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="customize-section">
-                    <h3>Ice Level</h3>
-                    <div className="option-grid">
-                      {iceOptions.map(opt => (
-                        <button key={opt.id} className={`option-btn ${selectedIce?.id === opt.id ? 'selected' : ''}`} onClick={() => setSelectedIce(opt)}>
-                          {opt.name}
-                          {opt.cost > 0 && <div className="option-cost">+{currency(opt.cost)}</div>}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="customize-actions">
-                    <button className="btn-secondary" onClick={handleCancelCustomization}>Cancel</button>
-                    <button className="btn-primary" onClick={() => setCustomizeStep(2)}>Next: Toppings</button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="customize-section">
-                    <h3>Toppings</h3>
-                    <div className="option-grid">
-                      {toppingOptions.map(opt => {
-                        const isSelected = selectedToppings.some(t => t.id === opt.id);
-                        return (
-                          <button key={opt.id} className={`option-btn ${isSelected ? 'selected' : ''}`} onClick={() => toggleTopping(opt)}>
-                            {opt.name}
-                            {opt.cost > 0 && <div className="option-cost">+{currency(opt.cost)}</div>}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div className="comments-section">
-                    <label>Special Instructions</label>
-                    <input type="text" className="comments-input" value={comments} onChange={(e) => setComments(e.target.value)} placeholder="e.g., Extra shaken, half boba..." />
-                  </div>
-                  <div className="customize-actions">
-                    <button className="btn-secondary" onClick={() => setCustomizeStep(1)}>Back</button>
-                    <button className="btn-primary" onClick={saveCustomizedItem}>
-                      {editingCartItemId ? 'Save Changes' : 'Add to Cart'} - {currency(currentItem.cost + (selectedSugar?.cost || 0) + (selectedIce?.cost || 0) + selectedToppings.reduce((sum, t) => sum + t.cost, 0))}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
 
           {screen === SCREEN.CART && (
             <div className="customer-content cart-screen">
@@ -957,6 +893,94 @@ export default function CustomerScreen() {
           <span className="cart-count">{cartCount}</span>
           <span>{currency(cartTotal)}</span>
         </button>
+      )}
+
+      {customizeModalOpen && currentItem && (
+        <div
+          id={isMagnified ? 'magnified-customize-modal' : 'real-customize-modal'}
+          className="customize-modal-overlay"
+          onClick={isMagnified ? undefined : handleCancelCustomization}
+        >
+          <div className="customize-modal-card" onClick={e => e.stopPropagation()}>
+
+            <div className="customize-modal-image-placeholder">
+              <button className="customize-modal-close" onClick={isMagnified ? undefined : handleCancelCustomization} aria-label="Close">✕</button>
+              <span className="customize-modal-image-icon">🧋</span>
+            </div>
+
+            <div className="customize-modal-item-info">
+              <h2 className="customize-modal-item-name">{currentItem.name}</h2>
+              <p className="customize-modal-item-description">
+                Handcrafted fresh to order. Customize it your way below.
+              </p>
+              <div className="customize-modal-base-price">{currency(currentItem.cost)}</div>
+            </div>
+
+            <div className="customize-modal-body">
+              <div className="customize-section">
+                <h3>Sugar Level</h3>
+                <div className="option-grid">
+                  {sugarOptions.map(opt => (
+                    <button key={opt.id} className={`option-btn ${selectedSugar?.id === opt.id ? 'selected' : ''}`} onClick={() => setSelectedSugar(opt)}>
+                      {opt.name}
+                      {opt.cost > 0 && <div className="option-cost">+{currency(opt.cost)}</div>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="customize-section">
+                <h3>Ice Level</h3>
+                <div className="option-grid">
+                  {iceOptions.map(opt => (
+                    <button key={opt.id} className={`option-btn ${selectedIce?.id === opt.id ? 'selected' : ''}`} onClick={() => setSelectedIce(opt)}>
+                      {opt.name}
+                      {opt.cost > 0 && <div className="option-cost">+{currency(opt.cost)}</div>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="customize-section">
+                <h3>Toppings</h3>
+                <div className="option-grid">
+                  {toppingOptions.map(opt => {
+                    const isSelected = selectedToppings.some(t => t.id === opt.id);
+                    return (
+                      <button key={opt.id} className={`option-btn ${isSelected ? 'selected' : ''}`} onClick={() => toggleTopping(opt)}>
+                        {opt.name}
+                        {opt.cost > 0 && <div className="option-cost">+{currency(opt.cost)}</div>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="comments-section">
+                <label>Special Instructions</label>
+                <input
+                  type="text"
+                  className="comments-input"
+                  value={comments}
+                  onChange={e => setComments(e.target.value)}
+                  placeholder="e.g., Extra shaken, half boba..."
+                />
+              </div>
+            </div>
+
+            <div className="customize-modal-footer">
+              <button className="customize-modal-add-btn" onClick={saveCustomizedItem}>
+                {editingCartItemId ? 'Save Changes' : 'Add to Order'} —{' '}
+                {currency(
+                  currentItem.cost +
+                  (selectedSugar?.cost || 0) +
+                  (selectedIce?.cost || 0) +
+                  selectedToppings.reduce((sum, t) => sum + t.cost, 0)
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
