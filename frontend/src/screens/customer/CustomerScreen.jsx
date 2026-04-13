@@ -812,22 +812,30 @@ export default function CustomerScreen() {
     return "member";
   }, [rewardsStatus.tier]);
 
-  function getFavoriteMatch(item) {
-    const targetId = item.id ?? item.menu_item_id;
+  function getFavoriteMatch(menuItem, cartItem) {
+    const targetId = menuItem.id ?? menuItem.menu_item_id;
     return savedFavorites.find((fav) => {
-      const favItemId =
-        fav.item_data?.menu_item_id ?? fav.item_data?.id ?? fav.menu_item_id;
-      return favItemId === targetId;
+      const d = fav.item_data || {};
+      const favItemId = d.menu_item_id ?? d.id ?? fav.menu_item_id;
+      if (favItemId !== targetId) return false;
+      if (!cartItem) return true;
+      const favSugar = (d.sugarLevel || '').toLowerCase();
+      const favIce = (d.iceLevel || '').toLowerCase();
+      const favToppings = (d.toppingNames || []).slice().sort().join(',').toLowerCase();
+      const cartSugar = (cartItem.sugarLevel || '').toLowerCase();
+      const cartIce = (cartItem.iceLevel || '').toLowerCase();
+      const cartToppings = (cartItem.toppingNames || []).slice().sort().join(',').toLowerCase();
+      return favSugar === cartSugar && favIce === cartIce && favToppings === cartToppings;
     });
   }
 
-  async function handleToggleFavorite(item, e) {
+  async function handleToggleFavorite(menuItem, cartItem, e) {
     e.stopPropagation();
     if (!user || !token || user.guest) {
       alert("Sign in to save favorites!");
       return;
     }
-    const fav = getFavoriteMatch(item);
+    const fav = getFavoriteMatch(menuItem, cartItem);
     try {
       if (fav) {
         await fetch(`${API_BASE}/customer/saved-favorites/${fav.favorite_id}`, {
@@ -839,10 +847,16 @@ export default function CustomerScreen() {
         );
       } else {
         const itemData = {
-          menu_item_id: item.id,
-          name: item.name,
-          cost: item.cost,
-          category: item.category,
+          menu_item_id: menuItem.id,
+          name: cartItem.name,
+          cost: menuItem.cost ?? cartItem.price,
+          category: menuItem.category || '',
+          sugarLevel: cartItem.sugarLevel || '',
+          iceLevel: cartItem.iceLevel || '',
+          toppingNames: cartItem.toppingNames || [],
+          comments: cartItem.comments || '',
+          modificationIds: cartItem.modificationIds || [],
+          price: cartItem.price,
         };
         const res = await fetch(`${API_BASE}/customer/saved-favorites`, {
           method: "POST",
@@ -1350,17 +1364,51 @@ export default function CustomerScreen() {
                         </div>
                       ) : (
                         savedFavorites.map((fav) => {
-                          const favItemId = fav.item_data?.menu_item_id ?? fav.item_data?.id;
+                          const d = fav.item_data || {};
+                          const favItemId = d.menu_item_id ?? d.id;
                           const menuItem = menuItems.find((m) => m.id === favItemId) || {
                             id: favItemId,
-                            name: fav.item_data?.name || "Unknown",
-                            cost: Number(fav.item_data?.cost) || 0,
-                            category: fav.item_data?.category || "Other",
+                            name: d.name || "Unknown",
+                            cost: Number(d.cost) || 0,
+                            category: d.category || "Other",
                           };
+                          const hasCust = d.sugarLevel || d.iceLevel || (d.toppingNames && d.toppingNames.length > 0);
+                          const displayPrice = d.price != null ? Number(d.price) : menuItem.cost;
                           return (
-                            <button key={fav.favorite_id} className="menu-item-card" onClick={() => handleSelectItem(menuItem)}>
+                            <button
+                              key={fav.favorite_id}
+                              className="menu-item-card"
+                              onClick={() => {
+                                if (hasCust) {
+                                  const favCart = {
+                                    id: Date.now(),
+                                    quantity: 1,
+                                    menuItemId: menuItem.id,
+                                    name: menuItem.name,
+                                    price: displayPrice,
+                                    sugarLevel: d.sugarLevel || '100%',
+                                    iceLevel: d.iceLevel || 'Regular',
+                                    toppingNames: d.toppingNames || [],
+                                    comments: d.comments || '',
+                                    modificationIds: d.modificationIds || [],
+                                  };
+                                  setCart((prev) => [...prev, favCart]);
+                                } else {
+                                  handleSelectItem(menuItem);
+                                }
+                              }}
+                            >
                               <div className="item-name">{menuItem.name}</div>
-                              <div className="item-price">{currency(menuItem.cost)}</div>
+                              {hasCust && (
+                                <div className="fav-customizations">
+                                  {d.sugarLevel && <span className="fav-tag">{d.sugarLevel}</span>}
+                                  {d.iceLevel && <span className="fav-tag">{d.iceLevel}</span>}
+                                  {(d.toppingNames || []).map((t, i) => (
+                                    <span key={i} className="fav-tag">{t}</span>
+                                  ))}
+                                </div>
+                              )}
+                              <div className="item-price">{currency(displayPrice)}</div>
                             </button>
                           );
                         })
@@ -1671,7 +1719,7 @@ export default function CustomerScreen() {
                 <div className="cart-items-list">
                   {cart.map((item, index) => {
                     const menuRef = menuItems.find((m) => m.id === item.menuItemId) || { id: item.menuItemId, name: item.name, cost: item.price, category: '' };
-                    const isFav = !!getFavoriteMatch(menuRef);
+                    const isFav = !!getFavoriteMatch(menuRef, item);
                     return (
                     <div key={item.id} className="cart-item">
                       <div className="cart-item-header">
@@ -1680,7 +1728,7 @@ export default function CustomerScreen() {
                         {!user?.guest && (
                         <button
                           className={`cart-fav-btn${isFav ? ' cart-fav-btn--active' : ''}`}
-                          onClick={(e) => handleToggleFavorite(menuRef, e)}
+                          onClick={(e) => handleToggleFavorite(menuRef, item, e)}
                           aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
                         >
                           {isFav ? '♥ Saved' : '♡ Save'}

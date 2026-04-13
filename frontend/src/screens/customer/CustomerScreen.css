@@ -516,6 +516,25 @@
   color: #8b4513;
 }
 
+.fav-customizations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.fav-tag {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b4226;
+  background: #f5ebe0;
+  border: 1px solid #e5d4b8;
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  white-space: nowrap;
+}
+
 .customize-screen {
   max-width: 900px;
 }
