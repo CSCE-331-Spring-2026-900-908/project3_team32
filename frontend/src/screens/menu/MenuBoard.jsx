@@ -25,10 +25,11 @@ function Section({ title, items }) {
 const NUM_COLUMNS = 3;
 
 function distributeIntoColumns(sections, numColumns) {
-  const columns = Array.from({ length: numColumns }, () => []);
-  sections.forEach((section, i) => {
-    columns[i % numColumns].push(section);
-  });
+  const chunkSize = Math.ceil(sections.length / numColumns);
+  const columns = [];
+  for (let i = 0; i < numColumns; i++) {
+    columns.push(sections.slice(i * chunkSize, (i + 1) * chunkSize));
+  }
   return columns;
 }
 
@@ -57,6 +58,9 @@ function MenuBoard() {
           category,
         };
       });
+
+      rows.sort((a, b) => a.menu_item_id - b.menu_item_id);
+
 
       // Group items by category, preserving insertion order
       const categoryMap = new Map();
