@@ -76,6 +76,7 @@ export default function CustomerScreen() {
   const [orderNumber, setOrderNumber] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [customizeModalOpen, setCustomizeModalOpen] = useState(false);
+  const [ordersModalOpen, setOrdersModalOpen] = useState(false);
 
   const [accessibilityOpen, setAccessibilityOpen] = useState(false);
   const [magnifierEnabled, setMagnifierEnabled] = useState(false);
@@ -296,6 +297,10 @@ export default function CustomerScreen() {
       .customer-page .customize-progress            { font-size: ${1 * scale}rem !important; }
       .customer-page .cart-items-title              { font-size: ${1.1 * scale}rem !important; }
       .customer-page .cart-screen h2                { font-size: ${1.5 * scale}rem !important; }
+      .customer-page .cart-panel-title              { font-size: ${1.4 * scale}rem !important; }
+      .customer-page .cart-panel-empty-msg          { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .cart-panel-empty-sub          { font-size: ${0.95 * scale}rem !important; }
+      .customer-page .cart-panel-checkout-btn       { font-size: ${1.1 * scale}rem !important; }
       .customer-page .cart-item-detail              { font-size: ${0.9 * scale}rem !important; }
       .customer-page .option-cost                   { font-size: ${0.9 * scale}rem !important; }
       .customer-page .comments-input                { font-size: ${1 * scale}rem !important; }
@@ -355,6 +360,7 @@ export default function CustomerScreen() {
       syncFixedElement('real-cart-badge', 'magnified-cart-badge');
       syncFixedElement('real-confirmation', 'magnified-confirmation');
       syncFixedElement('real-customize-modal', 'magnified-customize-modal');
+      syncFixedElement('real-orders-modal', 'magnified-orders-modal');
     }
 
     function handleMouseMove(e) {
@@ -682,6 +688,11 @@ export default function CustomerScreen() {
                 <span className="customer-user-name">{user.name || user.email}</span>
               </div>
             )}
+            {!user?.guest && (
+              <button className="my-orders-btn" onClick={() => setOrdersModalOpen(o => !o)}>
+                📋 My Orders
+              </button>
+            )}
             <button className="exit-btn" onClick={() => { logout(); navigate('/login/customer'); }}>Exit</button>
           </div>
         </div>
@@ -689,146 +700,141 @@ export default function CustomerScreen() {
 
       <div className="customer-content-wrapper">
           {screen === SCREEN.MENU && (
-            <div className="customer-content">
+            <div className="menu-with-cart-layout">
+
+              {/* ── Left: menu ── */}
+              <div className="menu-left-col">
                 <div className="category-tabs">
-                    {categories.map(cat => (
-                        <button key={cat} className={`category-tab${selectedCategory === cat ? ' active' : ''}`} onClick={() => setSelectedCategory(cat)}>{cat}</button>
-                    ))}
+                  {categories.map(cat => (
+                    <button key={cat} className={`category-tab${selectedCategory === cat ? ' active' : ''}`} onClick={() => setSelectedCategory(cat)}>{cat}</button>
+                  ))}
                 </div>
                 <div className="menu-grid">
-                    {visibleItems.map(item => (
-                        <button key={item.id} className="menu-item-card" onClick={() => handleSelectItem(item)}>
-                            <div className="item-name">{item.name}</div>
-                            <div className="item-price">{currency(item.cost)}</div>
-                        </button>
-                    ))}
+                  {visibleItems.map(item => (
+                    <button key={item.id} className="menu-item-card" onClick={() => handleSelectItem(item)}>
+                      <div className="item-name">{item.name}</div>
+                      <div className="item-price">{currency(item.cost)}</div>
+                    </button>
+                  ))}
                 </div>
-            </div>
-          )}
-
-
-          {screen === SCREEN.CART && (
-            <div className="customer-content cart-screen">
-              <div className="cart-screen-top">
-                <button className="cart-back-btn" onClick={() => setScreen(SCREEN.MENU)}>Back</button>
-                <h2>Your Order</h2>
               </div>
-              {cart.length === 0 ? (
-                <div className="empty-cart">
-                  <p>Your cart is empty.</p>
-                  <button className="btn-primary" onClick={() => setScreen(SCREEN.MENU)}>Back to Menu</button>
-                </div>
-              ) : (
-                <div className="cart-screen-body">
-                  <div className={`rewards-summary rewards-tone-${rewardsTone}`}>
-                    <div className="rewards-line">
-                      <span>Rewards Status</span>
-                      <span className={`rewards-tier-badge rewards-tier-${rewardsTone}`}>
-                        {rewardsStatus.tier}
-                        {rewardsStatus.discountRate > 0 ? ` (${Math.round(rewardsStatus.discountRate * 100)}% off)` : ''}
-                      </span>
-                    </div>
-                    {rewardsStatus.note && <div className="rewards-note rewards-note-employee">{rewardsStatus.note}</div>}
-                    {rewardsStatus.tier === 'Employee' ? (
-                      <div className="tier-visual-row">
-                        <span className="tier-chip tier-chip-employee active">Employee Only</span>
-                      </div>
-                    ) : (
-                      <div className="tier-visual-row">
-                        <span className={`tier-chip ${['Gold', 'Platinum', 'Diamond'].includes(rewardsStatus.tier) ? 'active' : ''}`}>Gold</span>
-                        <span className={`tier-chip ${['Platinum', 'Diamond'].includes(rewardsStatus.tier) ? 'active' : ''}`}>Platinum</span>
-                        <span className={`tier-chip ${rewardsStatus.tier === 'Diamond' ? 'active' : ''}`}>Diamond</span>
-                      </div>
-                    )}
-                    <div className="rewards-progress">
-                      <div className="rewards-progress-fill" style={{ width: `${tierProgressPercent}%` }} />
-                    </div>
-                    <div className="rewards-line">
-                      <span>Points (last 12 months)</span>
-                      <span>{previousYearPoints}</span>
-                    </div>
-                    <div className="rewards-line">
-                      <span>Points from this order</span>
-                      <span>+{pointsFromCurrentOrder}</span>
-                    </div>
-                    {rewardsStatus.nextTierAt && (
-                      <div className="rewards-line">
-                        <span>Points to next tier (after this cart)</span>
-                        <span>{pointsToNextTier}</span>
-                      </div>
-                    )}
-                    {!rewardsStatus.nextTierAt && (
-                      <div className="rewards-line">
-                        <span>Progress</span>
-                        <span>Top tier reached</span>
-                      </div>
-                    )}
+
+              {/* ── Right: cart panel ── */}
+              <div className="cart-side-panel">
+                <h2 className="cart-panel-title">Your Cart</h2>
+
+                {cart.length === 0 ? (
+                  <div className="cart-panel-empty">
+                    <div className="cart-panel-empty-icon">🛒</div>
+                    <p className="cart-panel-empty-msg">Your cart is empty</p>
+                    <p className="cart-panel-empty-sub">Tap any drink to get started</p>
                   </div>
-                  <div className="cart-items">
-                    <h3 className="cart-items-title">Menu Items</h3>
-                    {cart.map((item, index) => (
-                      <div key={item.id} className="cart-item">
-                        <div className="cart-item-header">
-                          <span className="cart-item-number">{index + 1}.</span>
-                          <span className="cart-item-name">{item.name}</span>
-                          <span className="cart-item-price">{currency(item.price * (item.quantity || 1))}</span>
-                          <button className="remove-btn" onClick={() => removeFromCart(item.id)}>×</button>
+                ) : (
+                  <>
+                    <div className="cart-panel-scroll-area">
+                    <div className={`rewards-summary rewards-tone-${rewardsTone}`}>
+                      <div className="rewards-line">
+                        <span>Rewards</span>
+                        <span className={`rewards-tier-badge rewards-tier-${rewardsTone}`}>
+                          {rewardsStatus.tier}
+                          {rewardsStatus.discountRate > 0 ? ` (${Math.round(rewardsStatus.discountRate * 100)}% off)` : ''}
+                        </span>
+                      </div>
+                      {rewardsStatus.note && <div className="rewards-note rewards-note-employee">{rewardsStatus.note}</div>}
+                      {rewardsStatus.tier === 'Employee' ? (
+                        <div className="tier-visual-row">
+                          <span className="tier-chip tier-chip-employee active">Employee Only</span>
                         </div>
-                        <div className="cart-item-controls">
-                          <span className="cart-item-unit-price">Each: {currency(item.price)}</span>
-                          <div className="qty-controls">
-                            <button
-                              className="qty-btn"
-                              onClick={() => updateCartQuantity(item.id, (item.quantity || 1) - 1)}
-                              aria-label="Decrease quantity"
-                            >
-                              -
-                            </button>
-                            <span className="qty-value">{item.quantity || 1}</span>
-                            <button
-                              className="qty-btn"
-                              onClick={() => updateCartQuantity(item.id, (item.quantity || 1) + 1)}
-                              aria-label="Increase quantity"
-                            >
-                              +
-                            </button>
+                      ) : (
+                        <div className="tier-visual-row">
+                          <span className={`tier-chip ${['Gold', 'Platinum', 'Diamond'].includes(rewardsStatus.tier) ? 'active' : ''}`}>Gold</span>
+                          <span className={`tier-chip ${['Platinum', 'Diamond'].includes(rewardsStatus.tier) ? 'active' : ''}`}>Platinum</span>
+                          <span className={`tier-chip ${rewardsStatus.tier === 'Diamond' ? 'active' : ''}`}>Diamond</span>
+                        </div>
+                      )}
+                      <div className="rewards-progress">
+                        <div className="rewards-progress-fill" style={{ width: `${tierProgressPercent}%` }} />
+                      </div>
+                      <div className="rewards-line">
+                        <span>Points (12 mo)</span>
+                        <span>{previousYearPoints}</span>
+                      </div>
+                      <div className="rewards-line">
+                        <span>From this order</span>
+                        <span>+{pointsFromCurrentOrder}</span>
+                      </div>
+                      {rewardsStatus.nextTierAt && (
+                        <div className="rewards-line">
+                          <span>To next tier</span>
+                          <span>{pointsToNextTier}</span>
+                        </div>
+                      )}
+                      {!rewardsStatus.nextTierAt && (
+                        <div className="rewards-line">
+                          <span>Progress</span>
+                          <span>Top tier ✓</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="cart-panel-items">
+                      {cart.map((item, index) => (
+                        <div key={item.id} className="cart-item">
+                          <div className="cart-item-header">
+                            <span className="cart-item-number">{index + 1}.</span>
+                            <span className="cart-item-name">{item.name}</span>
+                            <span className="cart-item-price">{currency(item.price * (item.quantity || 1))}</span>
+                            <button className="remove-btn" onClick={() => removeFromCart(item.id)}>×</button>
                           </div>
-                          <button className="cart-edit-btn" onClick={() => startEditCartItem(item)}>Edit</button>
+                          <div className="cart-item-controls">
+                            <span className="cart-item-unit-price">Each: {currency(item.price)}</span>
+                            <div className="qty-controls">
+                              <button className="qty-btn" onClick={() => updateCartQuantity(item.id, (item.quantity || 1) - 1)} aria-label="Decrease quantity">-</button>
+                              <span className="qty-value">{item.quantity || 1}</span>
+                              <button className="qty-btn" onClick={() => updateCartQuantity(item.id, (item.quantity || 1) + 1)} aria-label="Increase quantity">+</button>
+                            </div>
+                            <button className="cart-edit-btn" onClick={() => startEditCartItem(item)}>Edit</button>
+                          </div>
+                          <div className="cart-item-details">
+                            {buildDisplayLines(item).map((line, i) => (
+                              <div key={i} className="cart-item-detail">{line}</div>
+                            ))}
+                          </div>
                         </div>
-                        <div className="cart-item-details">
-                          {buildDisplayLines(item).map((line, i) => (
-                            <div key={i} className="cart-item-detail">{line}</div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="cart-total">
-                    <div className="cart-total-line">
-                      <span>{rewardsStatus.discountRate > 0 ? 'Subtotal' : 'Total'}</span>
-                      <span>{currency(cartTotal)}</span>
+                      ))}
                     </div>
-                    {rewardsStatus.discountRate > 0 && (
-                      <>
+                    </div>{/* end cart-panel-scroll-area */}
+
+                    <div className="cart-panel-footer">
+                      <div className="cart-total">
                         <div className="cart-total-line">
-                          <span>Discount ({Math.round(rewardsStatus.discountRate * 100)}%)</span>
-                          <span>-{currency(discountAmount)}</span>
+                          <span>{rewardsStatus.discountRate > 0 ? 'Subtotal' : 'Total'}</span>
+                          <span>{currency(cartTotal)}</span>
                         </div>
-                        <div className="cart-total-line cart-total-line-final">
-                          <span>Discounted Total</span>
-                          <span>{currency(discountedSubtotal)}</span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  <div className="cart-actions">
-                    <button className="btn-secondary" onClick={() => setScreen(SCREEN.MENU)}>Add More Items</button>
-                    <button className="btn-primary" onClick={() => setScreen(SCREEN.CHECKOUT)}>Proceed to Checkout</button>
-                  </div>
-                </div>
-              )}
+                        {rewardsStatus.discountRate > 0 && (
+                          <>
+                            <div className="cart-total-line">
+                              <span>Discount ({Math.round(rewardsStatus.discountRate * 100)}%)</span>
+                              <span>-{currency(discountAmount)}</span>
+                            </div>
+                            <div className="cart-total-line cart-total-line-final">
+                              <span>Discounted Total</span>
+                              <span>{currency(discountedSubtotal)}</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      <button className="btn-primary cart-panel-checkout-btn" onClick={() => setScreen(SCREEN.CHECKOUT)}>
+                        Proceed to Checkout
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           )}
+
+
 
           {screen === SCREEN.CHECKOUT && (
             <div className="customer-content checkout-screen">
@@ -859,7 +865,7 @@ export default function CustomerScreen() {
                 <button className="payment-btn" onClick={() => { alert('Please see cashier to pay with cash.'); completeOrder('CASH'); }}>💵 Pay with Cash</button>
               </div>
               <div className="cart-actions">
-                <button className="btn-secondary full-width" onClick={() => setScreen(SCREEN.CART)}>Back to Cart</button>
+                <button className="btn-secondary full-width" onClick={() => setScreen(SCREEN.MENU)}>Back to Menu</button>
               </div>
             </div>
           )}
@@ -882,17 +888,80 @@ export default function CustomerScreen() {
         </div>
       )}
 
-      {screen !== SCREEN.CART && screen !== SCREEN.CHECKOUT && cartCount > 0 && (
-        <button 
-          id={isMagnified ? 'magnified-cart-badge' : 'real-cart-badge'}
-          className="cart-badge" 
-          onClick={() => setScreen(SCREEN.CART)}
-          style={isMagnified ? { bottom: 'auto', right: 'auto', margin: 0 } : {}}
+
+      {ordersModalOpen && (
+        <div
+          id={isMagnified ? 'magnified-orders-modal' : 'real-orders-modal'}
+          className="orders-modal-overlay"
+          onClick={isMagnified ? undefined : () => setOrdersModalOpen(false)}
+          style={isMagnified ? { position: 'absolute' } : {}}
         >
-          <span className="cart-icon">🛒</span>
-          <span className="cart-count">{cartCount}</span>
-          <span>{currency(cartTotal)}</span>
-        </button>
+          <div className="orders-modal-card" onClick={e => e.stopPropagation()}>
+            <div className="orders-modal-header">
+              <h2 className="orders-modal-title">My Orders</h2>
+              <button
+                className="customize-modal-close"
+                onClick={isMagnified ? undefined : () => setOrdersModalOpen(false)}
+                aria-label="Close"
+              >✕</button>
+            </div>
+
+            <div className="orders-modal-body">
+              {customerOrders.length === 0 ? (
+                <div className="orders-empty">
+                  <div className="orders-empty-icon">🧋</div>
+                  <p className="orders-empty-msg">No orders yet</p>
+                  <p className="orders-empty-sub">Your completed orders will appear here.</p>
+                </div>
+              ) : (
+                customerOrders.map(order => {
+                  const date = new Date(order.order_date);
+                  const isRecent = Date.now() - date.getTime() < 30 * 60 * 1000;
+                  const status = isRecent ? 'In Progress' : 'Completed';
+                  const itemCount = Array.isArray(order.items)
+                    ? order.items.reduce((s, i) => s + (i.quantity || 1), 0)
+                    : null;
+                  return (
+                    <div key={order.order_id} className="order-history-card">
+                      <div className="order-history-top">
+                        <div className="order-history-id">Order #{order.order_id}</div>
+                        <span className={`order-status-chip order-status-${isRecent ? 'progress' : 'done'}`}>
+                          {status}
+                        </span>
+                      </div>
+
+                      <div className="order-history-meta">
+                        <span>📅 {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        <span>🕐 {date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
+                        {order.payment_type && (
+                          <span>{order.payment_type === 'CARD' ? '💳' : '💵'} {order.payment_type}</span>
+                        )}
+                        {itemCount !== null && <span>🧋 {itemCount} item{itemCount !== 1 ? 's' : ''}</span>}
+                      </div>
+
+                      {Array.isArray(order.items) && order.items.length > 0 && (
+                        <div className="order-history-items">
+                          {order.items.map(item => (
+                            <div key={item.order_item_id} className="order-history-item-row">
+                              <span className="order-history-item-qty">{item.quantity}×</span>
+                              <span className="order-history-item-name">{item.name}</span>
+                              <span className="order-history-item-price">{currency(Number(item.item_price) * item.quantity)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="order-history-total">
+                        <span>Total</span>
+                        <span>{currency(Number(order.total_cost))}</span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {customizeModalOpen && currentItem && (
