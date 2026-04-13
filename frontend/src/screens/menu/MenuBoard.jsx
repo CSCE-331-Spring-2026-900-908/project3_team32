@@ -22,8 +22,18 @@ function Section({ title, items }) {
   );
 }
 
+const NUM_COLUMNS = 3;
+
+function distributeIntoColumns(sections, numColumns) {
+  const columns = Array.from({ length: numColumns }, () => []);
+  sections.forEach((section, i) => {
+    columns[i % numColumns].push(section);
+  });
+  return columns;
+}
+
 function MenuBoard() {
-  const [items, setItems] = useState([]);
+  const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -33,14 +43,36 @@ function MenuBoard() {
       setError("");
 
       const payload = await apiRequest("/menu/items");
-      const rows = unwrapList(payload, "menuItems").map((row) => ({
-        menu_item_id: row.menu_item_id ?? row.menuItemId ?? row.id,
-        name: row.name,
-        cost: Number(row.cost ?? row.price ?? 0),
-        category: row.category || "Uncategorized",
+      const rows = unwrapList(payload, "menuItems").map((row) => {
+        const category = row.category;
+        if (!category) {
+          throw new Error(
+            `Menu item "${row.name ?? row.id}" is missing a category.`
+          );
+        }
+        return {
+          menu_item_id: row.menu_item_id ?? row.menuItemId ?? row.id,
+          name: row.name,
+          cost: Number(row.cost ?? row.price ?? 0),
+          category,
+        };
+      });
+
+      // Group items by category, preserving insertion order
+      const categoryMap = new Map();
+      for (const item of rows) {
+        if (!categoryMap.has(item.category)) {
+          categoryMap.set(item.category, []);
+        }
+        categoryMap.get(item.category).push(item);
+      }
+
+      const derived = Array.from(categoryMap.entries()).map(([title, items]) => ({
+        title: title.toUpperCase(),
+        items,
       }));
 
-      setItems(rows);
+      setSections(derived);
     } catch (err) {
       setError(err.message || "Failed to load menu items");
     } finally {
@@ -52,13 +84,6 @@ function MenuBoard() {
     loadMenuItems();
   }, []);
 
-  const milkTeaItems = items.filter((item) => item.category === "Milk Tea");
-  const fruitTeaItems = items.filter((item) => item.category === "Fruit Tea");
-  const smoothieItems = items.filter((item) => item.category === "Smoothies");
-  const latteItems = items.filter((item) => item.category === "Lattes");
-  const specialtyItems = items.filter((item) => item.category === "Specialty");
-  const seasonalItems = items.filter((item) => item.category === "Seasonal");
-
   if (loading) {
     return <div className="menu-board">Loading menu...</div>;
   }
@@ -66,6 +91,8 @@ function MenuBoard() {
   if (error) {
     return <div className="menu-board">Error: {error}</div>;
   }
+
+  const columns = distributeIntoColumns(sections, NUM_COLUMNS);
 
   return (
     <div className="menu-board">
@@ -85,20 +112,13 @@ function MenuBoard() {
       </div>
 
       <div className="menu-columns">
-        <div className="menu-column">
-          <Section title="MILK TEA" items={milkTeaItems} />
-          <Section title="LATTES" items={latteItems} />
-        </div>
-
-        <div className="menu-column">
-          <Section title="FRUIT TEA" items={fruitTeaItems} />
-          <Section title="SMOOTHIES" items={smoothieItems} />
-        </div>
-
-        <div className="menu-column">
-          <Section title="SPECIALTY" items={specialtyItems} />
-          <Section title="SEASONAL" items={seasonalItems} />
-        </div>
+        {columns.map((columnSections, colIdx) => (
+          <div className="menu-column" key={colIdx}>
+            {columnSections.map((section) => (
+              <Section key={section.title} title={section.title} items={section.items} />
+            ))}
+          </div>
+        ))}
       </div>
 
       <div className="bottom-bar">

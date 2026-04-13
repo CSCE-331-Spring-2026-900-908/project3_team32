@@ -22,6 +22,7 @@ function App() {
             {/* Public routes */}
             <Route path="/" element={<Portal />} />
             <Route path="/login/:role" element={<Login />} />
+            <Route path="/menu-board" element={<MenuBoard />} />
 
             {/* Customer — requires customer JWT */}
             <Route
