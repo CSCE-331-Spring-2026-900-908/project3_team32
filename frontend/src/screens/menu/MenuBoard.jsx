@@ -13,7 +13,9 @@ function Section({ title, items }) {
             <span className="item-number">{item.menu_item_id}</span>
             <div className="item-details">
               <span className="item-name">{item.name}</span>
-              <span className="item-price">${Number(item.cost).toFixed(2)}</span>
+              <span className="item-price">
+                ${Number(item.cost).toFixed(2)}
+              </span>
             </div>
           </div>
         ))}
@@ -48,7 +50,7 @@ function MenuBoard() {
         const category = row.category;
         if (!category) {
           throw new Error(
-            `Menu item "${row.name ?? row.id}" is missing a category.`
+            `Menu item "${row.name ?? row.id}" is missing a category.`,
           );
         }
         return {
@@ -61,7 +63,6 @@ function MenuBoard() {
 
       rows.sort((a, b) => a.menu_item_id - b.menu_item_id);
 
-
       // Group items by category, preserving insertion order
       const categoryMap = new Map();
       for (const item of rows) {
@@ -71,10 +72,12 @@ function MenuBoard() {
         categoryMap.get(item.category).push(item);
       }
 
-      const derived = Array.from(categoryMap.entries()).map(([title, items]) => ({
-        title: title.toUpperCase(),
-        items,
-      }));
+      const derived = Array.from(categoryMap.entries()).map(
+        ([title, items]) => ({
+          title: title.toUpperCase(),
+          items,
+        }),
+      );
 
       setSections(derived);
     } catch (err) {
@@ -100,26 +103,15 @@ function MenuBoard() {
 
   return (
     <div className="menu-board">
-      <div className="top-bar">
-        <div className="top-left">
-          <span>Hot Available</span>
-          <span>Non-Caffeinated</span>
-          <span>Alternative Milk Available</span>
-        </div>
-        <div className="top-right">
-          <h3>FOOD ALLERGY NOTICE</h3>
-          <p>
-            We cannot guarantee that any of our products are free from allergens.
-            Additional nutrition information available upon request.
-          </p>
-        </div>
-      </div>
-
       <div className="menu-columns">
         {columns.map((columnSections, colIdx) => (
           <div className="menu-column" key={colIdx}>
             {columnSections.map((section) => (
-              <Section key={section.title} title={section.title} items={section.items} />
+              <Section
+                key={section.title}
+                title={section.title}
+                items={section.items}
+              />
             ))}
           </div>
         ))}
@@ -128,19 +120,20 @@ function MenuBoard() {
       <div className="bottom-bar">
         <div className="bottom-group">
           <h4>ICE LEVEL</h4>
-          <p>Regular • Less • No Ice</p>
+          <p>No Ice • Less Ice • Regular • Extra Ice</p>
         </div>
 
         <div className="bottom-group">
-          <h4>SWEETNESS LEVEL</h4>
-          <p>Normal 100% • Less 80% • Half 50% • Light 30% • No Sugar 0%</p>
+          <h4>SUGAR LEVEL</h4>
+          <p>0% • 25% • 50% • 75% • 100% • 125%</p>
         </div>
 
         <div className="bottom-group">
           <h4>TOPPING</h4>
           <p>
-            Pearls (Boba) • Coffee Jelly • Pudding • Lychee Jelly • Honey Jelly •
-            Crystal Boba • Mango Popping Boba • Strawberry Popping Boba • Ice Cream • Crema
+            Tapioca Pearls • Crystal Boba • Popping Boba (Strawberry) • Popping
+            Boba (Mango) • Honey Jelly • Lychee Jelly • Coffee Jelly • Pudding •
+            Ice Cream • Creama
           </p>
         </div>
       </div>
