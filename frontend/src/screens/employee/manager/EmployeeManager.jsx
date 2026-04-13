@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { apiRequest, unwrapList } from './managerApi.js';
 
 export default function EmployeeManager() {
@@ -8,7 +8,7 @@ export default function EmployeeManager() {
   const [selectedId, setSelectedId] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [mode, setMode] = useState('add');
-  const [form, setForm] = useState({ employee_id: '', name: '', position: '', hire_date: '' });
+  const [form, setForm] = useState({ employee_id: '', name: '', position: '', hire_date: '', google_email: '', employee_pin: '' });
 
   const selected = useMemo(
     () => employees.find((employee) => Number(employee.employee_id) === Number(selectedId)) || null,
@@ -26,6 +26,9 @@ export default function EmployeeManager() {
         name: row.name,
         position: row.position,
         hire_date: String(row.hire_date ?? row.hireDate ?? '').slice(0, 10),
+        google_email: row.google_email ?? '',
+        employee_pin: row.employee_pin ?? '',
+        pin_set: row.pin_set === true || row.pin_set === 't' || row.pin_set === 1 || row.pin_set === '1',
       }));
       setEmployees(rows);
     } catch (err) {
@@ -41,7 +44,7 @@ export default function EmployeeManager() {
 
   function openAdd() {
     setMode('add');
-    setForm({ employee_id: '', name: '', position: '', hire_date: '' });
+    setForm({ employee_id: '', name: '', position: '', hire_date: '', google_email: '', employee_pin: '' });
     setShowForm(true);
   }
 
@@ -56,6 +59,8 @@ export default function EmployeeManager() {
       name: employee.name,
       position: employee.position,
       hire_date: employee.hire_date,
+      google_email: employee.google_email ?? '',
+      employee_pin: employee.employee_pin ?? '',
     });
     setShowForm(true);
   }
@@ -74,12 +79,25 @@ export default function EmployeeManager() {
       return;
     }
 
+    const pin = String(form.employee_pin || '').trim();
+    if (pin && !/^\d{4}$/.test(pin)) {
+      alert('Employee PIN must be exactly 4 digits.');
+      return;
+    }
+
     const body = {
       employee_id: employeeId,
       name: form.name.trim(),
       position: form.position.trim(),
       hire_date: form.hire_date,
+      google_email: form.google_email.trim() || null,
     };
+    if (mode === 'add' && pin) {
+      body.employee_pin = pin;
+    }
+    if (mode === 'edit' && pin) {
+      body.employee_pin = pin;
+    }
 
     try {
       if (mode === 'add') {
@@ -154,12 +172,15 @@ export default function EmployeeManager() {
             </label>
             <label>
               Position
-              <input
-                type="text"
+              <select
                 value={form.position}
                 onChange={(e) => setForm((prev) => ({ ...prev, position: e.target.value }))}
                 required
-              />
+              >
+                <option value="">Select position</option>
+                <option value="Cashier">Cashier</option>
+                <option value="Manager">Manager</option>
+              </select>
             </label>
             <label>
               Hire Date (YYYY-MM-DD)
@@ -168,6 +189,29 @@ export default function EmployeeManager() {
                 value={form.hire_date}
                 onChange={(e) => setForm((prev) => ({ ...prev, hire_date: e.target.value }))}
                 required
+              />
+            </label>
+            <label>
+              Google Email (for login)
+              <input
+                type="email"
+                placeholder="employee@gmail.com"
+                value={form.google_email}
+                onChange={(e) => setForm((prev) => ({ ...prev, google_email: e.target.value }))}
+              />
+            </label>
+            <label>
+              4-Digit PIN (for PIN login)
+              <input
+                type={mode === 'edit' ? 'text' : 'password'}
+                inputMode="numeric"
+                maxLength={4}
+                placeholder={mode === 'edit' ? '4-digit PIN' : 'Enter 4-digit PIN'}
+                value={form.employee_pin}
+                onChange={(e) => setForm((prev) => ({
+                  ...prev,
+                  employee_pin: e.target.value.replace(/\D/g, '').slice(0, 4),
+                }))}
               />
             </label>
           </div>
@@ -187,6 +231,8 @@ export default function EmployeeManager() {
             <th>Name</th>
             <th>Position</th>
             <th>Hire Date</th>
+            <th>Google Email</th>
+            <th>PIN</th>
           </tr>
         </thead>
         <tbody>
@@ -203,6 +249,8 @@ export default function EmployeeManager() {
                 <td>{employee.name}</td>
                 <td>{employee.position}</td>
                 <td>{employee.hire_date}</td>
+                <td>{employee.google_email || <span style={{ color: '#aaa' }}>Not set</span>}</td>
+                <td>{employee.pin_set ? '****' : <span style={{ color: '#aaa' }}>Not set</span>}</td>
               </tr>
             );
           })}

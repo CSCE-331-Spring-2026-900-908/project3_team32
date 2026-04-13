@@ -1,15 +1,97 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import jwt from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
 import pool from './config/database.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+function normalizeEmployeePin(value) {
+  if (value === undefined || value === null) return null;
+  const normalized = String(value).trim();
+  if (!normalized) return null;
+  return normalized;
+}
+
+function isValidEmployeePin(pin) {
+  return /^\d{4}$/.test(pin);
+}
+
+async function ensureEmployeeAuthSchema() {
+  await pool.query('ALTER TABLE employee ADD COLUMN IF NOT EXISTS google_email VARCHAR(255)');
+  await pool.query('ALTER TABLE employee ADD COLUMN IF NOT EXISTS employee_pin VARCHAR(4)');
+  await pool.query(
+    `DO $$
+     BEGIN
+       IF NOT EXISTS (
+         SELECT 1
+         FROM pg_constraint
+         WHERE conname = 'employee_pin_format_chk'
+       ) THEN
+         ALTER TABLE employee
+           ADD CONSTRAINT employee_pin_format_chk
+           CHECK (employee_pin IS NULL OR employee_pin ~ '^[0-9]{4}$');
+       END IF;
+     END $$;`,
+  );
+}
+
+await ensureEmployeeAuthSchema().catch((error) => {
+  console.error('Failed to ensure employee auth schema:', error.message);
+});
+
+// ── JWT helpers ────────────────────────────────────────────────────────────────
+
+function signToken(payload) {
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '8h' });
+}
+
+/**
+ * requireAuth(roles?)
+ * Pass an array of allowed position strings, e.g. ['Manager', 'Shift Lead'].
+ * Omit roles to allow any authenticated user.
+ */
+function requireAuth(roles) {
+  return (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    try {
+      const decoded = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET);
+      req.user = decoded;
+      if (roles && roles.length > 0 && !roles.includes(decoded.position)) {
+        return res.status(403).json({ error: 'Insufficient permissions' });
+      }
+      next();
+    } catch {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+  };
+}
 
 // Middleware
-app.use(cors());
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://team32-project3.vercel.app',
+  'https://team32-project3-abhivurs-projects.vercel.app',
+];
+app.use(cors({
+  origin(origin, cb) {
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('-abhivurs-projects.vercel.app')) {
+      cb(null, true);
+    } else {
+      cb(null, true); // allow all for now; tighten later if needed
+    }
+  },
+  credentials: true,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -36,12 +118,285 @@ app.get('/api', (req, res) => {
   res.json({ message: 'Sharetea POS API' });
 });
 
+// ── Dev-only bypass (never enabled in production) ─────────────────────────────
+if (process.env.NODE_ENV !== 'production') {
+  app.post('/api/auth/dev/login', async (req, res) => {
+    const { role } = req.body;
+    if (role === 'customer') {
+      const result = await pool.query(
+        `INSERT INTO customer (google_id, email, name, picture)
+         VALUES ('dev-customer-001', 'dev@example.com', 'Dev Customer', NULL)
+         ON CONFLICT (google_id) DO UPDATE SET name = EXCLUDED.name
+         RETURNING customer_id, email, name`,
+      );
+      const customer = result.rows[0];
+      const token = signToken({ type: 'customer', customer_id: customer.customer_id, email: customer.email, name: customer.name });
+      return res.json({ token, user: customer });
+    }
+    // Default to first Manager employee for employee dev bypass
+    const result = await pool.query(
+      `SELECT employee_id, name, position FROM employee WHERE position = 'Manager' LIMIT 1`,
+    );
+    if (!result.rowCount) return res.status(404).json({ error: 'No manager employee found in DB' });
+    const emp = result.rows[0];
+    const token = signToken({ type: 'employee', employee_id: emp.employee_id, name: emp.name, position: emp.position });
+    return res.json({ token, user: emp });
+  });
+}
+
+// ── Auth routes ────────────────────────────────────────────────────────────────
+
+async function verifyGoogleToken(credential) {
+  const ticket = await googleClient.verifyIdToken({
+    idToken: credential,
+    audience: process.env.GOOGLE_CLIENT_ID,
+  });
+  return ticket.getPayload();
+}
+
+// Customer Google login — creates account on first sign-in
+app.post('/api/auth/google/customer', async (req, res, next) => {
+  const { credential } = req.body;
+  if (!credential) return res.status(400).json({ error: 'credential is required' });
+
+  try {
+    const payload = await verifyGoogleToken(credential);
+    const { sub: googleId, email, name, picture } = payload;
+
+    const result = await pool.query(
+      `INSERT INTO customer (google_id, email, name, picture)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (google_id) DO UPDATE
+         SET email = EXCLUDED.email,
+             name  = EXCLUDED.name,
+             picture = EXCLUDED.picture
+       RETURNING customer_id, email, name, picture`,
+      [googleId, email, name, picture],
+    );
+
+    const customer = result.rows[0];
+    const token = signToken({
+      type: 'customer',
+      customer_id: customer.customer_id,
+      email: customer.email,
+      name: customer.name,
+      picture: customer.picture,
+    });
+
+    res.json({ token, user: customer });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Customer guest login — no account required
+app.post('/api/auth/guest/customer', async (req, res) => {
+  const guestSessionId = `guest-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+  const token = signToken({
+    type: 'customer',
+    guest: true,
+    guest_session_id: guestSessionId,
+    name: 'Guest',
+  });
+
+  res.json({
+    token,
+    user: {
+      type: 'customer',
+      guest: true,
+      name: 'Guest',
+      guest_session_id: guestSessionId,
+    },
+  });
+});
+
+// Employee Google login — must already have google_email pre-registered
+app.post('/api/auth/google/employee', async (req, res, next) => {
+  const { credential } = req.body;
+  if (!credential) return res.status(400).json({ error: 'credential is required' });
+
+  try {
+    const payload = await verifyGoogleToken(credential);
+    const { email } = payload;
+
+    const result = await pool.query(
+      'SELECT employee_id, name, position, hire_date, google_email FROM employee WHERE google_email = $1',
+      [email],
+    );
+
+    if (!result.rowCount) {
+      return res.status(403).json({
+        error: 'No employee account found for this Google email. Contact your manager.',
+      });
+    }
+
+    const employee = result.rows[0];
+    const token = signToken({
+      type: 'employee',
+      employee_id: employee.employee_id,
+      name: employee.name,
+      position: employee.position,
+    });
+
+    res.json({ token, user: { ...employee } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Employee PIN login — uses 4-digit PIN only
+app.post('/api/auth/pin/employee', async (req, res, next) => {
+  const pin = normalizeEmployeePin(req.body?.pin);
+
+  if (!pin || !isValidEmployeePin(pin)) {
+    return res.status(400).json({ error: 'pin must be a 4-digit code' });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT employee_id, name, position, hire_date, google_email
+       FROM employee
+       WHERE employee_pin = $1`,
+      [pin],
+    );
+
+    if (!result.rowCount) {
+      return res.status(401).json({ error: 'Invalid PIN' });
+    }
+    if (result.rowCount > 1) {
+      return res.status(409).json({ error: 'PIN is assigned to multiple employees. Ask manager to reset PINs.' });
+    }
+
+    const employee = result.rows[0];
+    const token = signToken({
+      type: 'employee',
+      employee_id: employee.employee_id,
+      name: employee.name,
+      position: employee.position,
+    });
+
+    res.json({ token, user: { ...employee } });
+  } catch (error) {
+    next(error);
+  }
+});
+
 function parseDateInput(value) {
   if (!value || typeof value !== 'string') return null;
   const date = new Date(`${value}T00:00:00`);
   if (Number.isNaN(date.getTime())) return null;
   return value;
 }
+
+function describeOpenMeteoWeatherCode(weatherCode) {
+  const codeMap = {
+    0: 'Clear sky',
+    1: 'Mainly clear',
+    2: 'Partly cloudy',
+    3: 'Overcast',
+    45: 'Fog',
+    48: 'Rime fog',
+    51: 'Light drizzle',
+    53: 'Moderate drizzle',
+    55: 'Dense drizzle',
+    56: 'Light freezing drizzle',
+    57: 'Dense freezing drizzle',
+    61: 'Slight rain',
+    63: 'Moderate rain',
+    65: 'Heavy rain',
+    66: 'Light freezing rain',
+    67: 'Heavy freezing rain',
+    71: 'Slight snow fall',
+    73: 'Moderate snow fall',
+    75: 'Heavy snow fall',
+    77: 'Snow grains',
+    80: 'Slight rain showers',
+    81: 'Moderate rain showers',
+    82: 'Violent rain showers',
+    85: 'Slight snow showers',
+    86: 'Heavy snow showers',
+    95: 'Thunderstorm',
+    96: 'Thunderstorm with hail',
+    99: 'Thunderstorm with heavy hail',
+  };
+  return codeMap[weatherCode] || 'Unknown weather';
+}
+
+function isBadWeatherCondition(weatherCode) {
+  // Highlight severe/impactful conditions such as hail, thunderstorms, freezing rain, and heavy snow/showers.
+  return [66, 67, 75, 77, 82, 85, 86, 95, 96, 99].includes(weatherCode);
+}
+
+// External weather route (Open-Meteo, no API key required)
+app.get('/api/external/weather', async (req, res, next) => {
+  const cityInput = typeof req.query.city === 'string' && req.query.city.trim() ? req.query.city.trim() : 'College Station,US';
+  const units = typeof req.query.units === 'string' && req.query.units.trim() ? req.query.units.trim() : 'imperial';
+
+  const [cityNameRaw, countryRaw] = cityInput.split(',').map((part) => part.trim());
+  const cityName = cityNameRaw || cityInput;
+  const countryCode = countryRaw && countryRaw.length === 2 ? countryRaw.toUpperCase() : '';
+  const temperatureUnit = units === 'metric' ? 'celsius' : 'fahrenheit';
+
+  try {
+    const geocodeParams = new URLSearchParams({
+      name: cityName,
+      count: '1',
+      language: 'en',
+      format: 'json',
+    });
+    if (countryCode) geocodeParams.set('countryCode', countryCode);
+
+    const geocodeResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?${geocodeParams.toString()}`);
+    const geocodeData = await geocodeResponse.json().catch(() => ({}));
+
+    if (!geocodeResponse.ok) {
+      return res.status(geocodeResponse.status).json({
+        error: geocodeData.reason || 'Failed to geocode location with Open-Meteo',
+      });
+    }
+
+    const match = geocodeData.results?.[0];
+    if (!match) {
+      return res.status(404).json({ error: `Location not found: ${cityInput}` });
+    }
+
+    const forecastParams = new URLSearchParams({
+      latitude: String(match.latitude),
+      longitude: String(match.longitude),
+      current: 'temperature_2m,apparent_temperature,weather_code',
+      temperature_unit: temperatureUnit,
+      timezone: 'auto',
+    });
+
+    const forecastResponse = await fetch(`https://api.open-meteo.com/v1/forecast?${forecastParams.toString()}`);
+    const forecastData = await forecastResponse.json().catch(() => ({}));
+
+    if (!forecastResponse.ok) {
+      return res.status(forecastResponse.status).json({
+        error: forecastData.reason || 'Failed to fetch weather from Open-Meteo',
+      });
+    }
+
+    const current = forecastData.current || {};
+    const weatherCode = Number(current.weather_code ?? -1);
+    const description = describeOpenMeteoWeatherCode(weatherCode);
+
+    return res.json({
+      source: 'Open-Meteo',
+      location: match.name || cityName,
+      country: match.country_code || null,
+      units,
+      temperature: Number(current.temperature_2m),
+      feelsLike: Number(current.apparent_temperature),
+      description,
+      weatherCode,
+      icon: null,
+      isSevere: isBadWeatherCondition(weatherCode),
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
 
 // Menu routes
 app.get('/api/menu/items', async (req, res, next) => {
@@ -172,7 +527,10 @@ app.delete('/api/inventory/:id', async (req, res, next) => {
 app.get('/api/employees', async (req, res, next) => {
   try {
     const result = await pool.query(
-      'SELECT employee_id, name, position, hire_date FROM employee ORDER BY employee_id',
+      `SELECT employee_id, name, position, hire_date, google_email, employee_pin,
+              (employee_pin IS NOT NULL) AS pin_set
+       FROM employee
+       ORDER BY employee_id`,
     );
     res.json({ employees: result.rows });
   } catch (error) {
@@ -181,17 +539,31 @@ app.get('/api/employees', async (req, res, next) => {
 });
 
 app.post('/api/employees', async (req, res, next) => {
-  const { employee_id, name, position, hire_date } = req.body;
+  const { employee_id, name, position, hire_date, google_email } = req.body;
+  const pin = normalizeEmployeePin(req.body?.employee_pin);
   if (!employee_id || !name || !position || !parseDateInput(hire_date)) {
     return res.status(400).json({ error: 'employee_id, name, position, hire_date are required' });
   }
+  if (pin && !isValidEmployeePin(pin)) {
+    return res.status(400).json({ error: 'employee_pin must be exactly 4 digits' });
+  }
 
   try {
+    if (pin) {
+      const pinInUse = await pool.query(
+        'SELECT employee_id FROM employee WHERE employee_pin = $1 LIMIT 1',
+        [pin],
+      );
+      if (pinInUse.rowCount) {
+        return res.status(409).json({ error: 'This PIN is already assigned to another employee' });
+      }
+    }
+
     const result = await pool.query(
-      `INSERT INTO employee (employee_id, name, position, hire_date)
-       VALUES ($1, $2, $3, $4)
-       RETURNING employee_id, name, position, hire_date`,
-      [Number(employee_id), name.trim(), position.trim(), hire_date],
+      `INSERT INTO employee (employee_id, name, position, hire_date, google_email, employee_pin)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING employee_id, name, position, hire_date, google_email, employee_pin, (employee_pin IS NOT NULL) AS pin_set`,
+      [Number(employee_id), name.trim(), position.trim(), hire_date, google_email?.trim() || null, pin],
     );
     res.status(201).json({ employee: result.rows[0] });
   } catch (error) {
@@ -200,18 +572,48 @@ app.post('/api/employees', async (req, res, next) => {
 });
 
 app.put('/api/employees/:id', async (req, res, next) => {
-  const { name, position, hire_date } = req.body;
+  const { name, position, hire_date, google_email } = req.body;
   if (!name || !position || !parseDateInput(hire_date)) {
     return res.status(400).json({ error: 'name, position, hire_date are required' });
   }
 
+  const hasPinField = Object.prototype.hasOwnProperty.call(req.body, 'employee_pin');
+  const pin = normalizeEmployeePin(req.body?.employee_pin);
+  if (hasPinField && pin && !isValidEmployeePin(pin)) {
+    return res.status(400).json({ error: 'employee_pin must be exactly 4 digits' });
+  }
+
   try {
+    if (hasPinField && pin) {
+      const pinInUse = await pool.query(
+        'SELECT employee_id FROM employee WHERE employee_pin = $1 AND employee_id <> $2 LIMIT 1',
+        [pin, req.params.id],
+      );
+      if (pinInUse.rowCount) {
+        return res.status(409).json({ error: 'This PIN is already assigned to another employee' });
+      }
+    }
+
+    const values = [name.trim(), position.trim(), hire_date, google_email?.trim() || null];
+    const setClauses = [
+      'name = $1',
+      'position = $2',
+      'hire_date = $3',
+      'google_email = $4',
+    ];
+
+    if (hasPinField) {
+      values.push(pin);
+      setClauses.push(`employee_pin = $${values.length}`);
+    }
+
+    values.push(req.params.id);
     const result = await pool.query(
       `UPDATE employee
-       SET name = $1, position = $2, hire_date = $3
-       WHERE employee_id = $4
-       RETURNING employee_id, name, position, hire_date`,
-      [name.trim(), position.trim(), hire_date, req.params.id],
+       SET ${setClauses.join(', ')}
+       WHERE employee_id = $${values.length}
+       RETURNING employee_id, name, position, hire_date, google_email, employee_pin, (employee_pin IS NOT NULL) AS pin_set`,
+      values,
     );
     if (!result.rowCount) return res.status(404).json({ error: 'Employee not found' });
     res.json({ employee: result.rows[0] });
@@ -237,13 +639,13 @@ app.get('/api/cashier/modifications', async (req, res, next) => {
     const result = await pool.query(
       `SELECT modification_type_id, name, cost
        FROM modification_type
-       WHERE modification_type_id BETWEEN 1 AND 17
        ORDER BY modification_type_id`,
     );
 
     const sugar = [];
     const ice = [];
     const toppings = [];
+    const sizes = [];
 
     for (const row of result.rows) {
       const record = {
@@ -255,14 +657,33 @@ app.get('/api/cashier/modifications', async (req, res, next) => {
         sugar.push(record);
       } else if (record.modification_type_id >= 7 && record.modification_type_id <= 10) {
         ice.push(record);
-      } else if (record.modification_type_id >= 11 && record.modification_type_id <= 17) {
+      } else if (record.modification_type_id >= 11 && record.modification_type_id <= 20) {
         toppings.push(record);
+      } else if (record.modification_type_id >= 21) {
+        sizes.push(record);
       }
     }
 
-    res.json({ sugar, ice, toppings });
+    res.json({ sugar, ice, toppings, sizes });
   } catch (error) {
     next(error);
+  }
+});
+
+app.get('/api/cashier/most-ordered', async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT m.menu_item_id, m.name, m.cost, m.category, SUM(oi.quantity) as order_count
+       FROM order_item oi
+       JOIN menu_item m ON oi.menu_item_id = m.menu_item_id
+       GROUP BY m.menu_item_id, m.name, m.cost, m.category
+       ORDER BY order_count DESC
+       LIMIT 9`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Cashier Most Ordered Error:", error);
+    res.status(500).json({ error: 'Failed to fetch global most ordered' });
   }
 });
 
@@ -270,6 +691,20 @@ app.post('/api/cashier/orders', async (req, res, next) => {
   const employeeId = Number(req.body?.employee_id);
   const paymentType = String(req.body?.payment_type || 'CARD').trim() || 'CARD';
   const items = Array.isArray(req.body?.items) ? req.body.items : [];
+
+  // Optionally attach a customer to this order (customer kiosk orders)
+  let customerId = null;
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith('Bearer ')) {
+    try {
+      const decoded = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET);
+      if (decoded.type === 'customer' && decoded.customer_id) {
+        customerId = decoded.customer_id;
+      }
+    } catch {
+      // Non-fatal: unrecognized token just means no customer link
+    }
+  }
 
   if (!Number.isInteger(employeeId) || employeeId <= 0) {
     return res.status(400).json({ error: 'employee_id must be a positive integer' });
@@ -344,10 +779,10 @@ app.post('/api/cashier/orders', async (req, res, next) => {
     });
 
     const orderResult = await client.query(
-      `INSERT INTO customer_order (order_id, order_date, total_cost, employee_id, payment_type)
-       VALUES ((SELECT COALESCE(MAX(order_id), 0) + 1 FROM customer_order), NOW(), $1, $2, $3)
-       RETURNING order_id, order_date, total_cost, employee_id, payment_type`,
-      [totalCost, employeeId, paymentType],
+      `INSERT INTO customer_order (order_id, order_date, total_cost, employee_id, payment_type, customer_id)
+       VALUES ((SELECT COALESCE(MAX(order_id), 0) + 1 FROM customer_order), NOW(), $1, $2, $3, $4)
+       RETURNING order_id, order_date, total_cost, employee_id, payment_type, customer_id`,
+      [totalCost, employeeId, paymentType, customerId],
     );
     const order = orderResult.rows[0];
 
@@ -381,6 +816,74 @@ app.post('/api/cashier/orders', async (req, res, next) => {
     next(error);
   } finally {
     client.release();
+  }
+});
+
+// Today's orders for the cashier screen
+app.get('/api/cashier/orders/today', async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT
+         co.order_id,
+         co.order_date,
+         co.total_cost,
+         co.payment_type,
+         json_agg(
+           json_build_object(
+             'order_item_id', oi.order_item_id,
+             'menu_item_id',  oi.menu_item_id,
+             'name',          m.name,
+             'quantity',      oi.quantity,
+             'item_price',    oi.item_price
+           ) ORDER BY oi.order_item_id
+         ) AS items
+       FROM customer_order co
+       JOIN order_item oi ON co.order_id = oi.order_id
+       JOIN menu_item  m  ON oi.menu_item_id = m.menu_item_id
+       WHERE co.order_date::date = CURRENT_DATE
+       GROUP BY co.order_id, co.order_date, co.total_cost, co.payment_type
+       ORDER BY co.order_id DESC`,
+    );
+    res.json({ orders: result.rows });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Customer order history (requires customer JWT)
+app.get('/api/customer/orders', requireAuth(), async (req, res, next) => {
+  if (req.user.type !== 'customer') {
+    return res.status(403).json({ error: 'Customer account required' });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT
+         co.order_id,
+         co.order_date,
+         co.total_cost,
+         co.payment_type,
+         json_agg(
+           json_build_object(
+             'order_item_id', oi.order_item_id,
+             'menu_item_id',  oi.menu_item_id,
+             'name',          m.name,
+             'quantity',      oi.quantity,
+             'item_price',    oi.item_price
+           ) ORDER BY oi.order_item_id
+         ) AS items
+       FROM customer_order co
+       JOIN order_item oi ON co.order_id = oi.order_id
+       JOIN menu_item m ON oi.menu_item_id = m.menu_item_id
+       WHERE co.customer_id = $1
+       GROUP BY co.order_id
+       ORDER BY co.order_date DESC`,
+      [req.user.customer_id],
+    );
+
+    res.json({ orders: result.rows });
+  } catch (error) {
+    next(error);
   }
 });
 
@@ -832,6 +1335,32 @@ app.post('/api/reports/z-report', async (req, res, next) => {
     );
 
     await client.query('COMMIT');
+    if (req.body.customer_email) {
+      try {
+          const email = req.body.customer_email;
+          const name = req.body.customer_name || email.split('@')[0];
+          const googleId = req.body.google_id || email;
+          console.log(`[CHECKOUT] Attempting to link order ${orderId} to email: ${email}`);
+          let custRes = await pool.query(`SELECT customer_id FROM customer WHERE email = $1 LIMIT 1`, [email]);
+          let custId = custRes.rows[0]?.customer_id;
+          if (!custId) {
+              console.log(`[CHECKOUT] Customer not found. Auto-registering: ${email}`);
+              const insertRes = await pool.query(
+                  `INSERT INTO customer (email, name, google_id) VALUES ($1, $2, $3) RETURNING customer_id`,
+                  [email, name, googleId]
+              );
+              custId = insertRes.rows[0].customer_id;
+          }
+          await pool.query(
+            `UPDATE customer_order SET customer_id = $1 WHERE order_id = $2`,
+            [custId, orderId]
+          );
+          console.log(`[CHECKOUT] Successfully linked order ${orderId} to customer_id ${custId}`);
+          
+      } catch (linkError) {
+          console.error("[CHECKOUT] FAILED TO LINK CUSTOMER:", linkError.message);
+      }
+   }
 
     res.json({
       totalOrders: totals.rows[0]?.total_orders || 0,
@@ -847,6 +1376,97 @@ app.post('/api/reports/z-report', async (req, res, next) => {
     next(error);
   } finally {
     client.release();
+  }
+});
+
+app.get('/api/customer/most-ordered', requireAuth(), async (req, res, next) => {
+  const email = req.user?.email;
+  if (!email) return res.status(401).json({ error: 'User email not found.' });
+
+  try {
+    const result = await pool.query(
+      `SELECT m.menu_item_id, m.name, m.cost, m.category, SUM(oi.quantity) as order_count
+       FROM customer_order co
+       JOIN customer c ON co.customer_id = c.customer_id
+       JOIN order_item oi ON co.order_id = oi.order_id
+       JOIN menu_item m ON oi.menu_item_id = m.menu_item_id
+       WHERE c.email = $1
+       GROUP BY m.menu_item_id, m.name, m.cost, m.category
+       ORDER BY order_count DESC
+       LIMIT 12
+       `,
+      [email]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Most Ordered SQL Error:", error.message);
+    res.json([]); 
+  }
+});
+
+app.get('/api/customer/saved-favorites', requireAuth(), async (req, res, next) => {
+  const email = req.user?.email;
+  if (!email) return res.status(401).json({ error: 'User email not found.' });
+  try {
+    const result = await pool.query(
+      `SELECT f.favorite_id, f.item_data
+       FROM customer_favorite f
+       JOIN customer c ON f.customer_id = c.customer_id
+       WHERE c.email = $1
+       ORDER BY f.favorite_id DESC`,
+      [email]
+    );
+    const parsed = result.rows.map(row => {
+        let safeData = row.item_data;
+        if (typeof row.item_data === 'string') {
+            try { safeData = JSON.parse(row.item_data); } catch(e) {}
+        }
+        return {
+            favorite_id: row.favorite_id,
+            item_data: safeData
+        };
+    });
+    res.json(parsed);
+  } catch (error) {
+    console.error("Saved Favorites Fetch Error:", error.message);
+    res.json([]);
+  }
+});
+
+app.post('/api/customer/saved-favorites', requireAuth(), async (req, res, next) => {
+  const email = req.body.customer_email;
+  const name = req.body.customer_name || email.split('@')[0];
+  const googleId = req.body.google_id || email;
+  const itemDataStr = JSON.stringify(req.body.item_data);
+
+  try {
+      let custRes = await pool.query(`SELECT customer_id FROM customer WHERE email = $1 LIMIT 1`, [email]);
+      let custId = custRes.rows[0]?.customer_id;
+      if (!custId) {
+          const insertRes = await pool.query(
+              `INSERT INTO customer (email, name, google_id) VALUES ($1, $2, $3) RETURNING customer_id`,
+              [email, name, googleId]
+          );
+          custId = insertRes.rows[0].customer_id;
+      }
+      const favRes = await pool.query(
+          `INSERT INTO customer_favorite (customer_id, item_data) VALUES ($1, $2) RETURNING favorite_id`,
+          [custId, itemDataStr]
+      );
+      res.json({ favorite_id: favRes.rows[0].favorite_id });
+  } catch (err) {
+      console.error("Failed to save favorite:", err.message);
+      res.status(500).json({ error: 'Failed to save favorite' });
+  }
+});
+
+app.delete('/api/customer/saved-favorites/:id', requireAuth(), async (req, res, next) => {
+  try {
+      await pool.query(`DELETE FROM customer_favorite WHERE favorite_id = $1`, [req.params.id]);
+      res.json({ success: true });
+  } catch (err) {
+      console.error("Failed to delete favorite:", err.message);
+      res.status(500).json({ error: 'Failed to delete favorite' });
   }
 });
 

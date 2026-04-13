@@ -8,7 +8,7 @@ function CustomerDashboard() {
   return (
     <div className="dashboard">
       <h1>Customer Dashboard</h1>
-      <button onClick={() => navigate('/')}>Exit</button>
+      <button onClick={() => navigate('/login/customer')}>Exit</button>
     </div>
   );
 }

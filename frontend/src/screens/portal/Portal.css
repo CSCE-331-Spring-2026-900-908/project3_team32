@@ -73,7 +73,7 @@
 }
 
 .employee-card:hover {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  background: linear-gradient(135deg, #fef3e2 0%, #fce7c8 100%);
 }
 
 .card-icon {
