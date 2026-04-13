@@ -148,6 +148,8 @@ export default function CustomerScreen() {
   const [comments, setComments] = useState("");
   const [orderNumber, setOrderNumber] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [trackedOrderId, setTrackedOrderId] = useState(null);
+  const [orderStatus, setOrderStatus] = useState(null);
   const [customizeModalOpen, setCustomizeModalOpen] = useState(false);
   const [ordersModalOpen, setOrdersModalOpen] = useState(false);
 
@@ -422,6 +424,36 @@ export default function CustomerScreen() {
       })
       .catch(console.error);
   }, [user, token, refreshTrigger]);
+
+  useEffect(() => {
+    if (!trackedOrderId) return;
+    if (orderStatus === "Completed") return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/orders/${trackedOrderId}/status`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.status) {
+            setOrderStatus(data.status);
+            if (data.status === "Completed") {
+              setShowConfirmation(true);
+              setTimeout(() => {
+                setShowConfirmation(false);
+                setOrderNumber(null);
+                setTrackedOrderId(null);
+                setOrderStatus(null);
+              }, 8000);
+            }
+          }
+        }
+      } catch {
+        // silently fail, keep polling
+      }
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [trackedOrderId, orderStatus]);
 
   useEffect(() => {
     let labelInterval = null;
@@ -942,13 +974,12 @@ export default function CustomerScreen() {
         ]);
         setCart([]);
         setOrderNumber(orderNum);
+        setTrackedOrderId(orderNum);
+        setOrderStatus("In Progress");
         setScreen(SCREEN.MENU);
         setShowConfirmation(true);
+        setTimeout(() => setShowConfirmation(false), 3000);
         setRefreshTrigger((prev) => prev + 1);
-        setTimeout(() => {
-          setShowConfirmation(false);
-          setOrderNumber(null);
-        }, 5000);
       } catch (error) {
         console.error("Order submission error:", error);
         alert(
@@ -1158,114 +1189,84 @@ export default function CustomerScreen() {
         </div>
       </header>
 
-<div style={{ display: showMenuBoard ? 'block' : 'none' }}>
-  <MenuBoard />
-</div>
-<div className="customer-content-wrapper" style={{ display: showMenuBoard ? 'none' : 'block' }}>
-          {screen === SCREEN.MENU && (
-            <div className="menu-with-cart-layout">
-              {/* ── Left: menu ── */}
-              <div className="menu-left-col">
-                <div className="category-tabs">
-                  {categories.map((cat) => (
-                    <button
-                      key={cat}
-                      className={`category-tab${selectedCategory === cat ? " active" : ""}`}
-                      onClick={() => setSelectedCategory(cat)}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
-                <div className="menu-grid">
-                  {selectedCategory === "Favorites" ? (
-                    savedFavorites.length === 0 ? (
-                      <div className="menu-empty-state">
-                        <div className="menu-empty-icon">🤍</div>
-                        <p>
-                          {user?.guest
-                            ? "Sign in to save favorites!"
-                            : "No favorites yet — tap ♥ on any drink to save it."}
-                        </p>
-                      </div>
-                    ) : (
-                      savedFavorites.map((fav) => {
-                        const favItemId =
-                          fav.item_data?.menu_item_id ?? fav.item_data?.id;
-                        const menuItem = menuItems.find(
-                          (m) => m.id === favItemId,
-                        ) || {
-                          id: favItemId,
-                          name: fav.item_data?.name || "Unknown",
-                          cost: Number(fav.item_data?.cost) || 0,
-                          category: fav.item_data?.category || "Other",
-                        };
-                        return (
-                          <button
-                            key={fav.favorite_id}
-                            className="menu-item-card"
-                            onClick={() => handleSelectItem(menuItem)}
-                          >
-                            <button
-                              className="heart-btn heart-btn--active"
-                              onClick={(e) => handleToggleFavorite(menuItem, e)}
-                              aria-label="Remove from favorites"
-                            >
-                              ♥
-                            </button>
-                            <div className="item-name">{menuItem.name}</div>
-                            <div className="item-price">
-                              {currency(menuItem.cost)}
-                            </div>
-                          </button>
-                        );
-                      })
-                    )
-                  ) : selectedCategory === "Most Ordered" ? (
-                    mostOrderedItems.length === 0 ? (
-                      <div className="menu-empty-state">
-                        <div className="menu-empty-icon">📊</div>
-                        <p>
-                          {user?.guest
-                            ? "Sign in to see your most ordered drinks."
-                            : "Place your first order to see your favorites here!"}
-                        </p>
-                      </div>
-                    ) : (
-                      mostOrderedItems.map((item) => {
-                        const isFav = !!getFavoriteMatch(item);
-                        return (
-                          <button
-                            key={item.id}
-                            className="menu-item-card"
-                            onClick={() => handleSelectItem(item)}
-                          >
-                            <button
-                              className={`heart-btn${isFav ? " heart-btn--active" : ""}`}
-                              onClick={(e) => handleToggleFavorite(item, e)}
-                              aria-label={
-                                isFav
-                                  ? "Remove from favorites"
-                                  : "Add to favorites"
-                              }
-                            >
-                              {isFav ? "♥" : "♡"}
-                            </button>
-                            <div className="item-name">{item.name}</div>
-                            <div className="item-price">
-                              {currency(item.cost)}
-                            </div>
-                            {item.order_count && (
-                              <div className="item-order-count">
-                                ordered {item.order_count}×
-                              </div>
-                            )}
-                          </button>
-                        );
-                      })
-                    )
+      <div style={{ display: showMenuBoard ? "block" : "none" }}>
+        <MenuBoard />
+      </div>
+      <div
+        className="customer-content-wrapper"
+        style={{ display: showMenuBoard ? "none" : "block" }}
+      >
+        {screen === SCREEN.MENU && (
+          <div className="menu-with-cart-layout">
+            {/* ── Left: menu ── */}
+            <div className="menu-left-col">
+              <div className="category-tabs">
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    className={`category-tab${selectedCategory === cat ? " active" : ""}`}
+                    onClick={() => setSelectedCategory(cat)}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+              <div className="menu-grid">
+                {selectedCategory === "Favorites" ? (
+                  savedFavorites.length === 0 ? (
+                    <div className="menu-empty-state">
+                      <div className="menu-empty-icon">🤍</div>
+                      <p>
+                        {user?.guest
+                          ? "Sign in to save favorites!"
+                          : "No favorites yet — tap ♥ on any drink to save it."}
+                      </p>
+                    </div>
                   ) : (
-                    visibleItems.map((item) => {
+                    savedFavorites.map((fav) => {
+                      const favItemId =
+                        fav.item_data?.menu_item_id ?? fav.item_data?.id;
+                      const menuItem = menuItems.find(
+                        (m) => m.id === favItemId,
+                      ) || {
+                        id: favItemId,
+                        name: fav.item_data?.name || "Unknown",
+                        cost: Number(fav.item_data?.cost) || 0,
+                        category: fav.item_data?.category || "Other",
+                      };
+                      return (
+                        <button
+                          key={fav.favorite_id}
+                          className="menu-item-card"
+                          onClick={() => handleSelectItem(menuItem)}
+                        >
+                          <button
+                            className="heart-btn heart-btn--active"
+                            onClick={(e) => handleToggleFavorite(menuItem, e)}
+                            aria-label="Remove from favorites"
+                          >
+                            ♥
+                          </button>
+                          <div className="item-name">{menuItem.name}</div>
+                          <div className="item-price">
+                            {currency(menuItem.cost)}
+                          </div>
+                        </button>
+                      );
+                    })
+                  )
+                ) : selectedCategory === "Most Ordered" ? (
+                  mostOrderedItems.length === 0 ? (
+                    <div className="menu-empty-state">
+                      <div className="menu-empty-icon">📊</div>
+                      <p>
+                        {user?.guest
+                          ? "Sign in to see your most ordered drinks."
+                          : "Place your first order to see your favorites here!"}
+                      </p>
+                    </div>
+                  ) : (
+                    mostOrderedItems.map((item) => {
                       const isFav = !!getFavoriteMatch(item);
                       return (
                         <button
@@ -1288,299 +1289,326 @@ export default function CustomerScreen() {
                           <div className="item-price">
                             {currency(item.cost)}
                           </div>
+                          {item.order_count && (
+                            <div className="item-order-count">
+                              ordered {item.order_count}×
+                            </div>
+                          )}
                         </button>
                       );
                     })
-                  )}
-                </div>
+                  )
+                ) : (
+                  visibleItems.map((item) => {
+                    const isFav = !!getFavoriteMatch(item);
+                    return (
+                      <button
+                        key={item.id}
+                        className="menu-item-card"
+                        onClick={() => handleSelectItem(item)}
+                      >
+                        <button
+                          className={`heart-btn${isFav ? " heart-btn--active" : ""}`}
+                          onClick={(e) => handleToggleFavorite(item, e)}
+                          aria-label={
+                            isFav ? "Remove from favorites" : "Add to favorites"
+                          }
+                        >
+                          {isFav ? "♥" : "♡"}
+                        </button>
+                        <div className="item-name">{item.name}</div>
+                        <div className="item-price">{currency(item.cost)}</div>
+                      </button>
+                    );
+                  })
+                )}
               </div>
+            </div>
 
-              {/* ── Right: cart panel ── */}
-              <div className="cart-side-panel">
-                <h2 className="cart-panel-title">Your Cart</h2>
+            {/* ── Right: cart panel ── */}
+            <div className="cart-side-panel">
+              <h2 className="cart-panel-title">Your Cart</h2>
 
-                {cart.length === 0 ? (
-                  <div className="cart-panel-empty">
-                    {weather && !weatherLoading && (
-                      <div className="cart-panel-weather">
-                        <div className="cart-panel-weather-header">
-                          📍 College Station
+              {cart.length === 0 ? (
+                <div className="cart-panel-empty">
+                  {weather && !weatherLoading && (
+                    <div className="cart-panel-weather">
+                      <div className="cart-panel-weather-header">
+                        📍 College Station
+                      </div>
+                      <div className="cart-panel-weather-temp">
+                        {Math.round(weather.temperature ?? weather.temp ?? 0)}
+                        °F
+                      </div>
+                      <div className="cart-panel-weather-desc">
+                        {weather.description ??
+                          describeWeatherCode(weather.weather_code)}
+                      </div>
+                      {weeklyWeather.length > 0 && (
+                        <div className="cart-panel-weather-week">
+                          {weeklyWeather.map((day, i) => (
+                            <div key={i} className="cart-panel-weather-day">
+                              <span className="weather-day-label">
+                                {i === 0
+                                  ? "Today"
+                                  : formatWeekdayLabel(day.date)}
+                              </span>
+                              <span className="weather-day-range">
+                                {Math.round(day.maxTemp ?? day.high ?? 0)}° /{" "}
+                                {Math.round(day.minTemp ?? day.low ?? 0)}°
+                              </span>
+                            </div>
+                          ))}
                         </div>
-                        <div className="cart-panel-weather-temp">
-                          {Math.round(weather.temperature ?? weather.temp ?? 0)}
-                          °F
+                      )}
+                    </div>
+                  )}
+                  <div className="cart-panel-empty-icon">🛒</div>
+                  <p className="cart-panel-empty-msg">Your cart is empty</p>
+                  <p className="cart-panel-empty-sub">
+                    Tap any drink to get started
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="cart-panel-scroll-area">
+                    <div
+                      className={`rewards-summary rewards-tone-${rewardsTone}`}
+                    >
+                      <div className="rewards-line">
+                        <span>Rewards</span>
+                        <span
+                          className={`rewards-tier-badge rewards-tier-${rewardsTone}`}
+                        >
+                          {rewardsStatus.tier}
+                          {rewardsStatus.discountRate > 0
+                            ? ` (${Math.round(rewardsStatus.discountRate * 100)}% off)`
+                            : ""}
+                        </span>
+                      </div>
+                      {rewardsStatus.note && (
+                        <div className="rewards-note rewards-note-employee">
+                          {rewardsStatus.note}
                         </div>
-                        <div className="cart-panel-weather-desc">
-                          {weather.description ??
-                            describeWeatherCode(weather.weather_code)}
+                      )}
+                      {rewardsStatus.tier === "Employee" ? (
+                        <div className="tier-visual-row">
+                          <span className="tier-chip tier-chip-employee active">
+                            Employee Only
+                          </span>
                         </div>
-                        {weeklyWeather.length > 0 && (
-                          <div className="cart-panel-weather-week">
-                            {weeklyWeather.map((day, i) => (
-                              <div key={i} className="cart-panel-weather-day">
-                                <span className="weather-day-label">
-                                  {i === 0
-                                    ? "Today"
-                                    : formatWeekdayLabel(day.date)}
-                                </span>
-                                <span className="weather-day-range">
-                                  {Math.round(day.maxTemp ?? day.high ?? 0)}° /{" "}
-                                  {Math.round(day.minTemp ?? day.low ?? 0)}°
-                                </span>
+                      ) : (
+                        <div className="tier-visual-row">
+                          <span
+                            className={`tier-chip ${["Gold", "Platinum", "Diamond"].includes(rewardsStatus.tier) ? "active" : ""}`}
+                          >
+                            Gold
+                          </span>
+                          <span
+                            className={`tier-chip ${["Platinum", "Diamond"].includes(rewardsStatus.tier) ? "active" : ""}`}
+                          >
+                            Platinum
+                          </span>
+                          <span
+                            className={`tier-chip ${rewardsStatus.tier === "Diamond" ? "active" : ""}`}
+                          >
+                            Diamond
+                          </span>
+                        </div>
+                      )}
+                      <div className="rewards-progress">
+                        <div
+                          className="rewards-progress-fill"
+                          style={{ width: `${tierProgressPercent}%` }}
+                        />
+                      </div>
+                      <div className="rewards-line">
+                        <span>Points (12 mo)</span>
+                        <span>{previousYearPoints}</span>
+                      </div>
+                      <div className="rewards-line">
+                        <span>From this order</span>
+                        <span>+{pointsFromCurrentOrder}</span>
+                      </div>
+                      {rewardsStatus.nextTierAt && (
+                        <div className="rewards-line">
+                          <span>To next tier</span>
+                          <span>{pointsToNextTier}</span>
+                        </div>
+                      )}
+                      {!rewardsStatus.nextTierAt && (
+                        <div className="rewards-line">
+                          <span>Progress</span>
+                          <span>Top tier ✓</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="cart-panel-items">
+                      {cart.map((item, index) => (
+                        <div key={item.id} className="cart-item">
+                          <div className="cart-item-header">
+                            <span className="cart-item-number">
+                              {index + 1}.
+                            </span>
+                            <span className="cart-item-name">{item.name}</span>
+                            <span className="cart-item-price">
+                              {currency(item.price * (item.quantity || 1))}
+                            </span>
+                            <button
+                              className="remove-btn"
+                              onClick={() => removeFromCart(item.id)}
+                            >
+                              ×
+                            </button>
+                          </div>
+                          <div className="cart-item-controls">
+                            <span className="cart-item-unit-price">
+                              Each: {currency(item.price)}
+                            </span>
+                            <div className="qty-controls">
+                              <button
+                                className="qty-btn"
+                                onClick={() =>
+                                  updateCartQuantity(
+                                    item.id,
+                                    (item.quantity || 1) - 1,
+                                  )
+                                }
+                                aria-label="Decrease quantity"
+                              >
+                                -
+                              </button>
+                              <span className="qty-value">
+                                {item.quantity || 1}
+                              </span>
+                              <button
+                                className="qty-btn"
+                                onClick={() =>
+                                  updateCartQuantity(
+                                    item.id,
+                                    (item.quantity || 1) + 1,
+                                  )
+                                }
+                                aria-label="Increase quantity"
+                              >
+                                +
+                              </button>
+                            </div>
+                            <button
+                              className="cart-edit-btn"
+                              onClick={() => startEditCartItem(item)}
+                            >
+                              Edit
+                            </button>
+                          </div>
+                          <div className="cart-item-details">
+                            {buildDisplayLines(item).map((line, i) => (
+                              <div key={i} className="cart-item-detail">
+                                {line}
                               </div>
                             ))}
                           </div>
-                        )}
-                      </div>
-                    )}
-                    <div className="cart-panel-empty-icon">🛒</div>
-                    <p className="cart-panel-empty-msg">Your cart is empty</p>
-                    <p className="cart-panel-empty-sub">
-                      Tap any drink to get started
-                    </p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ) : (
-                  <>
-                    <div className="cart-panel-scroll-area">
-                      <div
-                        className={`rewards-summary rewards-tone-${rewardsTone}`}
-                      >
-                        <div className="rewards-line">
-                          <span>Rewards</span>
-                          <span
-                            className={`rewards-tier-badge rewards-tier-${rewardsTone}`}
-                          >
-                            {rewardsStatus.tier}
-                            {rewardsStatus.discountRate > 0
-                              ? ` (${Math.round(rewardsStatus.discountRate * 100)}% off)`
-                              : ""}
-                          </span>
-                        </div>
-                        {rewardsStatus.note && (
-                          <div className="rewards-note rewards-note-employee">
-                            {rewardsStatus.note}
-                          </div>
-                        )}
-                        {rewardsStatus.tier === "Employee" ? (
-                          <div className="tier-visual-row">
-                            <span className="tier-chip tier-chip-employee active">
-                              Employee Only
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="tier-visual-row">
-                            <span
-                              className={`tier-chip ${["Gold", "Platinum", "Diamond"].includes(rewardsStatus.tier) ? "active" : ""}`}
-                            >
-                              Gold
-                            </span>
-                            <span
-                              className={`tier-chip ${["Platinum", "Diamond"].includes(rewardsStatus.tier) ? "active" : ""}`}
-                            >
-                              Platinum
-                            </span>
-                            <span
-                              className={`tier-chip ${rewardsStatus.tier === "Diamond" ? "active" : ""}`}
-                            >
-                              Diamond
-                            </span>
-                          </div>
-                        )}
-                        <div className="rewards-progress">
-                          <div
-                            className="rewards-progress-fill"
-                            style={{ width: `${tierProgressPercent}%` }}
-                          />
-                        </div>
-                        <div className="rewards-line">
-                          <span>Points (12 mo)</span>
-                          <span>{previousYearPoints}</span>
-                        </div>
-                        <div className="rewards-line">
-                          <span>From this order</span>
-                          <span>+{pointsFromCurrentOrder}</span>
-                        </div>
-                        {rewardsStatus.nextTierAt && (
-                          <div className="rewards-line">
-                            <span>To next tier</span>
-                            <span>{pointsToNextTier}</span>
-                          </div>
-                        )}
-                        {!rewardsStatus.nextTierAt && (
-                          <div className="rewards-line">
-                            <span>Progress</span>
-                            <span>Top tier ✓</span>
-                          </div>
-                        )}
-                      </div>
+                  {/* end cart-panel-scroll-area */}
 
-                      <div className="cart-panel-items">
-                        {cart.map((item, index) => (
-                          <div key={item.id} className="cart-item">
-                            <div className="cart-item-header">
-                              <span className="cart-item-number">
-                                {index + 1}.
-                              </span>
-                              <span className="cart-item-name">
-                                {item.name}
-                              </span>
-                              <span className="cart-item-price">
-                                {currency(item.price * (item.quantity || 1))}
-                              </span>
-                              <button
-                                className="remove-btn"
-                                onClick={() => removeFromCart(item.id)}
-                              >
-                                ×
-                              </button>
-                            </div>
-                            <div className="cart-item-controls">
-                              <span className="cart-item-unit-price">
-                                Each: {currency(item.price)}
-                              </span>
-                              <div className="qty-controls">
-                                <button
-                                  className="qty-btn"
-                                  onClick={() =>
-                                    updateCartQuantity(
-                                      item.id,
-                                      (item.quantity || 1) - 1,
-                                    )
-                                  }
-                                  aria-label="Decrease quantity"
-                                >
-                                  -
-                                </button>
-                                <span className="qty-value">
-                                  {item.quantity || 1}
-                                </span>
-                                <button
-                                  className="qty-btn"
-                                  onClick={() =>
-                                    updateCartQuantity(
-                                      item.id,
-                                      (item.quantity || 1) + 1,
-                                    )
-                                  }
-                                  aria-label="Increase quantity"
-                                >
-                                  +
-                                </button>
-                              </div>
-                              <button
-                                className="cart-edit-btn"
-                                onClick={() => startEditCartItem(item)}
-                              >
-                                Edit
-                              </button>
-                            </div>
-                            <div className="cart-item-details">
-                              {buildDisplayLines(item).map((line, i) => (
-                                <div key={i} className="cart-item-detail">
-                                  {line}
-                                </div>
-                              ))}
-                            </div>
+                  <div className="cart-panel-footer">
+                    <div className="cart-total">
+                      <div className="cart-total-line">
+                        <span>
+                          {rewardsStatus.discountRate > 0
+                            ? "Subtotal"
+                            : "Total"}
+                        </span>
+                        <span>{currency(cartTotal)}</span>
+                      </div>
+                      {rewardsStatus.discountRate > 0 && (
+                        <>
+                          <div className="cart-total-line">
+                            <span>
+                              Discount (
+                              {Math.round(rewardsStatus.discountRate * 100)}%)
+                            </span>
+                            <span>-{currency(discountAmount)}</span>
                           </div>
-                        ))}
-                      </div>
+                          <div className="cart-total-line cart-total-line-final">
+                            <span>Discounted Total</span>
+                            <span>{currency(discountedSubtotal)}</span>
+                          </div>
+                        </>
+                      )}
                     </div>
-                    {/* end cart-panel-scroll-area */}
+                    <button
+                      className="btn-primary cart-panel-checkout-btn"
+                      onClick={() => setScreen(SCREEN.CHECKOUT)}
+                    >
+                      Proceed to Checkout
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
-                    <div className="cart-panel-footer">
-                      <div className="cart-total">
-                        <div className="cart-total-line">
-                          <span>
-                            {rewardsStatus.discountRate > 0
-                              ? "Subtotal"
-                              : "Total"}
-                          </span>
-                          <span>{currency(cartTotal)}</span>
-                        </div>
-                        {rewardsStatus.discountRate > 0 && (
-                          <>
-                            <div className="cart-total-line">
-                              <span>
-                                Discount (
-                                {Math.round(rewardsStatus.discountRate * 100)}%)
-                              </span>
-                              <span>-{currency(discountAmount)}</span>
-                            </div>
-                            <div className="cart-total-line cart-total-line-final">
-                              <span>Discounted Total</span>
-                              <span>{currency(discountedSubtotal)}</span>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                      <button
-                        className="btn-primary cart-panel-checkout-btn"
-                        onClick={() => setScreen(SCREEN.CHECKOUT)}
-                      >
-                        Proceed to Checkout
-                      </button>
-                    </div>
-                  </>
-                )}
+        {screen === SCREEN.CHECKOUT && (
+          <div className="customer-content checkout-screen">
+            <h2>Checkout</h2>
+            <div className="checkout-summary">
+              <div className="summary-row">
+                <span>Items ({cartCount})</span>
+                <span>{currency(cartTotal)}</span>
+              </div>
+              {rewardsStatus.discountRate > 0 && (
+                <div className="summary-row">
+                  <span>
+                    Rewards Discount (
+                    {Math.round(rewardsStatus.discountRate * 100)}%)
+                  </span>
+                  <span>-{currency(discountAmount)}</span>
+                </div>
+              )}
+              <div className="summary-row">
+                <span>Tax (8.25%)</span>
+                <span>{currency(checkoutTax)}</span>
+              </div>
+              <div className="summary-row total">
+                <span>Total</span>
+                <span>{currency(checkoutTotal)}</span>
               </div>
             </div>
-          )}
-
-          {screen === SCREEN.CHECKOUT && (
-            <div className="customer-content checkout-screen">
-              <h2>Checkout</h2>
-              <div className="checkout-summary">
-                <div className="summary-row">
-                  <span>Items ({cartCount})</span>
-                  <span>{currency(cartTotal)}</span>
-                </div>
-                {rewardsStatus.discountRate > 0 && (
-                  <div className="summary-row">
-                    <span>
-                      Rewards Discount (
-                      {Math.round(rewardsStatus.discountRate * 100)}%)
-                    </span>
-                    <span>-{currency(discountAmount)}</span>
-                  </div>
-                )}
-                <div className="summary-row">
-                  <span>Tax (8.25%)</span>
-                  <span>{currency(checkoutTax)}</span>
-                </div>
-                <div className="summary-row total">
-                  <span>Total</span>
-                  <span>{currency(checkoutTotal)}</span>
-                </div>
-              </div>
-              <div className="payment-methods">
-                <h3>Select Payment Method</h3>
-                <button
-                  className="payment-btn"
-                  onClick={() => completeOrder("CARD")}
-                >
-                  💳 Pay with Card
-                </button>
-                <button
-                  className="payment-btn"
-                  onClick={() => {
-                    alert("Please see cashier to pay with cash.");
-                    completeOrder("CASH");
-                  }}
-                >
-                  💵 Pay with Cash
-                </button>
-              </div>
-              <div className="cart-actions">
-                <button
-                  className="btn-secondary full-width"
-                  onClick={() => setScreen(SCREEN.MENU)}
-                >
-                  Back to Menu
-                </button>
-              </div>
+            <div className="payment-methods">
+              <h3>Select Payment Method</h3>
+              <button
+                className="payment-btn"
+                onClick={() => completeOrder("CARD")}
+              >
+                💳 Pay with Card
+              </button>
+              <button
+                className="payment-btn"
+                onClick={() => {
+                  alert("Please see cashier to pay with cash.");
+                  completeOrder("CASH");
+                }}
+              >
+                💵 Pay with Cash
+              </button>
             </div>
-          )}
-        </div>
+            <div className="cart-actions">
+              <button
+                className="btn-secondary full-width"
+                onClick={() => setScreen(SCREEN.MENU)}
+              >
+                Back to Menu
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {showConfirmation && (
         <div
@@ -1589,12 +1617,31 @@ export default function CustomerScreen() {
           style={isMagnified ? { transform: "none", left: 0, top: 0 } : {}}
         >
           <div className="confirmation-content">
-            <div className="confirmation-checkmark">✓</div>
+            <button
+              className="confirmation-close-btn"
+              onClick={() => {
+                setShowConfirmation(false);
+                setOrderNumber(null);
+                setTrackedOrderId(null);
+                setOrderStatus(null);
+              }}
+            >
+              ✕
+            </button>
+            <div className="confirmation-checkmark">
+              {orderStatus === "Completed" ? "🎉" : "✓"}
+            </div>
             <div className="confirmation-text">
-              <h3>Order Received!</h3>
+              <h3>
+                {orderStatus === "Completed"
+                  ? "Order Ready!"
+                  : "Order Received!"}
+              </h3>
               <p>Order Number: #{orderNumber}</p>
               <p className="confirmation-subtitle">
-                Please wait for your number to be called.
+                {orderStatus === "Completed"
+                  ? "Please pick up your order!"
+                  : "Status: " + (orderStatus || "In Progress")}
               </p>
             </div>
           </div>
@@ -1638,7 +1685,8 @@ export default function CustomerScreen() {
                 customerOrders.map((order) => {
                   const date = new Date(order.order_date);
                   const isRecent = Date.now() - date.getTime() < 30 * 60 * 1000;
-                  const status = isRecent ? "In Progress" : "Completed";
+                  const status =
+                    order.status || (isRecent ? "In Progress" : "Completed");
                   const itemCount = Array.isArray(order.items)
                     ? order.items.reduce((s, i) => s + (i.quantity || 1), 0)
                     : null;
@@ -1649,7 +1697,9 @@ export default function CustomerScreen() {
                           Order #{order.order_id}
                         </div>
                         <span
-                          className={`order-status-chip order-status-${isRecent ? "progress" : "done"}`}
+                          className={`order-status-chip order-status-${
+                            status === "Completed" ? "done" : "progress"
+                          }`}
                         >
                           {status}
                         </span>

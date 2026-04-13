@@ -1,9 +1,9 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import jwt from 'jsonwebtoken';
-import { OAuth2Client } from 'google-auth-library';
-import pool from './config/database.js';
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import jwt from "jsonwebtoken";
+import { OAuth2Client } from "google-auth-library";
+import pool from "./config/database.js";
 
 dotenv.config();
 
@@ -23,8 +23,12 @@ function isValidEmployeePin(pin) {
 }
 
 async function ensureEmployeeAuthSchema() {
-  await pool.query('ALTER TABLE employee ADD COLUMN IF NOT EXISTS google_email VARCHAR(255)');
-  await pool.query('ALTER TABLE employee ADD COLUMN IF NOT EXISTS employee_pin VARCHAR(4)');
+  await pool.query(
+    "ALTER TABLE employee ADD COLUMN IF NOT EXISTS google_email VARCHAR(255)",
+  );
+  await pool.query(
+    "ALTER TABLE employee ADD COLUMN IF NOT EXISTS employee_pin VARCHAR(4)",
+  );
   await pool.query(
     `DO $$
      BEGIN
@@ -42,13 +46,13 @@ async function ensureEmployeeAuthSchema() {
 }
 
 await ensureEmployeeAuthSchema().catch((error) => {
-  console.error('Failed to ensure employee auth schema:', error.message);
+  console.error("Failed to ensure employee auth schema:", error.message);
 });
 
 // ── JWT helpers ────────────────────────────────────────────────────────────────
 
 function signToken(payload) {
-  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '8h' });
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "8h" });
 }
 
 /**
@@ -59,70 +63,76 @@ function signToken(payload) {
 function requireAuth(roles) {
   return (req, res, next) => {
     const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Authentication required' });
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Authentication required" });
     }
     try {
       const decoded = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET);
       req.user = decoded;
       if (roles && roles.length > 0 && !roles.includes(decoded.position)) {
-        return res.status(403).json({ error: 'Insufficient permissions' });
+        return res.status(403).json({ error: "Insufficient permissions" });
       }
       next();
     } catch {
-      return res.status(401).json({ error: 'Invalid or expired token' });
+      return res.status(401).json({ error: "Invalid or expired token" });
     }
   };
 }
 
 // Middleware
 const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:5173',
-  'https://team32-project3.vercel.app',
-  'https://team32-project3-abhivurs-projects.vercel.app',
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "https://team32-project3.vercel.app",
+  "https://team32-project3-abhivurs-projects.vercel.app",
 ];
-app.use(cors({
-  origin(origin, cb) {
-    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('-abhivurs-projects.vercel.app')) {
-      cb(null, true);
-    } else {
-      cb(null, true); // allow all for now; tighten later if needed
-    }
-  },
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin(origin, cb) {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        origin.endsWith("-abhivurs-projects.vercel.app")
+      ) {
+        cb(null, true);
+      } else {
+        cb(null, true); // allow all for now; tighten later if needed
+      }
+    },
+    credentials: true,
+  }),
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Health check route
-app.get('/health', async (req, res) => {
+app.get("/health", async (req, res) => {
   try {
-    const result = await pool.query('SELECT NOW()');
-    res.json({ 
-      status: 'healthy', 
-      database: 'connected',
-      timestamp: result.rows[0].now 
+    const result = await pool.query("SELECT NOW()");
+    res.json({
+      status: "healthy",
+      database: "connected",
+      timestamp: result.rows[0].now,
     });
   } catch (error) {
-    res.status(500).json({ 
-      status: 'unhealthy', 
-      database: 'disconnected',
-      error: error.message 
+    res.status(500).json({
+      status: "unhealthy",
+      database: "disconnected",
+      error: error.message,
     });
   }
 });
 
 // API Routes (to be implemented)
-app.get('/api', (req, res) => {
-  res.json({ message: 'Sharetea POS API' });
+app.get("/api", (req, res) => {
+  res.json({ message: "Sharetea POS API" });
 });
 
 // ── Dev-only bypass (never enabled in production) ─────────────────────────────
-if (process.env.NODE_ENV !== 'production') {
-  app.post('/api/auth/dev/login', async (req, res) => {
+if (process.env.NODE_ENV !== "production") {
+  app.post("/api/auth/dev/login", async (req, res) => {
     const { role } = req.body;
-    if (role === 'customer') {
+    if (role === "customer") {
       const result = await pool.query(
         `INSERT INTO customer (google_id, email, name, picture)
          VALUES ('dev-customer-001', 'dev@example.com', 'Dev Customer', NULL)
@@ -130,16 +140,27 @@ if (process.env.NODE_ENV !== 'production') {
          RETURNING customer_id, email, name`,
       );
       const customer = result.rows[0];
-      const token = signToken({ type: 'customer', customer_id: customer.customer_id, email: customer.email, name: customer.name });
+      const token = signToken({
+        type: "customer",
+        customer_id: customer.customer_id,
+        email: customer.email,
+        name: customer.name,
+      });
       return res.json({ token, user: customer });
     }
     // Default to first Manager employee for employee dev bypass
     const result = await pool.query(
       `SELECT employee_id, name, position FROM employee WHERE position = 'Manager' LIMIT 1`,
     );
-    if (!result.rowCount) return res.status(404).json({ error: 'No manager employee found in DB' });
+    if (!result.rowCount)
+      return res.status(404).json({ error: "No manager employee found in DB" });
     const emp = result.rows[0];
-    const token = signToken({ type: 'employee', employee_id: emp.employee_id, name: emp.name, position: emp.position });
+    const token = signToken({
+      type: "employee",
+      employee_id: emp.employee_id,
+      name: emp.name,
+      position: emp.position,
+    });
     return res.json({ token, user: emp });
   });
 }
@@ -155,9 +176,10 @@ async function verifyGoogleToken(credential) {
 }
 
 // Customer Google login — creates account on first sign-in
-app.post('/api/auth/google/customer', async (req, res, next) => {
+app.post("/api/auth/google/customer", async (req, res, next) => {
   const { credential } = req.body;
-  if (!credential) return res.status(400).json({ error: 'credential is required' });
+  if (!credential)
+    return res.status(400).json({ error: "credential is required" });
 
   try {
     const payload = await verifyGoogleToken(credential);
@@ -176,7 +198,7 @@ app.post('/api/auth/google/customer', async (req, res, next) => {
 
     const customer = result.rows[0];
     const token = signToken({
-      type: 'customer',
+      type: "customer",
       customer_id: customer.customer_id,
       email: customer.email,
       name: customer.name,
@@ -190,49 +212,51 @@ app.post('/api/auth/google/customer', async (req, res, next) => {
 });
 
 // Customer guest login — no account required
-app.post('/api/auth/guest/customer', async (req, res) => {
+app.post("/api/auth/guest/customer", async (req, res) => {
   const guestSessionId = `guest-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
   const token = signToken({
-    type: 'customer',
+    type: "customer",
     guest: true,
     guest_session_id: guestSessionId,
-    name: 'Guest',
+    name: "Guest",
   });
 
   res.json({
     token,
     user: {
-      type: 'customer',
+      type: "customer",
       guest: true,
-      name: 'Guest',
+      name: "Guest",
       guest_session_id: guestSessionId,
     },
   });
 });
 
 // Employee Google login — must already have google_email pre-registered
-app.post('/api/auth/google/employee', async (req, res, next) => {
+app.post("/api/auth/google/employee", async (req, res, next) => {
   const { credential } = req.body;
-  if (!credential) return res.status(400).json({ error: 'credential is required' });
+  if (!credential)
+    return res.status(400).json({ error: "credential is required" });
 
   try {
     const payload = await verifyGoogleToken(credential);
     const { email } = payload;
 
     const result = await pool.query(
-      'SELECT employee_id, name, position, hire_date, google_email FROM employee WHERE google_email = $1',
+      "SELECT employee_id, name, position, hire_date, google_email FROM employee WHERE google_email = $1",
       [email],
     );
 
     if (!result.rowCount) {
       return res.status(403).json({
-        error: 'No employee account found for this Google email. Contact your manager.',
+        error:
+          "No employee account found for this Google email. Contact your manager.",
       });
     }
 
     const employee = result.rows[0];
     const token = signToken({
-      type: 'employee',
+      type: "employee",
       employee_id: employee.employee_id,
       name: employee.name,
       position: employee.position,
@@ -245,11 +269,11 @@ app.post('/api/auth/google/employee', async (req, res, next) => {
 });
 
 // Employee PIN login — uses 4-digit PIN only
-app.post('/api/auth/pin/employee', async (req, res, next) => {
+app.post("/api/auth/pin/employee", async (req, res, next) => {
   const pin = normalizeEmployeePin(req.body?.pin);
 
   if (!pin || !isValidEmployeePin(pin)) {
-    return res.status(400).json({ error: 'pin must be a 4-digit code' });
+    return res.status(400).json({ error: "pin must be a 4-digit code" });
   }
 
   try {
@@ -261,15 +285,18 @@ app.post('/api/auth/pin/employee', async (req, res, next) => {
     );
 
     if (!result.rowCount) {
-      return res.status(401).json({ error: 'Invalid PIN' });
+      return res.status(401).json({ error: "Invalid PIN" });
     }
     if (result.rowCount > 1) {
-      return res.status(409).json({ error: 'PIN is assigned to multiple employees. Ask manager to reset PINs.' });
+      return res.status(409).json({
+        error:
+          "PIN is assigned to multiple employees. Ask manager to reset PINs.",
+      });
     }
 
     const employee = result.rows[0];
     const token = signToken({
-      type: 'employee',
+      type: "employee",
       employee_id: employee.employee_id,
       name: employee.name,
       position: employee.position,
@@ -282,7 +309,7 @@ app.post('/api/auth/pin/employee', async (req, res, next) => {
 });
 
 function parseDateInput(value) {
-  if (!value || typeof value !== 'string') return null;
+  if (!value || typeof value !== "string") return null;
   const date = new Date(`${value}T00:00:00`);
   if (Number.isNaN(date.getTime())) return null;
   return value;
@@ -290,36 +317,36 @@ function parseDateInput(value) {
 
 function describeOpenMeteoWeatherCode(weatherCode) {
   const codeMap = {
-    0: 'Clear sky',
-    1: 'Mainly clear',
-    2: 'Partly cloudy',
-    3: 'Overcast',
-    45: 'Fog',
-    48: 'Rime fog',
-    51: 'Light drizzle',
-    53: 'Moderate drizzle',
-    55: 'Dense drizzle',
-    56: 'Light freezing drizzle',
-    57: 'Dense freezing drizzle',
-    61: 'Slight rain',
-    63: 'Moderate rain',
-    65: 'Heavy rain',
-    66: 'Light freezing rain',
-    67: 'Heavy freezing rain',
-    71: 'Slight snow fall',
-    73: 'Moderate snow fall',
-    75: 'Heavy snow fall',
-    77: 'Snow grains',
-    80: 'Slight rain showers',
-    81: 'Moderate rain showers',
-    82: 'Violent rain showers',
-    85: 'Slight snow showers',
-    86: 'Heavy snow showers',
-    95: 'Thunderstorm',
-    96: 'Thunderstorm with hail',
-    99: 'Thunderstorm with heavy hail',
+    0: "Clear sky",
+    1: "Mainly clear",
+    2: "Partly cloudy",
+    3: "Overcast",
+    45: "Fog",
+    48: "Rime fog",
+    51: "Light drizzle",
+    53: "Moderate drizzle",
+    55: "Dense drizzle",
+    56: "Light freezing drizzle",
+    57: "Dense freezing drizzle",
+    61: "Slight rain",
+    63: "Moderate rain",
+    65: "Heavy rain",
+    66: "Light freezing rain",
+    67: "Heavy freezing rain",
+    71: "Slight snow fall",
+    73: "Moderate snow fall",
+    75: "Heavy snow fall",
+    77: "Snow grains",
+    80: "Slight rain showers",
+    81: "Moderate rain showers",
+    82: "Violent rain showers",
+    85: "Slight snow showers",
+    86: "Heavy snow showers",
+    95: "Thunderstorm",
+    96: "Thunderstorm with hail",
+    99: "Thunderstorm with heavy hail",
   };
-  return codeMap[weatherCode] || 'Unknown weather';
+  return codeMap[weatherCode] || "Unknown weather";
 }
 
 function isBadWeatherCondition(weatherCode) {
@@ -328,52 +355,68 @@ function isBadWeatherCondition(weatherCode) {
 }
 
 // External weather route (Open-Meteo, no API key required)
-app.get('/api/external/weather', async (req, res, next) => {
-  const cityInput = typeof req.query.city === 'string' && req.query.city.trim() ? req.query.city.trim() : 'College Station,US';
-  const units = typeof req.query.units === 'string' && req.query.units.trim() ? req.query.units.trim() : 'imperial';
+app.get("/api/external/weather", async (req, res, next) => {
+  const cityInput =
+    typeof req.query.city === "string" && req.query.city.trim()
+      ? req.query.city.trim()
+      : "College Station,US";
+  const units =
+    typeof req.query.units === "string" && req.query.units.trim()
+      ? req.query.units.trim()
+      : "imperial";
 
-  const [cityNameRaw, countryRaw] = cityInput.split(',').map((part) => part.trim());
+  const [cityNameRaw, countryRaw] = cityInput
+    .split(",")
+    .map((part) => part.trim());
   const cityName = cityNameRaw || cityInput;
-  const countryCode = countryRaw && countryRaw.length === 2 ? countryRaw.toUpperCase() : '';
-  const temperatureUnit = units === 'metric' ? 'celsius' : 'fahrenheit';
+  const countryCode =
+    countryRaw && countryRaw.length === 2 ? countryRaw.toUpperCase() : "";
+  const temperatureUnit = units === "metric" ? "celsius" : "fahrenheit";
 
   try {
     const geocodeParams = new URLSearchParams({
       name: cityName,
-      count: '1',
-      language: 'en',
-      format: 'json',
+      count: "1",
+      language: "en",
+      format: "json",
     });
-    if (countryCode) geocodeParams.set('countryCode', countryCode);
+    if (countryCode) geocodeParams.set("countryCode", countryCode);
 
-    const geocodeResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?${geocodeParams.toString()}`);
+    const geocodeResponse = await fetch(
+      `https://geocoding-api.open-meteo.com/v1/search?${geocodeParams.toString()}`,
+    );
     const geocodeData = await geocodeResponse.json().catch(() => ({}));
 
     if (!geocodeResponse.ok) {
       return res.status(geocodeResponse.status).json({
-        error: geocodeData.reason || 'Failed to geocode location with Open-Meteo',
+        error:
+          geocodeData.reason || "Failed to geocode location with Open-Meteo",
       });
     }
 
     const match = geocodeData.results?.[0];
     if (!match) {
-      return res.status(404).json({ error: `Location not found: ${cityInput}` });
+      return res
+        .status(404)
+        .json({ error: `Location not found: ${cityInput}` });
     }
 
     const forecastParams = new URLSearchParams({
       latitude: String(match.latitude),
       longitude: String(match.longitude),
-      current: 'temperature_2m,apparent_temperature,weather_code',
+      current: "temperature_2m,apparent_temperature,weather_code",
       temperature_unit: temperatureUnit,
-      timezone: 'auto',
+      timezone: "auto",
     });
 
-    const forecastResponse = await fetch(`https://api.open-meteo.com/v1/forecast?${forecastParams.toString()}`);
+    const forecastResponse = await fetch(
+      `https://api.open-meteo.com/v1/forecast?${forecastParams.toString()}`,
+    );
     const forecastData = await forecastResponse.json().catch(() => ({}));
 
     if (!forecastResponse.ok) {
       return res.status(forecastResponse.status).json({
-        error: forecastData.reason || 'Failed to fetch weather from Open-Meteo',
+        error: forecastData.reason || "Failed to fetch weather from Open-Meteo",
       });
     }
 
@@ -382,7 +425,7 @@ app.get('/api/external/weather', async (req, res, next) => {
     const description = describeOpenMeteoWeatherCode(weatherCode);
 
     return res.json({
-      source: 'Open-Meteo',
+      source: "Open-Meteo",
       location: match.name || cityName,
       country: match.country_code || null,
       units,
@@ -399,10 +442,10 @@ app.get('/api/external/weather', async (req, res, next) => {
 });
 
 // Menu routes
-app.get('/api/menu/items', async (req, res, next) => {
+app.get("/api/menu/items", async (req, res, next) => {
   try {
     const result = await pool.query(
-      'SELECT menu_item_id, name, cost, category FROM menu_item ORDER BY menu_item_id',
+      "SELECT menu_item_id, name, cost, category FROM menu_item ORDER BY menu_item_id",
     );
     res.json({ menuItems: result.rows });
   } catch (error) {
@@ -410,10 +453,10 @@ app.get('/api/menu/items', async (req, res, next) => {
   }
 });
 
-app.post('/api/menu/items', async (req, res, next) => {
+app.post("/api/menu/items", async (req, res, next) => {
   const { name, cost, category } = req.body;
   if (!name || Number.isNaN(Number(cost))) {
-    return res.status(400).json({ error: 'name and cost are required' });
+    return res.status(400).json({ error: "name and cost are required" });
   }
 
   try {
@@ -429,11 +472,11 @@ app.post('/api/menu/items', async (req, res, next) => {
   }
 });
 
-app.put('/api/menu/items/:id', async (req, res, next) => {
+app.put("/api/menu/items/:id", async (req, res, next) => {
   const { id } = req.params;
   const { name, cost, category } = req.body;
   if (!name || Number.isNaN(Number(cost))) {
-    return res.status(400).json({ error: 'name and cost are required' });
+    return res.status(400).json({ error: "name and cost are required" });
   }
 
   try {
@@ -444,17 +487,22 @@ app.put('/api/menu/items/:id', async (req, res, next) => {
        RETURNING menu_item_id, name, cost, category`,
       [name.trim(), Number(cost), category || null, id],
     );
-    if (!result.rowCount) return res.status(404).json({ error: 'Menu item not found' });
+    if (!result.rowCount)
+      return res.status(404).json({ error: "Menu item not found" });
     res.json({ item: result.rows[0] });
   } catch (error) {
     next(error);
   }
 });
 
-app.delete('/api/menu/items/:id', async (req, res, next) => {
+app.delete("/api/menu/items/:id", async (req, res, next) => {
   try {
-    const result = await pool.query('DELETE FROM menu_item WHERE menu_item_id = $1', [req.params.id]);
-    if (!result.rowCount) return res.status(404).json({ error: 'Menu item not found' });
+    const result = await pool.query(
+      "DELETE FROM menu_item WHERE menu_item_id = $1",
+      [req.params.id],
+    );
+    if (!result.rowCount)
+      return res.status(404).json({ error: "Menu item not found" });
     res.status(204).send();
   } catch (error) {
     next(error);
@@ -462,10 +510,10 @@ app.delete('/api/menu/items/:id', async (req, res, next) => {
 });
 
 // Inventory routes
-app.get('/api/inventory', async (req, res, next) => {
+app.get("/api/inventory", async (req, res, next) => {
   try {
     const result = await pool.query(
-      'SELECT inventory_id, resource_name, quantity_available FROM inventory ORDER BY inventory_id',
+      "SELECT inventory_id, resource_name, quantity_available FROM inventory ORDER BY inventory_id",
     );
     res.json({ inventory: result.rows });
   } catch (error) {
@@ -473,10 +521,12 @@ app.get('/api/inventory', async (req, res, next) => {
   }
 });
 
-app.post('/api/inventory', async (req, res, next) => {
+app.post("/api/inventory", async (req, res, next) => {
   const { resource_name, quantity_available } = req.body;
   if (!resource_name || Number.isNaN(Number(quantity_available))) {
-    return res.status(400).json({ error: 'resource_name and quantity_available are required' });
+    return res
+      .status(400)
+      .json({ error: "resource_name and quantity_available are required" });
   }
 
   try {
@@ -492,10 +542,12 @@ app.post('/api/inventory', async (req, res, next) => {
   }
 });
 
-app.put('/api/inventory/:id', async (req, res, next) => {
+app.put("/api/inventory/:id", async (req, res, next) => {
   const { resource_name, quantity_available } = req.body;
   if (!resource_name || Number.isNaN(Number(quantity_available))) {
-    return res.status(400).json({ error: 'resource_name and quantity_available are required' });
+    return res
+      .status(400)
+      .json({ error: "resource_name and quantity_available are required" });
   }
 
   try {
@@ -506,17 +558,22 @@ app.put('/api/inventory/:id', async (req, res, next) => {
        RETURNING inventory_id, resource_name, quantity_available`,
       [resource_name.trim(), Number(quantity_available), req.params.id],
     );
-    if (!result.rowCount) return res.status(404).json({ error: 'Inventory item not found' });
+    if (!result.rowCount)
+      return res.status(404).json({ error: "Inventory item not found" });
     res.json({ item: result.rows[0] });
   } catch (error) {
     next(error);
   }
 });
 
-app.delete('/api/inventory/:id', async (req, res, next) => {
+app.delete("/api/inventory/:id", async (req, res, next) => {
   try {
-    const result = await pool.query('DELETE FROM inventory WHERE inventory_id = $1', [req.params.id]);
-    if (!result.rowCount) return res.status(404).json({ error: 'Inventory item not found' });
+    const result = await pool.query(
+      "DELETE FROM inventory WHERE inventory_id = $1",
+      [req.params.id],
+    );
+    if (!result.rowCount)
+      return res.status(404).json({ error: "Inventory item not found" });
     res.status(204).send();
   } catch (error) {
     next(error);
@@ -524,7 +581,7 @@ app.delete('/api/inventory/:id', async (req, res, next) => {
 });
 
 // Employee routes
-app.get('/api/employees', async (req, res, next) => {
+app.get("/api/employees", async (req, res, next) => {
   try {
     const result = await pool.query(
       `SELECT employee_id, name, position, hire_date, google_email, employee_pin,
@@ -538,24 +595,30 @@ app.get('/api/employees', async (req, res, next) => {
   }
 });
 
-app.post('/api/employees', async (req, res, next) => {
+app.post("/api/employees", async (req, res, next) => {
   const { employee_id, name, position, hire_date, google_email } = req.body;
   const pin = normalizeEmployeePin(req.body?.employee_pin);
   if (!employee_id || !name || !position || !parseDateInput(hire_date)) {
-    return res.status(400).json({ error: 'employee_id, name, position, hire_date are required' });
+    return res
+      .status(400)
+      .json({ error: "employee_id, name, position, hire_date are required" });
   }
   if (pin && !isValidEmployeePin(pin)) {
-    return res.status(400).json({ error: 'employee_pin must be exactly 4 digits' });
+    return res
+      .status(400)
+      .json({ error: "employee_pin must be exactly 4 digits" });
   }
 
   try {
     if (pin) {
       const pinInUse = await pool.query(
-        'SELECT employee_id FROM employee WHERE employee_pin = $1 LIMIT 1',
+        "SELECT employee_id FROM employee WHERE employee_pin = $1 LIMIT 1",
         [pin],
       );
       if (pinInUse.rowCount) {
-        return res.status(409).json({ error: 'This PIN is already assigned to another employee' });
+        return res
+          .status(409)
+          .json({ error: "This PIN is already assigned to another employee" });
       }
     }
 
@@ -563,7 +626,14 @@ app.post('/api/employees', async (req, res, next) => {
       `INSERT INTO employee (employee_id, name, position, hire_date, google_email, employee_pin)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING employee_id, name, position, hire_date, google_email, employee_pin, (employee_pin IS NOT NULL) AS pin_set`,
-      [Number(employee_id), name.trim(), position.trim(), hire_date, google_email?.trim() || null, pin],
+      [
+        Number(employee_id),
+        name.trim(),
+        position.trim(),
+        hire_date,
+        google_email?.trim() || null,
+        pin,
+      ],
     );
     res.status(201).json({ employee: result.rows[0] });
   } catch (error) {
@@ -571,35 +641,49 @@ app.post('/api/employees', async (req, res, next) => {
   }
 });
 
-app.put('/api/employees/:id', async (req, res, next) => {
+app.put("/api/employees/:id", async (req, res, next) => {
   const { name, position, hire_date, google_email } = req.body;
   if (!name || !position || !parseDateInput(hire_date)) {
-    return res.status(400).json({ error: 'name, position, hire_date are required' });
+    return res
+      .status(400)
+      .json({ error: "name, position, hire_date are required" });
   }
 
-  const hasPinField = Object.prototype.hasOwnProperty.call(req.body, 'employee_pin');
+  const hasPinField = Object.prototype.hasOwnProperty.call(
+    req.body,
+    "employee_pin",
+  );
   const pin = normalizeEmployeePin(req.body?.employee_pin);
   if (hasPinField && pin && !isValidEmployeePin(pin)) {
-    return res.status(400).json({ error: 'employee_pin must be exactly 4 digits' });
+    return res
+      .status(400)
+      .json({ error: "employee_pin must be exactly 4 digits" });
   }
 
   try {
     if (hasPinField && pin) {
       const pinInUse = await pool.query(
-        'SELECT employee_id FROM employee WHERE employee_pin = $1 AND employee_id <> $2 LIMIT 1',
+        "SELECT employee_id FROM employee WHERE employee_pin = $1 AND employee_id <> $2 LIMIT 1",
         [pin, req.params.id],
       );
       if (pinInUse.rowCount) {
-        return res.status(409).json({ error: 'This PIN is already assigned to another employee' });
+        return res
+          .status(409)
+          .json({ error: "This PIN is already assigned to another employee" });
       }
     }
 
-    const values = [name.trim(), position.trim(), hire_date, google_email?.trim() || null];
+    const values = [
+      name.trim(),
+      position.trim(),
+      hire_date,
+      google_email?.trim() || null,
+    ];
     const setClauses = [
-      'name = $1',
-      'position = $2',
-      'hire_date = $3',
-      'google_email = $4',
+      "name = $1",
+      "position = $2",
+      "hire_date = $3",
+      "google_email = $4",
     ];
 
     if (hasPinField) {
@@ -610,31 +694,35 @@ app.put('/api/employees/:id', async (req, res, next) => {
     values.push(req.params.id);
     const result = await pool.query(
       `UPDATE employee
-       SET ${setClauses.join(', ')}
+       SET ${setClauses.join(", ")}
        WHERE employee_id = $${values.length}
        RETURNING employee_id, name, position, hire_date, google_email, employee_pin, (employee_pin IS NOT NULL) AS pin_set`,
       values,
     );
-    if (!result.rowCount) return res.status(404).json({ error: 'Employee not found' });
+    if (!result.rowCount)
+      return res.status(404).json({ error: "Employee not found" });
     res.json({ employee: result.rows[0] });
   } catch (error) {
     next(error);
   }
 });
 
-app.delete('/api/employees/:id', async (req, res, next) => {
+app.delete("/api/employees/:id", async (req, res, next) => {
   try {
-    const result = await pool.query('DELETE FROM employee WHERE employee_id = $1', [req.params.id]);
-    if (!result.rowCount) return res.status(404).json({ error: 'Employee not found' });
+    const result = await pool.query(
+      "DELETE FROM employee WHERE employee_id = $1",
+      [req.params.id],
+    );
+    if (!result.rowCount)
+      return res.status(404).json({ error: "Employee not found" });
     res.status(204).send();
   } catch (error) {
     next(error);
   }
 });
 
-
 // Cashier routes
-app.get('/api/cashier/modifications', async (req, res, next) => {
+app.get("/api/cashier/modifications", async (req, res, next) => {
   try {
     const result = await pool.query(
       `SELECT modification_type_id, name, cost
@@ -653,11 +741,20 @@ app.get('/api/cashier/modifications', async (req, res, next) => {
         name: row.name,
         cost: Number(row.cost || 0),
       };
-      if (record.modification_type_id >= 1 && record.modification_type_id <= 6) {
+      if (
+        record.modification_type_id >= 1 &&
+        record.modification_type_id <= 6
+      ) {
         sugar.push(record);
-      } else if (record.modification_type_id >= 7 && record.modification_type_id <= 10) {
+      } else if (
+        record.modification_type_id >= 7 &&
+        record.modification_type_id <= 10
+      ) {
         ice.push(record);
-      } else if (record.modification_type_id >= 11 && record.modification_type_id <= 20) {
+      } else if (
+        record.modification_type_id >= 11 &&
+        record.modification_type_id <= 20
+      ) {
         toppings.push(record);
       } else if (record.modification_type_id >= 21) {
         sizes.push(record);
@@ -670,7 +767,7 @@ app.get('/api/cashier/modifications', async (req, res, next) => {
   }
 });
 
-app.get('/api/cashier/most-ordered', async (req, res, next) => {
+app.get("/api/cashier/most-ordered", async (req, res, next) => {
   try {
     const result = await pool.query(
       `SELECT m.menu_item_id, m.name, m.cost, m.category, SUM(oi.quantity) as order_count
@@ -678,27 +775,27 @@ app.get('/api/cashier/most-ordered', async (req, res, next) => {
        JOIN menu_item m ON oi.menu_item_id = m.menu_item_id
        GROUP BY m.menu_item_id, m.name, m.cost, m.category
        ORDER BY order_count DESC
-       LIMIT 9`
+       LIMIT 9`,
     );
     res.json(result.rows);
   } catch (error) {
     console.error("Cashier Most Ordered Error:", error);
-    res.status(500).json({ error: 'Failed to fetch global most ordered' });
+    res.status(500).json({ error: "Failed to fetch global most ordered" });
   }
 });
 
-app.post('/api/cashier/orders', async (req, res, next) => {
+app.post("/api/cashier/orders", async (req, res, next) => {
   const employeeId = Number(req.body?.employee_id);
-  const paymentType = String(req.body?.payment_type || 'CARD').trim() || 'CARD';
+  const paymentType = String(req.body?.payment_type || "CARD").trim() || "CARD";
   const items = Array.isArray(req.body?.items) ? req.body.items : [];
 
   // Optionally attach a customer to this order (customer kiosk orders)
   let customerId = null;
   const authHeader = req.headers.authorization;
-  if (authHeader?.startsWith('Bearer ')) {
+  if (authHeader?.startsWith("Bearer ")) {
     try {
       const decoded = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET);
-      if (decoded.type === 'customer' && decoded.customer_id) {
+      if (decoded.type === "customer" && decoded.customer_id) {
         customerId = decoded.customer_id;
       }
     } catch {
@@ -707,11 +804,15 @@ app.post('/api/cashier/orders', async (req, res, next) => {
   }
 
   if (!Number.isInteger(employeeId) || employeeId <= 0) {
-    return res.status(400).json({ error: 'employee_id must be a positive integer' });
+    return res
+      .status(400)
+      .json({ error: "employee_id must be a positive integer" });
   }
 
   if (!items.length) {
-    return res.status(400).json({ error: 'At least one order item is required' });
+    return res
+      .status(400)
+      .json({ error: "At least one order item is required" });
   }
 
   const normalizedItems = [];
@@ -719,12 +820,22 @@ app.post('/api/cashier/orders', async (req, res, next) => {
     const menuItemId = Number(item?.menu_item_id);
     const quantity = Number(item?.quantity || 1);
     const modificationIds = Array.isArray(item?.modification_ids)
-      ? item.modification_ids.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0)
+      ? item.modification_ids
+          .map((value) => Number(value))
+          .filter((value) => Number.isInteger(value) && value > 0)
       : [];
-    const comments = typeof item?.comments === 'string' ? item.comments.trim() : '';
+    const comments =
+      typeof item?.comments === "string" ? item.comments.trim() : "";
 
-    if (!Number.isInteger(menuItemId) || menuItemId <= 0 || !Number.isInteger(quantity) || quantity <= 0) {
-      return res.status(400).json({ error: 'Each item must include a valid menu_item_id and quantity' });
+    if (
+      !Number.isInteger(menuItemId) ||
+      menuItemId <= 0 ||
+      !Number.isInteger(quantity) ||
+      quantity <= 0
+    ) {
+      return res.status(400).json({
+        error: "Each item must include a valid menu_item_id and quantity",
+      });
     }
 
     normalizedItems.push({ menuItemId, quantity, modificationIds, comments });
@@ -732,36 +843,47 @@ app.post('/api/cashier/orders', async (req, res, next) => {
 
   const client = await pool.connect();
   try {
-    await client.query('BEGIN');
+    await client.query("BEGIN");
 
     const employeeResult = await client.query(
-      'SELECT employee_id FROM employee WHERE employee_id = $1',
+      "SELECT employee_id FROM employee WHERE employee_id = $1",
       [employeeId],
     );
     if (!employeeResult.rowCount) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({ error: 'Employee not found' });
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Employee not found" });
     }
 
-    const menuIds = [...new Set(normalizedItems.map((item) => item.menuItemId))];
+    const menuIds = [
+      ...new Set(normalizedItems.map((item) => item.menuItemId)),
+    ];
     const menuResult = await client.query(
-      'SELECT menu_item_id, cost FROM menu_item WHERE menu_item_id = ANY($1::int[])',
+      "SELECT menu_item_id, cost FROM menu_item WHERE menu_item_id = ANY($1::int[])",
       [menuIds],
     );
-    const menuMap = new Map(menuResult.rows.map((row) => [Number(row.menu_item_id), Number(row.cost || 0)]));
+    const menuMap = new Map(
+      menuResult.rows.map((row) => [
+        Number(row.menu_item_id),
+        Number(row.cost || 0),
+      ]),
+    );
 
     for (const item of normalizedItems) {
       if (!menuMap.has(item.menuItemId)) {
-        await client.query('ROLLBACK');
-        return res.status(404).json({ error: `Menu item not found: ${item.menuItemId}` });
+        await client.query("ROLLBACK");
+        return res
+          .status(404)
+          .json({ error: `Menu item not found: ${item.menuItemId}` });
       }
     }
 
-    const allModIds = [...new Set(normalizedItems.flatMap((item) => item.modificationIds))];
+    const allModIds = [
+      ...new Set(normalizedItems.flatMap((item) => item.modificationIds)),
+    ];
     const modMap = new Map();
     if (allModIds.length) {
       const modResult = await client.query(
-        'SELECT modification_type_id, cost FROM modification_type WHERE modification_type_id = ANY($1::int[])',
+        "SELECT modification_type_id, cost FROM modification_type WHERE modification_type_id = ANY($1::int[])",
         [allModIds],
       );
       for (const row of modResult.rows) {
@@ -772,7 +894,10 @@ app.post('/api/cashier/orders', async (req, res, next) => {
     let totalCost = 0;
     const pricedItems = normalizedItems.map((item) => {
       const baseCost = menuMap.get(item.menuItemId) || 0;
-      const modCost = item.modificationIds.reduce((sum, modId) => sum + (modMap.get(modId) || 0), 0);
+      const modCost = item.modificationIds.reduce(
+        (sum, modId) => sum + (modMap.get(modId) || 0),
+        0,
+      );
       const itemPrice = baseCost + modCost;
       totalCost += itemPrice * item.quantity;
       return { ...item, itemPrice };
@@ -791,7 +916,13 @@ app.post('/api/cashier/orders', async (req, res, next) => {
         `INSERT INTO order_item (order_item_id, order_id, menu_item_id, quantity, item_price, comments)
          VALUES ((SELECT COALESCE(MAX(order_item_id), 0) + 1 FROM order_item), $1, $2, $3, $4, $5)
          RETURNING order_item_id`,
-        [order.order_id, item.menuItemId, item.quantity, item.itemPrice, item.comments || null],
+        [
+          order.order_id,
+          item.menuItemId,
+          item.quantity,
+          item.itemPrice,
+          item.comments || null,
+        ],
       );
 
       const orderItemId = orderItemResult.rows[0]?.order_item_id;
@@ -804,7 +935,7 @@ app.post('/api/cashier/orders', async (req, res, next) => {
       }
     }
 
-    await client.query('COMMIT');
+    await client.query("COMMIT");
     res.status(201).json({
       order: {
         ...order,
@@ -812,7 +943,7 @@ app.post('/api/cashier/orders', async (req, res, next) => {
       },
     });
   } catch (error) {
-    await client.query('ROLLBACK');
+    await client.query("ROLLBACK");
     next(error);
   } finally {
     client.release();
@@ -820,17 +951,18 @@ app.post('/api/cashier/orders', async (req, res, next) => {
 });
 
 // Get order status (customer polls this)
-app.get('/api/orders/:id/status', async (req, res, next) => {
+app.get("/api/orders/:id/status", async (req, res, next) => {
   const orderId = Number(req.params.id);
   if (!Number.isInteger(orderId) || orderId <= 0) {
-    return res.status(400).json({ error: 'Invalid order id' });
+    return res.status(400).json({ error: "Invalid order id" });
   }
   try {
     const result = await pool.query(
-      'SELECT order_id, status FROM customer_order WHERE order_id = $1',
-      [orderId]
+      "SELECT order_id, status FROM customer_order WHERE order_id = $1",
+      [orderId],
     );
-    if (!result.rowCount) return res.status(404).json({ error: 'Order not found' });
+    if (!result.rowCount)
+      return res.status(404).json({ error: "Order not found" });
     res.json(result.rows[0]);
   } catch (error) {
     next(error);
@@ -838,27 +970,34 @@ app.get('/api/orders/:id/status', async (req, res, next) => {
 });
 
 // Update order status (cashier marks as Ready/Completed)
-app.patch('/api/orders/:id/status', requireAuth('manager', 'cashier'), async (req, res, next) => {
-  const orderId = Number(req.params.id);
-  const { status } = req.body;
-  const allowed = ['In Progress', 'Ready', 'Completed'];
-  if (!allowed.includes(status)) {
-    return res.status(400).json({ error: `status must be one of: ${allowed.join(', ')}` });
-  }
-  try {
-    const result = await pool.query(
-      'UPDATE customer_order SET status = $1 WHERE order_id = $2 RETURNING order_id, status',
-      [status, orderId]
-    );
-    if (!result.rowCount) return res.status(404).json({ error: 'Order not found' });
-    res.json(result.rows[0]);
-  } catch (error) {
-    next(error);
-  }
-});
+app.patch(
+  "/api/orders/:id/status",
+  requireAuth(["Manager", "Cashier"]),
+  async (req, res, next) => {
+    const orderId = Number(req.params.id);
+    const { status } = req.body;
+    const allowed = ["In Progress", "Ready", "Completed"];
+    if (!allowed.includes(status)) {
+      return res
+        .status(400)
+        .json({ error: `status must be one of: ${allowed.join(", ")}` });
+    }
+    try {
+      const result = await pool.query(
+        "UPDATE customer_order SET status = $1 WHERE order_id = $2 RETURNING order_id, status",
+        [status, orderId],
+      );
+      if (!result.rowCount)
+        return res.status(404).json({ error: "Order not found" });
+      res.json(result.rows[0]);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 // Today's orders for the cashier screen
-app.get('/api/cashier/orders/today', async (req, res, next) => {
+app.get("/api/cashier/orders/today", async (req, res, next) => {
   try {
     const result = await pool.query(
       `SELECT
@@ -866,6 +1005,7 @@ app.get('/api/cashier/orders/today', async (req, res, next) => {
          co.order_date,
          co.total_cost,
          co.payment_type,
+         co.status,
          json_agg(
            json_build_object(
              'order_item_id', oi.order_item_id,
@@ -879,7 +1019,7 @@ app.get('/api/cashier/orders/today', async (req, res, next) => {
        JOIN order_item oi ON co.order_id = oi.order_id
        JOIN menu_item  m  ON oi.menu_item_id = m.menu_item_id
        WHERE co.order_date::date = CURRENT_DATE
-       GROUP BY co.order_id, co.order_date, co.total_cost, co.payment_type
+       GROUP BY co.order_id, co.order_date, co.total_cost, co.payment_type, co.status
        ORDER BY co.order_id DESC`,
     );
     res.json({ orders: result.rows });
@@ -889,9 +1029,9 @@ app.get('/api/cashier/orders/today', async (req, res, next) => {
 });
 
 // Customer order history (requires customer JWT)
-app.get('/api/customer/orders', requireAuth(), async (req, res, next) => {
-  if (req.user.type !== 'customer') {
-    return res.status(403).json({ error: 'Customer account required' });
+app.get("/api/customer/orders", requireAuth(), async (req, res, next) => {
+  if (req.user.type !== "customer") {
+    return res.status(403).json({ error: "Customer account required" });
   }
 
   try {
@@ -901,6 +1041,7 @@ app.get('/api/customer/orders', requireAuth(), async (req, res, next) => {
          co.order_date,
          co.total_cost,
          co.payment_type,
+         co.status,
          json_agg(
            json_build_object(
              'order_item_id', oi.order_item_id,
@@ -926,9 +1067,12 @@ app.get('/api/customer/orders', requireAuth(), async (req, res, next) => {
 });
 
 // Reports routes
-app.get('/api/reports/items-sold', async (req, res, next) => {
+app.get("/api/reports/items-sold", async (req, res, next) => {
   const date = parseDateInput(req.query.date);
-  if (!date) return res.status(400).json({ error: 'date query param is required (YYYY-MM-DD)' });
+  if (!date)
+    return res
+      .status(400)
+      .json({ error: "date query param is required (YYYY-MM-DD)" });
 
   try {
     const result = await pool.query(
@@ -949,9 +1093,12 @@ app.get('/api/reports/items-sold', async (req, res, next) => {
   }
 });
 
-app.get('/api/reports/employees', async (req, res, next) => {
+app.get("/api/reports/employees", async (req, res, next) => {
   const date = parseDateInput(req.query.date);
-  if (!date) return res.status(400).json({ error: 'date query param is required (YYYY-MM-DD)' });
+  if (!date)
+    return res
+      .status(400)
+      .json({ error: "date query param is required (YYYY-MM-DD)" });
 
   try {
     const result = await pool.query(
@@ -971,9 +1118,12 @@ app.get('/api/reports/employees', async (req, res, next) => {
   }
 });
 
-app.get('/api/reports/total-profit', async (req, res, next) => {
+app.get("/api/reports/total-profit", async (req, res, next) => {
   const date = parseDateInput(req.query.date);
-  if (!date) return res.status(400).json({ error: 'date query param is required (YYYY-MM-DD)' });
+  if (!date)
+    return res
+      .status(400)
+      .json({ error: "date query param is required (YYYY-MM-DD)" });
 
   try {
     const result = await pool.query(
@@ -988,9 +1138,12 @@ app.get('/api/reports/total-profit', async (req, res, next) => {
   }
 });
 
-app.get('/api/reports/daily', async (req, res, next) => {
+app.get("/api/reports/daily", async (req, res, next) => {
   const date = parseDateInput(req.query.date);
-  if (!date) return res.status(400).json({ error: 'date query param is required (YYYY-MM-DD)' });
+  if (!date)
+    return res
+      .status(400)
+      .json({ error: "date query param is required (YYYY-MM-DD)" });
 
   try {
     const [items, employees, totals] = await Promise.all([
@@ -1035,11 +1188,13 @@ app.get('/api/reports/daily', async (req, res, next) => {
   }
 });
 
-app.get('/api/reports/sales', async (req, res, next) => {
+app.get("/api/reports/sales", async (req, res, next) => {
   const startDate = parseDateInput(req.query.startDate);
   const endDate = parseDateInput(req.query.endDate);
   if (!startDate || !endDate) {
-    return res.status(400).json({ error: 'startDate and endDate are required (YYYY-MM-DD)' });
+    return res
+      .status(400)
+      .json({ error: "startDate and endDate are required (YYYY-MM-DD)" });
   }
 
   try {
@@ -1076,11 +1231,13 @@ app.get('/api/reports/sales', async (req, res, next) => {
   }
 });
 
-app.get('/api/reports/inventory', async (req, res, next) => {
+app.get("/api/reports/inventory", async (req, res, next) => {
   const startDate = parseDateInput(req.query.startDate);
   const endDate = parseDateInput(req.query.endDate);
   if (!startDate || !endDate) {
-    return res.status(400).json({ error: 'startDate and endDate are required (YYYY-MM-DD)' });
+    return res
+      .status(400)
+      .json({ error: "startDate and endDate are required (YYYY-MM-DD)" });
   }
 
   try {
@@ -1122,9 +1279,12 @@ app.get('/api/reports/inventory', async (req, res, next) => {
   }
 });
 
-app.get('/api/reports/x-report', async (req, res, next) => {
+app.get("/api/reports/x-report", async (req, res, next) => {
   const date = parseDateInput(req.query.date);
-  if (!date) return res.status(400).json({ error: 'date query param is required (YYYY-MM-DD)' });
+  if (!date)
+    return res
+      .status(400)
+      .json({ error: "date query param is required (YYYY-MM-DD)" });
 
   try {
     const result = await pool.query(
@@ -1208,26 +1368,29 @@ app.get('/api/reports/x-report', async (req, res, next) => {
   }
 });
 
-app.get('/api/reports/x', async (req, res, next) => {
-  const date = req.query.date ? String(req.query.date) : '';
+app.get("/api/reports/x", async (req, res, next) => {
+  const date = req.query.date ? String(req.query.date) : "";
   res.redirect(307, `/api/reports/x-report?date=${encodeURIComponent(date)}`);
 });
 
 // Z-Report GET endpoint - Load existing report
-app.get('/api/reports/z-report', async (req, res, next) => {
+app.get("/api/reports/z-report", async (req, res, next) => {
   const date = parseDateInput(req.query.date);
-  if (!date) return res.status(400).json({ error: 'date query param is required (YYYY-MM-DD)' });
+  if (!date)
+    return res
+      .status(400)
+      .json({ error: "date query param is required (YYYY-MM-DD)" });
 
   try {
     // Check if Z-Report exists for this date
     const reportCheck = await pool.query(
-      'SELECT run_date, run_at FROM z_report_runs WHERE run_date = $1',
+      "SELECT run_date, run_at FROM z_report_runs WHERE run_date = $1",
       [date],
     );
 
     if (!reportCheck.rowCount) {
-      return res.status(404).json({ 
-        error: `No Z-Report found for ${date}. Use 'Generate Z-Report' to create one.` 
+      return res.status(404).json({
+        error: `No Z-Report found for ${date}. Use 'Generate Z-Report' to create one.`,
       });
     }
 
@@ -1281,7 +1444,9 @@ app.get('/api/reports/z-report', async (req, res, next) => {
       totalCash: totals.rows[0]?.total_cash || 0,
       payments: payments.rows,
       employees: employees.rows,
-      generatedDate: reportInfo.run_at ? new Date(reportInfo.run_at).toISOString().slice(0, 10) : null,
+      generatedDate: reportInfo.run_at
+        ? new Date(reportInfo.run_at).toISOString().slice(0, 10)
+        : null,
     });
   } catch (error) {
     next(error);
@@ -1289,25 +1454,28 @@ app.get('/api/reports/z-report', async (req, res, next) => {
 });
 
 // Z-Report GET redirect
-app.get('/api/reports/z', async (req, res, next) => {
-  const date = req.query.date ? String(req.query.date) : '';
+app.get("/api/reports/z", async (req, res, next) => {
+  const date = req.query.date ? String(req.query.date) : "";
   res.redirect(307, `/api/reports/z-report?date=${encodeURIComponent(date)}`);
 });
 
 // Z-Report POST endpoint - Generate new report
-app.post('/api/reports/z-report', async (req, res, next) => {
+app.post("/api/reports/z-report", async (req, res, next) => {
   const date = parseDateInput(req.body?.date || req.query?.date);
   const managerSignature = req.body?.managerSignature || null;
-  
-  if (!date) return res.status(400).json({ error: 'date is required (YYYY-MM-DD)' });
-  if (!managerSignature || managerSignature.trim() === '') {
-    return res.status(400).json({ error: 'Manager signature is required to generate Z-Report' });
+
+  if (!date)
+    return res.status(400).json({ error: "date is required (YYYY-MM-DD)" });
+  if (!managerSignature || managerSignature.trim() === "") {
+    return res
+      .status(400)
+      .json({ error: "Manager signature is required to generate Z-Report" });
   }
 
   const client = await pool.connect();
   try {
-    await client.query('BEGIN');
-    
+    await client.query("BEGIN");
+
     // Create table without manager_signature column
     await client.query(
       `CREATE TABLE IF NOT EXISTS z_report_runs (
@@ -1317,15 +1485,14 @@ app.post('/api/reports/z-report', async (req, res, next) => {
     );
 
     try {
-      await client.query(
-        'INSERT INTO z_report_runs(run_date) VALUES ($1)',
-        [date]
-      );
+      await client.query("INSERT INTO z_report_runs(run_date) VALUES ($1)", [
+        date,
+      ]);
     } catch (error) {
-      if (error.code === '23505') {
-        await client.query('ROLLBACK');
-        return res.status(409).json({ 
-          error: `Z-Report already exists for ${date}. Use 'Load Z-Report' to view it.` 
+      if (error.code === "23505") {
+        await client.query("ROLLBACK");
+        return res.status(409).json({
+          error: `Z-Report already exists for ${date}. Use 'Load Z-Report' to view it.`,
         });
       }
       throw error;
@@ -1372,33 +1539,41 @@ app.post('/api/reports/z-report', async (req, res, next) => {
       [date],
     );
 
-    await client.query('COMMIT');
+    await client.query("COMMIT");
     if (req.body.customer_email) {
       try {
-          const email = req.body.customer_email;
-          const name = req.body.customer_name || email.split('@')[0];
-          const googleId = req.body.google_id || email;
-          console.log(`[CHECKOUT] Attempting to link order ${orderId} to email: ${email}`);
-          let custRes = await pool.query(`SELECT customer_id FROM customer WHERE email = $1 LIMIT 1`, [email]);
-          let custId = custRes.rows[0]?.customer_id;
-          if (!custId) {
-              console.log(`[CHECKOUT] Customer not found. Auto-registering: ${email}`);
-              const insertRes = await pool.query(
-                  `INSERT INTO customer (email, name, google_id) VALUES ($1, $2, $3) RETURNING customer_id`,
-                  [email, name, googleId]
-              );
-              custId = insertRes.rows[0].customer_id;
-          }
-          await pool.query(
-            `UPDATE customer_order SET customer_id = $1 WHERE order_id = $2`,
-            [custId, orderId]
+        const email = req.body.customer_email;
+        const name = req.body.customer_name || email.split("@")[0];
+        const googleId = req.body.google_id || email;
+        console.log(
+          `[CHECKOUT] Attempting to link order ${orderId} to email: ${email}`,
+        );
+        let custRes = await pool.query(
+          `SELECT customer_id FROM customer WHERE email = $1 LIMIT 1`,
+          [email],
+        );
+        let custId = custRes.rows[0]?.customer_id;
+        if (!custId) {
+          console.log(
+            `[CHECKOUT] Customer not found. Auto-registering: ${email}`,
           );
-          console.log(`[CHECKOUT] Successfully linked order ${orderId} to customer_id ${custId}`);
-          
+          const insertRes = await pool.query(
+            `INSERT INTO customer (email, name, google_id) VALUES ($1, $2, $3) RETURNING customer_id`,
+            [email, name, googleId],
+          );
+          custId = insertRes.rows[0].customer_id;
+        }
+        await pool.query(
+          `UPDATE customer_order SET customer_id = $1 WHERE order_id = $2`,
+          [custId, orderId],
+        );
+        console.log(
+          `[CHECKOUT] Successfully linked order ${orderId} to customer_id ${custId}`,
+        );
       } catch (linkError) {
-          console.error("[CHECKOUT] FAILED TO LINK CUSTOMER:", linkError.message);
+        console.error("[CHECKOUT] FAILED TO LINK CUSTOMER:", linkError.message);
       }
-   }
+    }
 
     res.json({
       totalOrders: totals.rows[0]?.total_orders || 0,
@@ -1410,16 +1585,16 @@ app.post('/api/reports/z-report', async (req, res, next) => {
       generatedDate: new Date().toISOString().slice(0, 10),
     });
   } catch (error) {
-    await client.query('ROLLBACK');
+    await client.query("ROLLBACK");
     next(error);
   } finally {
     client.release();
   }
 });
 
-app.get('/api/customer/most-ordered', requireAuth(), async (req, res, next) => {
+app.get("/api/customer/most-ordered", requireAuth(), async (req, res, next) => {
   const email = req.user?.email;
-  if (!email) return res.status(401).json({ error: 'User email not found.' });
+  if (!email) return res.status(401).json({ error: "User email not found." });
 
   try {
     const result = await pool.query(
@@ -1433,94 +1608,113 @@ app.get('/api/customer/most-ordered', requireAuth(), async (req, res, next) => {
        ORDER BY order_count DESC
        LIMIT 12
        `,
-      [email]
+      [email],
     );
     res.json(result.rows);
   } catch (error) {
     console.error("Most Ordered SQL Error:", error.message);
-    res.json([]); 
-  }
-});
-
-app.get('/api/customer/saved-favorites', requireAuth(), async (req, res, next) => {
-  const email = req.user?.email;
-  if (!email) return res.status(401).json({ error: 'User email not found.' });
-  try {
-    const result = await pool.query(
-      `SELECT f.favorite_id, f.item_data
-       FROM customer_favorite f
-       JOIN customer c ON f.customer_id = c.customer_id
-       WHERE c.email = $1
-       ORDER BY f.favorite_id DESC`,
-      [email]
-    );
-    const parsed = result.rows.map(row => {
-        let safeData = row.item_data;
-        if (typeof row.item_data === 'string') {
-            try { safeData = JSON.parse(row.item_data); } catch(e) {}
-        }
-        return {
-            favorite_id: row.favorite_id,
-            item_data: safeData
-        };
-    });
-    res.json(parsed);
-  } catch (error) {
-    console.error("Saved Favorites Fetch Error:", error.message);
     res.json([]);
   }
 });
 
-app.post('/api/customer/saved-favorites', requireAuth(), async (req, res, next) => {
-  const email = req.body.customer_email;
-  const name = req.body.customer_name || email.split('@')[0];
-  const googleId = req.body.google_id || email;
-  const itemDataStr = JSON.stringify(req.body.item_data);
+app.get(
+  "/api/customer/saved-favorites",
+  requireAuth(),
+  async (req, res, next) => {
+    const email = req.user?.email;
+    if (!email) return res.status(401).json({ error: "User email not found." });
+    try {
+      const result = await pool.query(
+        `SELECT f.favorite_id, f.item_data
+       FROM customer_favorite f
+       JOIN customer c ON f.customer_id = c.customer_id
+       WHERE c.email = $1
+       ORDER BY f.favorite_id DESC`,
+        [email],
+      );
+      const parsed = result.rows.map((row) => {
+        let safeData = row.item_data;
+        if (typeof row.item_data === "string") {
+          try {
+            safeData = JSON.parse(row.item_data);
+          } catch (e) {}
+        }
+        return {
+          favorite_id: row.favorite_id,
+          item_data: safeData,
+        };
+      });
+      res.json(parsed);
+    } catch (error) {
+      console.error("Saved Favorites Fetch Error:", error.message);
+      res.json([]);
+    }
+  },
+);
 
-  try {
-      let custRes = await pool.query(`SELECT customer_id FROM customer WHERE email = $1 LIMIT 1`, [email]);
+app.post(
+  "/api/customer/saved-favorites",
+  requireAuth(),
+  async (req, res, next) => {
+    const email = req.body.customer_email;
+    const name = req.body.customer_name || email.split("@")[0];
+    const googleId = req.body.google_id || email;
+    const itemDataStr = JSON.stringify(req.body.item_data);
+
+    try {
+      let custRes = await pool.query(
+        `SELECT customer_id FROM customer WHERE email = $1 LIMIT 1`,
+        [email],
+      );
       let custId = custRes.rows[0]?.customer_id;
       if (!custId) {
-          const insertRes = await pool.query(
-              `INSERT INTO customer (email, name, google_id) VALUES ($1, $2, $3) RETURNING customer_id`,
-              [email, name, googleId]
-          );
-          custId = insertRes.rows[0].customer_id;
+        const insertRes = await pool.query(
+          `INSERT INTO customer (email, name, google_id) VALUES ($1, $2, $3) RETURNING customer_id`,
+          [email, name, googleId],
+        );
+        custId = insertRes.rows[0].customer_id;
       }
       const favRes = await pool.query(
-          `INSERT INTO customer_favorite (customer_id, item_data) VALUES ($1, $2) RETURNING favorite_id`,
-          [custId, itemDataStr]
+        `INSERT INTO customer_favorite (customer_id, item_data) VALUES ($1, $2) RETURNING favorite_id`,
+        [custId, itemDataStr],
       );
       res.json({ favorite_id: favRes.rows[0].favorite_id });
-  } catch (err) {
+    } catch (err) {
       console.error("Failed to save favorite:", err.message);
-      res.status(500).json({ error: 'Failed to save favorite' });
-  }
-});
+      res.status(500).json({ error: "Failed to save favorite" });
+    }
+  },
+);
 
-app.delete('/api/customer/saved-favorites/:id', requireAuth(), async (req, res, next) => {
-  try {
-      await pool.query(`DELETE FROM customer_favorite WHERE favorite_id = $1`, [req.params.id]);
+app.delete(
+  "/api/customer/saved-favorites/:id",
+  requireAuth(),
+  async (req, res, next) => {
+    try {
+      await pool.query(`DELETE FROM customer_favorite WHERE favorite_id = $1`, [
+        req.params.id,
+      ]);
       res.json({ success: true });
-  } catch (err) {
+    } catch (err) {
       console.error("Failed to delete favorite:", err.message);
-      res.status(500).json({ error: 'Failed to delete favorite' });
-  }
-});
+      res.status(500).json({ error: "Failed to delete favorite" });
+    }
+  },
+);
 
 // Z-Report POST redirect
-app.post('/api/reports/z', async (req, res, next) => {
-  res.redirect(307, '/api/reports/z-report');
+app.post("/api/reports/z", async (req, res, next) => {
+  res.redirect(307, "/api/reports/z-report");
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
+  res.status(500).json({ error: "Something went wrong!" });
 });
 
 // Start server (only in development)
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== "production") {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });

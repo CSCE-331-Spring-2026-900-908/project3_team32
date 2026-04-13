@@ -798,8 +798,14 @@
 }
 
 @keyframes slideDown {
-  from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 .confirmation-content {
@@ -812,6 +818,23 @@
   gap: 1.5rem;
   border: 3px solid #10b981;
   min-width: 400px;
+  position: relative;
+}
+
+.confirmation-close-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #666;
+  line-height: 1;
+}
+
+.confirmation-close-btn:hover {
+  color: #2f2f2f;
 }
 
 .confirmation-checkmark {
@@ -829,8 +852,12 @@
 }
 
 @keyframes scaleIn {
-  from { transform: scale(0); }
-  to { transform: scale(1); }
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
 }
 
 .confirmation-text {
@@ -864,7 +891,7 @@
 .accessibility-toggle-btn {
   background: rgba(255, 255, 255, 0.2);
   color: white;
-  border: 2px solid white; 
+  border: 2px solid white;
   padding: 0.75rem 1.5rem;
   border-radius: 12px;
   font-size: 1rem;
@@ -908,7 +935,7 @@
   position: absolute;
   top: calc(100% + 12px);
   right: 0;
-  width: 700px; 
+  width: 700px;
   background: white;
   border-radius: 20px;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25);
@@ -931,7 +958,8 @@
 
 .accessibility-toggle-btn:hover img,
 .accessibility-toggle-btn[aria-expanded="true"] img {
-  filter: brightness(0) saturate(100%) invert(26%) sepia(90%) saturate(614%) hue-rotate(357deg) brightness(91%) contrast(87%);
+  filter: brightness(0) saturate(100%) invert(26%) sepia(90%) saturate(614%)
+    hue-rotate(357deg) brightness(91%) contrast(87%);
 }
 
 .accessibility-panel.open {
@@ -979,7 +1007,7 @@
   appearance: none;
   display: block;
   width: 100%;
-  height: 20px; 
+  height: 20px;
   margin: 1.2rem 0;
   border-radius: 999px;
   background: #e5d4b8;
@@ -995,7 +1023,7 @@
   border-radius: 50%;
   background: #8b4513;
   border: 4px solid white;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   cursor: pointer;
 }
 
@@ -1005,7 +1033,7 @@
   border-radius: 50%;
   background: #8b4513;
   border: 4px solid white;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   cursor: pointer;
 }
 
@@ -1103,7 +1131,7 @@
   position: fixed;
   border-radius: 50%;
   border: 4px solid #8b4513;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.55);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.55);
   overflow: hidden;
   transform: translate(-50%, -50%);
   pointer-events: none;
@@ -1167,7 +1195,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
   padding: 0;
 }
 
@@ -1364,6 +1395,11 @@
   background: #fef3c7;
   color: #92400e;
   border-color: #fcd34d;
+}
+
+.order-status-ready {
+  background: #22c55e;
+  color: #fff;
 }
 
 .order-history-meta {
@@ -1651,8 +1687,12 @@
 }
 
 @keyframes modalFadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .customize-modal-card {
@@ -1668,8 +1708,14 @@
 }
 
 @keyframes modalSlideUp {
-  from { opacity: 0; transform: translateY(24px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .customize-modal-image-placeholder {
@@ -1686,10 +1732,14 @@
 
 /* Subtle radial glow behind the icon */
 .customize-modal-image-placeholder::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at 50% 60%, rgba(255,255,255,0.12) 0%, transparent 70%);
+  background: radial-gradient(
+    ellipse at 50% 60%,
+    rgba(255, 255, 255, 0.12) 0%,
+    transparent 70%
+  );
   pointer-events: none;
 }
 
@@ -1807,7 +1857,9 @@
   font-size: 1.15rem;
   font-weight: 800;
   cursor: pointer;
-  transition: background 0.2s, transform 0.15s;
+  transition:
+    background 0.2s,
+    transform 0.15s;
   letter-spacing: 0.01em;
 }
 
@@ -1865,10 +1917,13 @@
   align-items: center;
   justify-content: center;
   color: #ccc;
-  transition: color 0.18s, transform 0.15s, background 0.18s;
+  transition:
+    color 0.18s,
+    transform 0.15s,
+    background 0.18s;
   z-index: 2;
   padding: 0;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
 
 .heart-btn:hover {
@@ -1954,7 +2009,9 @@
   scrollbar-width: none;
 }
 
-.cart-panel-weather-week::-webkit-scrollbar { display: none; }
+.cart-panel-weather-week::-webkit-scrollbar {
+  display: none;
+}
 
 .cart-panel-weather-day {
   display: flex;
@@ -1962,7 +2019,7 @@
   align-items: center;
   gap: 0.15rem;
   min-width: 2.8rem;
-  background: rgba(255,255,255,0.55);
+  background: rgba(255, 255, 255, 0.55);
   border-radius: 8px;
   padding: 0.35rem 0.25rem;
   flex-shrink: 0;
