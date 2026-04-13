@@ -1843,3 +1843,140 @@
     grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   }
 }
+
+/* ── Heart / Favorite button on menu cards ────────────────────────── */
+.menu-item-card {
+  position: relative;
+}
+
+.heart-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: rgba(255, 255, 255, 0.85);
+  border: none;
+  border-radius: 50%;
+  width: 2rem;
+  height: 2rem;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ccc;
+  transition: color 0.18s, transform 0.15s, background 0.18s;
+  z-index: 2;
+  padding: 0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+
+.heart-btn:hover {
+  transform: scale(1.2);
+  background: white;
+}
+
+.heart-btn--active {
+  color: #e53935;
+}
+
+/* ── Menu empty state (Favorites / Most Ordered with no data) ─────── */
+.menu-empty-state {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  color: #a0856c;
+  text-align: center;
+  gap: 0.75rem;
+}
+
+.menu-empty-icon {
+  font-size: 3rem;
+  margin-bottom: 0.25rem;
+}
+
+.menu-empty-state p {
+  font-size: 1rem;
+  max-width: 260px;
+  line-height: 1.5;
+}
+
+/* ── Most Ordered count badge on card ────────────────────────────── */
+.item-order-count {
+  font-size: 0.75rem;
+  color: #a0856c;
+  margin-top: 0.25rem;
+  font-style: italic;
+}
+
+/* ── Weather widget in cart empty panel ──────────────────────────── */
+.cart-panel-weather {
+  width: 100%;
+  background: linear-gradient(135deg, #e8f4fd, #d0e8f5);
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+  margin-bottom: 1.25rem;
+  text-align: center;
+  border: 1px solid #b8d4e8;
+}
+
+.cart-panel-weather-header {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #5a7fa0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.25rem;
+}
+
+.cart-panel-weather-temp {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #2c5f8a;
+  line-height: 1.1;
+}
+
+.cart-panel-weather-desc {
+  font-size: 0.85rem;
+  color: #4a7aa0;
+  margin-top: 0.15rem;
+  margin-bottom: 0.75rem;
+}
+
+.cart-panel-weather-week {
+  display: flex;
+  gap: 0.3rem;
+  overflow-x: auto;
+  padding: 0 0.25rem 0.25rem;
+  scrollbar-width: none;
+}
+
+.cart-panel-weather-week::-webkit-scrollbar { display: none; }
+
+.cart-panel-weather-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 2.8rem;
+  background: rgba(255,255,255,0.55);
+  border-radius: 8px;
+  padding: 0.35rem 0.25rem;
+  flex-shrink: 0;
+}
+
+.weather-day-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #4a7aa0;
+  text-transform: uppercase;
+}
+
+.weather-day-range {
+  font-size: 0.68rem;
+  color: #2c5f8a;
+  white-space: nowrap;
+}

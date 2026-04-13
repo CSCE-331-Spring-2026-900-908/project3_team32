@@ -12,10 +12,31 @@ const DIAMOND_POINTS_THRESHOLD = PLATINUM_POINTS_THRESHOLD + 5000;
 const REWARDS_WINDOW_MS = 365 * 24 * 60 * 60 * 1000;
 
 const LANGUAGE_CODE_ALIASES = { iw: 'he', jw: 'jv' };
+const WEEKDAY_FORMATTER = new Intl.DateTimeFormat('en-US', { weekday: 'short' });
 
 const SCREEN = { MENU: 'MENU', CUSTOMIZE: 'CUSTOMIZE', CART: 'CART', CHECKOUT: 'CHECKOUT' };
 
-function currency(value) { return `$${value.toFixed(2)}`; }
+function currency(value) {
+  const num = Number(value);
+  if (isNaN(num)) return '$0.00';
+  return `$${num.toFixed(2)}`;
+}
+
+function describeWeatherCode(code) {
+  const map = {
+    0:'Sunny',1:'Mostly clear',2:'Partly cloudy',3:'Cloudy',45:'Foggy',48:'Rime fog',
+    51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',
+    71:'Light snow',73:'Snow',75:'Heavy snow',80:'Light showers',81:'Showers',82:'Heavy showers',
+    95:'Thunderstorm',96:'Thunderstorm & hail',99:'Heavy hail storm',
+  };
+  return map[Number(code)] || 'Weather unavailable';
+}
+
+function formatWeekdayLabel(dateString) {
+  if (!dateString) return '';
+  const d = new Date(`${dateString}T12:00:00`);
+  return isNaN(d.getTime()) ? '' : WEEKDAY_FORMATTER.format(d);
+}
 
 function pointsFromAmount(amount) {
   const numericAmount = Number(amount);
@@ -85,13 +106,19 @@ export default function CustomerScreen() {
   const [fontSize, setFontSize] = useState(100);
 
   const [menuItems, setMenuItems] = useState([]);
+  const [mostOrderedItems, setMostOrderedItems] = useState([]);
+  const [savedFavorites, setSavedFavorites] = useState([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [sugarOptions, setSugarOptions] = useState([]);
   const [iceOptions, setIceOptions] = useState([]);
   const [toppingOptions, setToppingOptions] = useState([]);
   const [customerOrders, setCustomerOrders] = useState([]);
   const [isEmployeeRewardsUser, setIsEmployeeRewardsUser] = useState(false);
+  const [weather, setWeather] = useState(null);
+  const [weeklyWeather, setWeeklyWeather] = useState([]);
+  const [weatherLoading, setWeatherLoading] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [categories, setCategories] = useState(['All']);
+  const [categories, setCategories] = useState(['Favorites', 'Most Ordered', 'All']);
 
   const magnifierRef = useRef(null);
   const lensInnerRef = useRef(null);
@@ -122,7 +149,7 @@ export default function CustomerScreen() {
           ...CATEGORY_ORDER.filter(c => rawCategories.includes(c)),
           ...rawCategories.filter(c => !CATEGORY_ORDER.includes(c)),
         ];
-        setCategories(['All', ...sortedCategories]);
+        setCategories(['Favorites', 'Most Ordered', 'All', ...sortedCategories]);
         const modRes = await fetch(`${API_BASE}/cashier/modifications`);
         const modData = await modRes.json();
         setSugarOptions((modData.sugar || []).map(m => ({ id: m.modification_type_id, name: m.name, cost: Number(m.cost) })));
@@ -160,7 +187,7 @@ export default function CustomerScreen() {
 
     loadCustomerOrders();
     return () => { cancelled = true; };
-  }, [token, user?.type]);
+  }, [token, user?.type, refreshTrigger]);
 
   useEffect(() => {
     const email = (user?.email || '').trim().toLowerCase();
@@ -192,6 +219,71 @@ export default function CustomerScreen() {
     loadEmployeeMatch();
     return () => { cancelled = true; };
   }, [token, user?.email]);
+
+  // ── Weather (College Station, refreshes every 10 min) ──────────────
+  useEffect(() => {
+    let cancelled = false;
+    let timerId = null;
+    async function loadWeather() {
+      try {
+        setWeatherLoading(true);
+        const res = await fetch(`${API_BASE}/external/weather?city=College%20Station,US`);
+        if (!res.ok) throw new Error('weather fetch failed');
+        const data = await res.json();
+        if (cancelled) return;
+        setWeather(data);
+        let weekly = Array.isArray(data.dailyForecast) ? data.dailyForecast.slice(0, 7) : [];
+        if (!weekly.length) {
+          try {
+            const wr = await fetch('https://api.open-meteo.com/v1/forecast?latitude=30.6280&longitude=-96.3344&daily=weather_code,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto&forecast_days=7');
+            if (wr.ok) {
+              const wd = await wr.json();
+              const times = wd.daily?.time || [];
+              weekly = times.map((date, i) => ({
+                date,
+                description: describeWeatherCode(wd.daily.weather_code?.[i]),
+                maxTemp: Number(wd.daily.temperature_2m_max?.[i]),
+                minTemp: Number(wd.daily.temperature_2m_min?.[i]),
+              }));
+            }
+          } catch { /* ignore */ }
+        }
+        if (!cancelled) setWeeklyWeather(weekly);
+      } catch {
+        if (!cancelled) { setWeather(null); setWeeklyWeather([]); }
+      } finally {
+        if (!cancelled) setWeatherLoading(false);
+      }
+    }
+    loadWeather();
+    timerId = window.setInterval(loadWeather, 10 * 60 * 1000);
+    return () => { cancelled = true; window.clearInterval(timerId); };
+  }, []);
+
+  // ── Most ordered (per signed-in customer) ─────────────────────────
+  useEffect(() => {
+    if (!user || !token || user.type !== 'customer' || user.guest) return;
+    fetch(`${API_BASE}/customer/most-ordered`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.error && Array.isArray(data)) {
+          setMostOrderedItems(data.map(item => ({ ...item, id: item.menu_item_id, cost: Number(item.cost) })));
+        }
+      })
+      .catch(console.error);
+  }, [user, token, refreshTrigger]);
+
+  // ── Saved favorites (per signed-in customer, DB-backed) ───────────
+  useEffect(() => {
+    if (!user || !token || user.type !== 'customer' || user.guest) {
+      setSavedFavorites([]);
+      return;
+    }
+    fetch(`${API_BASE}/customer/saved-favorites`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => { if (!data.error && Array.isArray(data)) setSavedFavorites(data); })
+      .catch(console.error);
+  }, [user, token, refreshTrigger]);
 
   useEffect(() => {
     let labelInterval = null;
@@ -385,6 +477,8 @@ export default function CustomerScreen() {
 
 
   const visibleItems = useMemo(() => {
+    if (selectedCategory === 'Favorites') return [];
+    if (selectedCategory === 'Most Ordered') return [];
     if (selectedCategory === 'All') return menuItems;
     return menuItems.filter(item => item.category === selectedCategory);
   }, [selectedCategory, menuItems]);
@@ -443,6 +537,48 @@ export default function CustomerScreen() {
     if (rewardsStatus.tier === 'Gold') return 'gold';
     return 'member';
   }, [rewardsStatus.tier]);
+
+  function getFavoriteMatch(item) {
+    const targetId = item.id ?? item.menu_item_id;
+    return savedFavorites.find(fav => {
+      const favItemId = fav.item_data?.menu_item_id ?? fav.item_data?.id ?? fav.menu_item_id;
+      return favItemId === targetId;
+    });
+  }
+
+  async function handleToggleFavorite(item, e) {
+    e.stopPropagation();
+    if (!user || !token || user.guest) {
+      alert('Sign in to save favorites!');
+      return;
+    }
+    const fav = getFavoriteMatch(item);
+    try {
+      if (fav) {
+        await fetch(`${API_BASE}/customer/saved-favorites/${fav.favorite_id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setSavedFavorites(prev => prev.filter(f => f.favorite_id !== fav.favorite_id));
+      } else {
+        const itemData = { menu_item_id: item.id, name: item.name, cost: item.cost, category: item.category };
+        const res = await fetch(`${API_BASE}/customer/saved-favorites`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            customer_email: user.email,
+            customer_name: user.name || user.email,
+            google_id: user.sub || user.google_id || user.email,
+            item_data: itemData,
+          }),
+        });
+        const data = await res.json();
+        if (!data.error) setSavedFavorites(prev => [...prev, { favorite_id: data.favorite_id, item_data: itemData }]);
+      }
+    } catch (err) {
+      console.error('Toggle favorite failed:', err);
+    }
+  }
 
   function clearCustomization() {
     setSelectedSugar(null); setSelectedIce(null);
@@ -549,6 +685,9 @@ export default function CustomerScreen() {
       try {
         const orderPayload = {
           employee_id: 1, payment_type: paymentType,
+          customer_email: user?.email || null,
+          customer_name: user?.name || null,
+          google_id: user?.sub || user?.google_id || null,
           items: cart.map(item => ({ menu_item_id: item.menuItemId, quantity: item.quantity || 1, modification_ids: item.modificationIds || [], comments: item.comments || '' }))
         };
         const headers = { 'Content-Type': 'application/json' };
@@ -559,6 +698,7 @@ export default function CustomerScreen() {
         const orderNum = result.order?.order_id || Math.floor(1000 + Math.random() * 9000);
         setCustomerOrders(prev => [{ order_id: orderNum, order_date: new Date().toISOString(), total_cost: discountedSubtotal }, ...prev]);
         setCart([]); setOrderNumber(orderNum); setScreen(SCREEN.MENU); setShowConfirmation(true);
+        setRefreshTrigger(prev => prev + 1);
         setTimeout(() => { setShowConfirmation(false); setOrderNumber(null); }, 5000);
       } catch (error) {
         console.error('Order submission error:', error);
@@ -710,12 +850,75 @@ export default function CustomerScreen() {
                   ))}
                 </div>
                 <div className="menu-grid">
-                  {visibleItems.map(item => (
-                    <button key={item.id} className="menu-item-card" onClick={() => handleSelectItem(item)}>
-                      <div className="item-name">{item.name}</div>
-                      <div className="item-price">{currency(item.cost)}</div>
-                    </button>
-                  ))}
+                  {selectedCategory === 'Favorites' ? (
+                    savedFavorites.length === 0 ? (
+                      <div className="menu-empty-state">
+                        <div className="menu-empty-icon">🤍</div>
+                        <p>{user?.guest ? 'Sign in to save favorites!' : 'No favorites yet — tap ♥ on any drink to save it.'}</p>
+                      </div>
+                    ) : (
+                      savedFavorites.map(fav => {
+                        const favItemId = fav.item_data?.menu_item_id ?? fav.item_data?.id;
+                        const menuItem = menuItems.find(m => m.id === favItemId) || {
+                          id: favItemId,
+                          name: fav.item_data?.name || 'Unknown',
+                          cost: Number(fav.item_data?.cost) || 0,
+                          category: fav.item_data?.category || 'Other',
+                        };
+                        return (
+                          <button key={fav.favorite_id} className="menu-item-card" onClick={() => handleSelectItem(menuItem)}>
+                            <button
+                              className="heart-btn heart-btn--active"
+                              onClick={(e) => handleToggleFavorite(menuItem, e)}
+                              aria-label="Remove from favorites"
+                            >♥</button>
+                            <div className="item-name">{menuItem.name}</div>
+                            <div className="item-price">{currency(menuItem.cost)}</div>
+                          </button>
+                        );
+                      })
+                    )
+                  ) : selectedCategory === 'Most Ordered' ? (
+                    mostOrderedItems.length === 0 ? (
+                      <div className="menu-empty-state">
+                        <div className="menu-empty-icon">📊</div>
+                        <p>{user?.guest ? 'Sign in to see your most ordered drinks.' : 'Place your first order to see your favorites here!'}</p>
+                      </div>
+                    ) : (
+                      mostOrderedItems.map(item => {
+                        const isFav = !!getFavoriteMatch(item);
+                        return (
+                          <button key={item.id} className="menu-item-card" onClick={() => handleSelectItem(item)}>
+                            <button
+                              className={`heart-btn${isFav ? ' heart-btn--active' : ''}`}
+                              onClick={(e) => handleToggleFavorite(item, e)}
+                              aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                            >{isFav ? '♥' : '♡'}</button>
+                            <div className="item-name">{item.name}</div>
+                            <div className="item-price">{currency(item.cost)}</div>
+                            {item.order_count && (
+                              <div className="item-order-count">ordered {item.order_count}×</div>
+                            )}
+                          </button>
+                        );
+                      })
+                    )
+                  ) : (
+                    visibleItems.map(item => {
+                      const isFav = !!getFavoriteMatch(item);
+                      return (
+                        <button key={item.id} className="menu-item-card" onClick={() => handleSelectItem(item)}>
+                          <button
+                            className={`heart-btn${isFav ? ' heart-btn--active' : ''}`}
+                            onClick={(e) => handleToggleFavorite(item, e)}
+                            aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                          >{isFav ? '♥' : '♡'}</button>
+                          <div className="item-name">{item.name}</div>
+                          <div className="item-price">{currency(item.cost)}</div>
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
               </div>
 
@@ -725,6 +928,29 @@ export default function CustomerScreen() {
 
                 {cart.length === 0 ? (
                   <div className="cart-panel-empty">
+                    {weather && !weatherLoading && (
+                      <div className="cart-panel-weather">
+                        <div className="cart-panel-weather-header">📍 College Station</div>
+                        <div className="cart-panel-weather-temp">
+                          {Math.round(weather.temperature ?? weather.temp ?? 0)}°F
+                        </div>
+                        <div className="cart-panel-weather-desc">
+                          {weather.description ?? describeWeatherCode(weather.weather_code)}
+                        </div>
+                        {weeklyWeather.length > 0 && (
+                          <div className="cart-panel-weather-week">
+                            {weeklyWeather.map((day, i) => (
+                              <div key={i} className="cart-panel-weather-day">
+                                <span className="weather-day-label">{i === 0 ? 'Today' : formatWeekdayLabel(day.date)}</span>
+                                <span className="weather-day-range">
+                                  {Math.round(day.maxTemp ?? day.high ?? 0)}° / {Math.round(day.minTemp ?? day.low ?? 0)}°
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div className="cart-panel-empty-icon">🛒</div>
                     <p className="cart-panel-empty-msg">Your cart is empty</p>
                     <p className="cart-panel-empty-sub">Tap any drink to get started</p>
