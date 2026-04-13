@@ -348,11 +348,46 @@ export default function CustomerScreen() {
   }, [translateContainerId]);
 
   useEffect(() => {
-    const root = document.documentElement;
-    const prev = root.style.fontSize;
-    root.style.fontSize = `${textScale}%`;
-    return () => { root.style.fontSize = prev; };
-  }, [textScale]);
+    const scale = fontSize / 100;
+    const id = 'customer-font-size-override';
+    let tag = document.getElementById(id);
+    if (!tag) {
+      tag = document.createElement('style');
+      tag.id = id;
+      document.head.appendChild(tag);
+    }
+    tag.textContent = `
+      .customer-page .customer-header h1            { font-size: ${2 * scale}rem !important; }
+      .customer-page .accessibility-toggle-btn      { font-size: ${1 * scale}rem !important; }
+      .customer-page .exit-btn                      { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .category-tab                  { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .item-name                     { font-size: ${1.25 * scale}rem !important; }
+      .customer-page .item-price                    { font-size: ${1.5 * scale}rem !important; }
+      .customer-page .customize-header h2           { font-size: ${1.5 * scale}rem !important; }
+      .customer-page .customize-section h3          { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .option-btn                    { font-size: ${1 * scale}rem !important; }
+      .customer-page .btn-primary,
+      .customer-page .btn-secondary                 { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .cart-item-name                { font-size: ${1 * scale}rem !important; }
+      .customer-page .cart-item-price               { font-size: ${1 * scale}rem !important; }
+      .customer-page .cart-total-line               { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .cart-total-line-final         { font-size: ${1.4 * scale}rem !important; }
+      .customer-page .checkout-screen h2            { font-size: ${1.5 * scale}rem !important; }
+      .customer-page .summary-row                   { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .summary-row.total             { font-size: ${1.5 * scale}rem !important; }
+      .customer-page .payment-btn                   { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .cart-badge                    { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .customer-user-name            { font-size: ${0.9 * scale}rem !important; }
+      .customer-page .customize-progress            { font-size: ${1 * scale}rem !important; }
+      .customer-page .cart-items-title              { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .cart-screen h2                { font-size: ${1.5 * scale}rem !important; }
+      .customer-page .rewards-line                  { font-size: ${0.88 * scale}rem !important; }
+      .customer-page .cart-item-detail              { font-size: ${0.9 * scale}rem !important; }
+      .customer-page .option-cost                   { font-size: ${0.9 * scale}rem !important; }
+      .customer-page .comments-input                { font-size: ${1 * scale}rem !important; }
+    `;
+    return () => { tag.textContent = ''; };
+  }, [fontSize]);
 
   // fontSize is applied via an injected <style> tag so it overrides rem-based values
   useEffect(() => {
@@ -409,6 +444,12 @@ export default function CustomerScreen() {
     }
     return () => { root.style.filter = ''; };
   }, [highContrastEnabled]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--a11y-font-size', `${fontSize}%`);
+    return () => { root.style.removeProperty('--a11y-font-size'); };
+  }, [fontSize]);
 
   // The "click outside to close" useEffect has been completely removed to lock the menu open.
 
