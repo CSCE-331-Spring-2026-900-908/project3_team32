@@ -26,56 +26,56 @@ def generate_menu_items():
 
     # (menu_item_id, name, cost, category)
     menu_items = [
-        # ── MILK TEA ──────────────────────────────────────────────────────────
-        (1,  'Classic Pearl Milk Tea',                  6.25, 'Milk Tea'),
-        (2,  'Honey Pearl Milk Tea',                    6.50, 'Milk Tea'),
-        (4,  'Coffee Milk Tea w/ Coffee Jelly',         6.75, 'Milk Tea'),
-        (5,  'Hokkaido Pearl Milk Tea',                 6.50, 'Milk Tea'),
-        (6,  'Thai Pearl Milk Tea',                     6.25, 'Milk Tea'),
-        (7,  'Taro Pearl Milk Tea',                     6.50, 'Milk Tea'),
-        (10, 'Coconut Pearl Milk Tea',                  6.50, 'Milk Tea'),
-        (27, 'Matcha Pearl Milk Tea',                   6.75, 'Milk Tea'),
+        # ── MILKY SERIES ─────────────────────────────────────────────────────
+        (1,  'Classic Pearl Milk Tea',                6.25, 'Milky Series'),
+        (2,  'Honey Pearl Milk Tea',                  6.50, 'Milky Series'),
+        (3,  'Coffee Creama',                         6.25, 'Milky Series'),
+        (4,  'Coffee Milk Tea w/ Coffee Jelly',       6.75, 'Milky Series'),
+        (5,  'Hokkaido Pearl Milk Tea',               6.50, 'Milky Series'),
+        (6,  'Thai Pearl Milk Tea',                   6.25, 'Milky Series'),
+        (7,  'Taro Pearl Milk Tea',                   6.50, 'Milky Series'),
+        (8,  'Mango Green Milk Tea',                  6.50, 'Milky Series'),
+        (9,  'Golden Retriever',                      6.75, 'Milky Series'),
+        (10, 'Coconut Pearl Milk Tea',                6.50, 'Milky Series'),
 
-        # ── FRUIT TEA ─────────────────────────────────────────────────────────
-        (8,  'Mango Green Milk Tea',                    6.50, 'Fruit Tea'),
-        (13, 'Mango Green Tea',                         6.25, 'Fruit Tea'),
-        (15, 'Berry Lychee Burst',                      6.50, 'Fruit Tea'),
-        (16, 'Peach Tea w/ Honey Jelly',                6.50, 'Fruit Tea'),
-        (17, 'Mango & Passion Fruit Tea',               6.25, 'Fruit Tea'),
-        (30, 'Mango Matcha Fresh Milk',                 7.00, 'Fruit Tea'),
-        (36, 'Mango w/ Ice Cream',                      7.50, 'Fruit Tea'),
-        (37, 'Strawberry w/ Lychee Jelly & Ice Cream',  7.75, 'Fruit Tea'),
-        (38, 'Peach Tea w/ Lychee Jelly',               7.00, 'Fruit Tea'),
+        # ── FRESH BREW ───────────────────────────────────────────────────────
+        (11, 'Classic Tea',                           5.25, 'Fresh Brew'),
+        (12, 'Honey Tea',                             5.50, 'Fresh Brew'),
 
-        # ── FRESH BREW ────────────────────────────────────────────────────────
-        (11, 'Classic Tea',                             5.25, 'Fresh Brew'),
-        (12, 'Honey Tea',                               5.50, 'Fresh Brew'),
+        # ── FRUITY BEVERAGE ──────────────────────────────────────────────────
+        (13, 'Mango Green Tea',                       6.25, 'Fruity Beverage'),
+        (14, 'Passion Chess',                         6.25, 'Fruity Beverage'),
+        (15, 'Berry Lychee Burst',                    6.50, 'Fruity Beverage'),
+        (16, 'Peach Tea w/ Honey Jelly',              6.50, 'Fruity Beverage'),
+        (17, 'Mango & Passion Fruit Tea',             6.25, 'Fruity Beverage'),
+        (18, 'Honey Lemonade',                        5.75, 'Fruity Beverage'),
 
-        # ── MATCHA ────────────────────────────────────────────────────────────
-        (28, 'Matcha Fresh Milk',                       6.50, 'Matcha'),
-        (29, 'Strawberry Matcha Fresh Milk',            7.00, 'Matcha'),
+        # ── NON-CAFFEINATED ──────────────────────────────────────────────────
+        (19, 'Tiger Boba',                            6.75, 'Non-Caffeinated'),
+        (20, 'Strawberry Coconut',                    6.75, 'Non-Caffeinated'),
+        (21, 'Strawberry Coconut Ice Blended',        7.25, 'Non-Caffeinated'),
+        (22, 'Halo Halo',                             7.50, 'Non-Caffeinated'),
+        (23, 'Halo Halo Ice Blended',                 7.75, 'Non-Caffeinated'),
+        (24, 'Wintermelon Lemonade',                  5.75, 'Non-Caffeinated'),
+        (25, 'Wintermelon Lemonade Ice Blended',      6.25, 'Non-Caffeinated'),
+        (26, 'Wintermelon w/ Fresh Milk',             6.25, 'Non-Caffeinated'),
 
-        # ── ICE BLENDED ───────────────────────────────────────────────────────
-        (21, 'Strawberry Coconut Ice Blended',          7.25, 'Ice Blended'),
-        (23, 'Halo Halo Ice Blended',                   7.75, 'Ice Blended'),
-        (25, 'Wintermelon Lemonade Ice Blended',        6.25, 'Ice Blended'),
-        (31, 'Matcha Ice Blended',                      7.25, 'Ice Blended'),
-        (32, 'Oreo w/ Pearl',                           7.25, 'Ice Blended'),
-        (33, 'Taro w/ Pudding',                         7.25, 'Ice Blended'),
-        (34, 'Thai Tea w/ Pearl',                       7.00, 'Ice Blended'),
-        (35, 'Coffee w/ Ice Cream',                     7.50, 'Ice Blended'),
-        (39, 'Lava Flow',                               7.75, 'Ice Blended'),
+        # ── NEW MATCHA SERIES ────────────────────────────────────────────────
+        (27, 'Matcha Pearl Milk Tea',                 6.75, 'New Matcha Series'),
+        (28, 'Matcha Fresh Milk',                     6.50, 'New Matcha Series'),
+        (29, 'Strawberry Matcha Fresh Milk',          7.00, 'New Matcha Series'),
+        (30, 'Mango Matcha Fresh Milk',               7.00, 'New Matcha Series'),
+        (31, 'Matcha Ice Blended',                    7.25, 'New Matcha Series'),
 
-        # ── SPECIALTY ─────────────────────────────────────────────────────────
-        (3,  'Coffee Creama',                           6.25, 'Specialty'),
-        (9,  'Golden Retriever',                        6.75, 'Specialty'),
-        (14, 'Passion Chess',                           6.25, 'Specialty'),
-        (18, 'Honey Lemonade',                          5.75, 'Specialty'),
-        (19, 'Tiger Boba',                              6.75, 'Specialty'),
-        (20, 'Strawberry Coconut',                      6.75, 'Specialty'),
-        (22, 'Halo Halo',                               7.50, 'Specialty'),
-        (24, 'Wintermelon Lemonade',                    5.75, 'Specialty'),
-        (26, 'Wintermelon w/ Fresh Milk',               6.25, 'Specialty'),
+        # ── ICE-BLENDED ──────────────────────────────────────────────────────
+        (32, 'Oreo w/ Pearl',                         7.25, 'Ice-Blended'),
+        (33, 'Taro w/ Pudding',                       7.25, 'Ice-Blended'),
+        (34, 'Thai Tea w/ Pearl',                     7.00, 'Ice-Blended'),
+        (35, 'Coffee w/ Ice Cream',                   7.50, 'Ice-Blended'),
+        (36, 'Mango w/ Ice Cream',                    7.50, 'Ice-Blended'),
+        (37, 'Strawberry w/ Lychee Jelly & Ice Cream',7.75, 'Ice-Blended'),
+        (38, 'Peach Tea w/ Lychee Jelly',             7.00, 'Ice-Blended'),
+        (39, 'Lava Flow',                             7.75, 'Ice-Blended'),
     ]
 
     # Sort by menu_item_id for clean CSV output
@@ -91,7 +91,7 @@ def generate_menu_items():
     from collections import Counter
     counts = Counter(row[3] for row in menu_items)
     print(f"✓ Generated {len(menu_items)} menu items → data/menu_items.csv")
-    for cat in ['Milk Tea', 'Fruit Tea', 'Fresh Brew', 'Matcha', 'Ice Blended', 'Specialty']:
+    for cat in ['Milky Series', 'Fresh Brew', 'Fruity Beverage', 'Non-Caffeinated', 'New Matcha Series', 'Ice-Blended']:
         print(f"    {cat}: {counts.get(cat, 0)} items")
 
     # ── INVENTORY MAPPINGS ────────────────────────────────────────────────────
