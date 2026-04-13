@@ -137,7 +137,7 @@ export default function CustomerScreen() {
   const { user, token, logout } = useAuth();
   const [screen, setScreen] = useState(SCREEN.MENU);
   const [textScale, setTextScale] = useState(100);
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const [cart, setCart] = useState([]);
   const [currentItem, setCurrentItem] = useState(null);
   const [editingCartItemId, setEditingCartItemId] = useState(null);
@@ -150,7 +150,6 @@ export default function CustomerScreen() {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [trackedOrderId, setTrackedOrderId] = useState(null);
   const [orderStatus, setOrderStatus] = useState(null);
-  const [customizeModalOpen, setCustomizeModalOpen] = useState(false);
   const [ordersModalOpen, setOrdersModalOpen] = useState(false);
 
   const [accessibilityOpen, setAccessibilityOpen] = useState(false);
@@ -168,14 +167,19 @@ export default function CustomerScreen() {
   const [toppingOptions, setToppingOptions] = useState([]);
   const [customerOrders, setCustomerOrders] = useState([]);
   const [isEmployeeRewardsUser, setIsEmployeeRewardsUser] = useState(false);
-  const [weather, setWeather] = useState(null);
-  const [weeklyWeather, setWeeklyWeather] = useState([]);
-  const [weatherLoading, setWeatherLoading] = useState(true);
+  const [weather, setWeather] = useState(() => {
+    try { const c = sessionStorage.getItem("weather_cache"); return c ? JSON.parse(c).weather : null; } catch { return null; }
+  });
+  const [weeklyWeather, setWeeklyWeather] = useState(() => {
+    try { const c = sessionStorage.getItem("weather_cache"); return c ? JSON.parse(c).weekly || [] : []; } catch { return []; }
+  });
+  const [weatherLoading, setWeatherLoading] = useState(() => {
+    try { return !sessionStorage.getItem("weather_cache"); } catch { return true; }
+  });
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState([
     "Favorites",
     "Most Ordered",
-    "All",
   ]);
 
   const [showMenuBoard, setShowMenuBoard] = useState(false);
@@ -191,10 +195,7 @@ export default function CustomerScreen() {
     y: window.innerHeight / 2,
   });
 
-  const translateContainerId = useMemo(
-    () => `google_translate_${Math.random().toString(36).substring(7)}`,
-    [],
-  );
+  const translateContainerId = "google_translate_element";
 
   useEffect(() => {
     magnifierZoomRef.current = magnifierZoom;
@@ -233,7 +234,6 @@ export default function CustomerScreen() {
         setCategories([
           "Favorites",
           "Most Ordered",
-          "All",
           ...sortedCategories,
         ]);
         const modRes = await fetch(`${API_BASE}/cashier/modifications`);
@@ -370,7 +370,10 @@ export default function CustomerScreen() {
             /* ignore */
           }
         }
-        if (!cancelled) setWeeklyWeather(weekly);
+        if (!cancelled) {
+          setWeeklyWeather(weekly);
+          try { sessionStorage.setItem("weather_cache", JSON.stringify({ weather: data, weekly })); } catch {}
+        }
       } catch {
         if (!cancelled) {
           setWeather(null);
@@ -462,7 +465,8 @@ export default function CustomerScreen() {
       if (!window.google?.translate) return;
 
       const container = document.getElementById(translateContainerId);
-      if (!container || container.childElementCount > 0) return;
+      if (!container) return;
+      if (container.childElementCount > 0) return;
 
       try {
         new window.google.translate.TranslateElement(
@@ -504,28 +508,22 @@ export default function CustomerScreen() {
 
     window.googleTranslateElementInit = initializeGoogleTranslate;
 
-    const script = document.createElement("script");
-    script.id = GOOGLE_TRANSLATE_SCRIPT_ID;
-    script.src =
-      "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
-    script.async = true;
-    document.body.appendChild(script);
+    const existing = document.getElementById(GOOGLE_TRANSLATE_SCRIPT_ID);
+    if (!existing) {
+      const script = document.createElement("script");
+      script.id = GOOGLE_TRANSLATE_SCRIPT_ID;
+      script.src =
+        "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
+      script.async = true;
+      document.body.appendChild(script);
+    } else if (window.google?.translate) {
+      initializeGoogleTranslate();
+    }
 
     return () => {
       if (labelInterval) window.clearInterval(labelInterval);
-      const existingScript = document.getElementById(
-        GOOGLE_TRANSLATE_SCRIPT_ID,
-      );
-      if (existingScript) existingScript.remove();
-      if (window.google && window.google.translate) {
-        delete window.google.translate;
-      }
-      const injectedElements = document.querySelectorAll(
-        ".skiptranslate, iframe.goog-te-menu-frame, #goog-gt-tt",
-      );
-      injectedElements.forEach((el) => el.remove());
     };
-  }, [translateContainerId]);
+  }, []);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -547,37 +545,69 @@ export default function CustomerScreen() {
       document.head.appendChild(tag);
     }
     tag.textContent = `
+      /* ── Header ── */
       .customer-page .customer-header h1            { font-size: ${2 * scale}rem !important; }
       .customer-page .accessibility-toggle-btn      { font-size: ${1 * scale}rem !important; }
       .customer-page .exit-btn                      { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .menu-board-btn                { font-size: ${1 * scale}rem !important; }
+      .customer-page .customer-user-name            { font-size: ${0.9 * scale}rem !important; }
+      /* ── Menu / Kiosk ── */
       .customer-page .category-tab                  { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .kiosk-category-name           { font-size: ${1.15 * scale}rem !important; }
+      .customer-page .kiosk-back-btn                { font-size: ${1 * scale}rem !important; }
+      .customer-page .kiosk-category-title          { font-size: ${1.4 * scale}rem !important; }
       .customer-page .item-name                     { font-size: ${1.25 * scale}rem !important; }
       .customer-page .item-price                    { font-size: ${1.5 * scale}rem !important; }
-      .customer-page .customize-header h2           { font-size: ${1.5 * scale}rem !important; }
-      .customer-page .customize-section h3          { font-size: ${1.1 * scale}rem !important; }
-      .customer-page .option-btn                    { font-size: ${1 * scale}rem !important; }
-      .customer-page .btn-primary,
-      .customer-page .btn-secondary                 { font-size: ${1.1 * scale}rem !important; }
+      /* ── Customize steps ── */
+      .customer-page .customize-step-title          { font-size: ${1.5 * scale}rem !important; }
+      .customer-page .customize-step-subtitle       { font-size: ${0.9 * scale}rem !important; }
+      .customer-page .customize-option-name         { font-size: ${1 * scale}rem !important; }
+      .customer-page .customize-option-cost         { font-size: ${0.8 * scale}rem !important; }
+      .customer-page .customize-item-name           { font-size: ${1.15 * scale}rem !important; }
+      .customer-page .customize-item-price          { font-size: ${1.15 * scale}rem !important; }
+      .customer-page .customize-progress-label      { font-size: ${0.75 * scale}rem !important; }
+      .customer-page .customize-progress-dot        { font-size: ${0.85 * scale}rem !important; }
+      .customer-page .customize-nav-btn             { font-size: ${1 * scale}rem !important; }
+      .customer-page .customize-review-header h3    { font-size: ${1.15 * scale}rem !important; }
+      .customer-page .customize-review-header p     { font-size: ${0.8 * scale}rem !important; }
+      .customer-page .customize-review-label        { font-size: ${0.9 * scale}rem !important; }
+      .customer-page .customize-review-value        { font-size: ${0.95 * scale}rem !important; }
+      .customer-page .customize-review-topping-chip { font-size: ${0.8 * scale}rem !important; }
+      .customer-page .customize-review-total-label  { font-size: ${1 * scale}rem !important; }
+      .customer-page .customize-review-total-price  { font-size: ${1.35 * scale}rem !important; }
+      .customer-page .customize-review-breakdown-row { font-size: ${0.8 * scale}rem !important; }
+      .customer-page .customize-review-section-title { font-size: ${0.75 * scale}rem !important; }
+      .customer-page .customize-review-comments label { font-size: ${0.85 * scale}rem !important; }
+      .customer-page .comments-input                { font-size: ${0.95 * scale}rem !important; }
+      /* ── Cart screen ── */
+      .customer-page .cart-screen h2                { font-size: ${1.5 * scale}rem !important; }
       .customer-page .cart-item-name                { font-size: ${1 * scale}rem !important; }
       .customer-page .cart-item-price               { font-size: ${1 * scale}rem !important; }
+      .customer-page .cart-item-unit-price          { font-size: ${0.85 * scale}rem !important; }
+      .customer-page .cart-item-detail              { font-size: ${0.9 * scale}rem !important; }
+      .customer-page .cart-fav-btn                  { font-size: ${0.8 * scale}rem !important; }
+      .customer-page .cart-edit-btn                 { font-size: ${0.85 * scale}rem !important; }
       .customer-page .cart-total-line               { font-size: ${1.1 * scale}rem !important; }
       .customer-page .cart-total-line-final         { font-size: ${1.4 * scale}rem !important; }
+      .customer-page .cart-badge                    { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .cart-panel-empty-msg          { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .cart-panel-empty-sub          { font-size: ${0.95 * scale}rem !important; }
+      /* ── Checkout screen ── */
       .customer-page .checkout-screen h2            { font-size: ${1.5 * scale}rem !important; }
       .customer-page .summary-row                   { font-size: ${1.1 * scale}rem !important; }
       .customer-page .summary-row.total             { font-size: ${1.5 * scale}rem !important; }
       .customer-page .payment-btn                   { font-size: ${1.1 * scale}rem !important; }
-      .customer-page .cart-badge                    { font-size: ${1.1 * scale}rem !important; }
-      .customer-page .customer-user-name            { font-size: ${0.9 * scale}rem !important; }
-      .customer-page .customize-progress            { font-size: ${1 * scale}rem !important; }
-      .customer-page .cart-items-title              { font-size: ${1.1 * scale}rem !important; }
-      .customer-page .cart-screen h2                { font-size: ${1.5 * scale}rem !important; }
-      .customer-page .cart-panel-title              { font-size: ${1.4 * scale}rem !important; }
-      .customer-page .cart-panel-empty-msg          { font-size: ${1.1 * scale}rem !important; }
-      .customer-page .cart-panel-empty-sub          { font-size: ${0.95 * scale}rem !important; }
-      .customer-page .cart-panel-checkout-btn       { font-size: ${1.1 * scale}rem !important; }
-      .customer-page .cart-item-detail              { font-size: ${0.9 * scale}rem !important; }
-      .customer-page .option-cost                   { font-size: ${0.9 * scale}rem !important; }
-      .customer-page .comments-input                { font-size: ${1 * scale}rem !important; }
+      /* ── Rewards ── */
+      .customer-page .rewards-summary               { font-size: ${0.9 * scale}rem !important; }
+      .customer-page .rewards-line                  { font-size: ${0.9 * scale}rem !important; }
+      .customer-page .tier-chip                     { font-size: ${0.75 * scale}rem !important; }
+      /* ── Buttons ── */
+      .customer-page .btn-primary,
+      .customer-page .btn-secondary                 { font-size: ${1.1 * scale}rem !important; }
+      /* ── Weather ── */
+      .customer-page .kiosk-weather-current-temp    { font-size: ${2 * scale}rem !important; }
+      .customer-page .kiosk-weather-card-day        { font-size: ${0.75 * scale}rem !important; }
+      .customer-page .kiosk-weather-card-range      { font-size: ${0.85 * scale}rem !important; }
     `;
     return () => {
       tag.textContent = "";
@@ -601,6 +631,39 @@ export default function CustomerScreen() {
   useEffect(() => {
     if (!magnifierEnabled) return;
 
+    const SCROLLABLE = [
+      '.menu-left-col',
+      '.cart-panel-scroll-area',
+      '.orders-modal-body',
+      '.customize-step-content',
+      '.checkout-screen',
+      '.cart-screen',
+      '.customer-content-wrapper',
+    ];
+
+    function findReal(sel) {
+      const all = document.querySelectorAll(sel);
+      for (const el of all) {
+        if (!el.closest('.magnified-content')) return el;
+      }
+      return null;
+    }
+
+    function syncScrollPositions() {
+      const inner = lensInnerRef.current;
+      if (!inner) return;
+      SCROLLABLE.forEach(sel => {
+        const real = findReal(sel);
+        const clone = inner.querySelector(sel);
+        if (real && clone && clone.scrollTop !== real.scrollTop) {
+          clone.scrollTop = real.scrollTop;
+        }
+        if (real && clone && clone.scrollLeft !== real.scrollLeft) {
+          clone.scrollLeft = real.scrollLeft;
+        }
+      });
+    }
+
     function updateMagnifier() {
       const mag = magnifierRef.current;
       const inner = lensInnerRef.current;
@@ -611,6 +674,8 @@ export default function CustomerScreen() {
       const scrollY = window.scrollY || document.documentElement.scrollTop;
       const z = magnifierZoomRef.current;
 
+      const rootScale = parseFloat(getComputedStyle(document.documentElement).fontSize) / 16;
+
       const lensSize = 350;
       const half = lensSize / 2;
 
@@ -619,9 +684,12 @@ export default function CustomerScreen() {
       mag.style.width = `${lensSize}px`;
       mag.style.height = `${lensSize}px`;
 
-      inner.style.transform = `scale(${z})`;
-      inner.style.left = `${-(x + scrollX) * z + half}px`;
-      inner.style.top = `${-(y + scrollY) * z + half}px`;
+      const effectiveZoom = z / rootScale;
+      inner.style.transform = `scale(${effectiveZoom})`;
+      inner.style.left = `${-(x + scrollX) * effectiveZoom + half}px`;
+      inner.style.top = `${-(y + scrollY) * effectiveZoom + half}px`;
+
+      syncScrollPositions();
 
       const syncFixedElement = (realId, magId) => {
         const realEl = document.getElementById(realId);
@@ -635,36 +703,32 @@ export default function CustomerScreen() {
         }
       };
 
-      syncFixedElement("real-cart-badge", "magnified-cart-badge");
-      syncFixedElement("real-confirmation", "magnified-confirmation");
-      syncFixedElement("real-customize-modal", "magnified-customize-modal");
-      syncFixedElement("real-orders-modal", "magnified-orders-modal");
+      syncFixedElement('real-cart-badge', 'magnified-cart-badge');
+      syncFixedElement('real-confirmation', 'magnified-confirmation');
+      syncFixedElement('real-orders-modal', 'magnified-orders-modal');
     }
 
     function handleMouseMove(e) {
       mousePosRef.current = { x: e.clientX, y: e.clientY };
-      updateMagnifier();
     }
 
-    function handleScroll() {
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+
+    let rafId = null;
+    function loop() {
       updateMagnifier();
+      rafId = requestAnimationFrame(loop);
     }
-
-    window.addEventListener("mousemove", handleMouseMove, { passive: true });
-    window.addEventListener("scroll", handleScroll, { passive: true });
-
-    updateMagnifier();
+    rafId = requestAnimationFrame(loop);
 
     return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("scroll", handleScroll);
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('mousemove', handleMouseMove);
     };
   }, [magnifierEnabled]);
 
   const visibleItems = useMemo(() => {
-    if (selectedCategory === "Favorites") return [];
-    if (selectedCategory === "Most Ordered") return [];
-    if (selectedCategory === "All") return menuItems;
+    if (!selectedCategory || selectedCategory === "Favorites" || selectedCategory === "Most Ordered") return [];
     return menuItems.filter((item) => item.category === selectedCategory);
   }, [selectedCategory, menuItems]);
 
@@ -817,21 +881,15 @@ export default function CustomerScreen() {
     setEditingCartItemId(null);
     setCurrentItem(item);
     clearCustomization();
-    const defaultSugar =
-      sugarOptions.find((opt) => opt.name.includes("50")) || null;
-    const defaultIce =
-      iceOptions.find((opt) => opt.name.toLowerCase().includes("regular")) ||
-      null;
-    setSelectedSugar(defaultSugar);
-    setSelectedIce(defaultIce);
-    setCustomizeModalOpen(true);
+    setCustomizeStep(1);
+    setScreen(SCREEN.CUSTOMIZE);
   }
 
   function handleCancelCustomization() {
     clearCustomization();
     setCurrentItem(null);
     setEditingCartItemId(null);
-    setCustomizeModalOpen(false);
+    setScreen(SCREEN.MENU);
   }
 
   function startEditCartItem(item) {
@@ -861,7 +919,8 @@ export default function CustomerScreen() {
     setSelectedIce(ice);
     setSelectedToppings(toppings.length ? toppings : fallbackToppings);
     setComments(item.comments || "");
-    setCustomizeModalOpen(true);
+    setCustomizeStep(1);
+    setScreen(SCREEN.CUSTOMIZE);
   }
 
   function toggleTopping(topping) {
@@ -874,22 +933,32 @@ export default function CustomerScreen() {
 
   function saveCustomizedItem() {
     if (!currentItem) return;
+    const effectiveSugar =
+      selectedSugar ||
+      sugarOptions.find((o) => o.name.includes("100")) ||
+      sugarOptions[sugarOptions.length - 1] ||
+      null;
+    const effectiveIce =
+      selectedIce ||
+      iceOptions.find((o) => o.name.toLowerCase().includes("regular")) ||
+      iceOptions[0] ||
+      null;
     const totalPrice =
       currentItem.cost +
-      (selectedSugar?.cost || 0) +
-      (selectedIce?.cost || 0) +
+      (effectiveSugar?.cost || 0) +
+      (effectiveIce?.cost || 0) +
       selectedToppings.reduce((sum, t) => sum + t.cost, 0);
     const modificationIds = [
-      selectedSugar?.id,
-      selectedIce?.id,
+      effectiveSugar?.id,
+      effectiveIce?.id,
       ...selectedToppings.map((t) => t.id),
     ].filter(Boolean);
     const itemPayload = {
       menuItemId: currentItem.id,
       name: currentItem.name,
       price: totalPrice,
-      sugarLevel: selectedSugar?.name || "Regular",
-      iceLevel: selectedIce?.name || "Regular",
+      sugarLevel: effectiveSugar?.name || "100%",
+      iceLevel: effectiveIce?.name || "100%",
       toppingNames: selectedToppings.map((t) => t.name),
       comments: comments.trim(),
       modificationIds,
@@ -903,7 +972,7 @@ export default function CustomerScreen() {
       clearCustomization();
       setCurrentItem(null);
       setEditingCartItemId(null);
-      setCustomizeModalOpen(false);
+      setScreen(SCREEN.MENU);
       return;
     }
 
@@ -911,7 +980,7 @@ export default function CustomerScreen() {
     setCart((prev) => [...prev, item]);
     clearCustomization();
     setCurrentItem(null);
-    setCustomizeModalOpen(false);
+    setScreen(SCREEN.MENU);
   }
 
   function removeFromCart(itemId) {
@@ -997,13 +1066,16 @@ export default function CustomerScreen() {
     <>
       <header className="customer-header">
         <div className="header-content">
-          <button
-            className={`menu-board-btn${showMenuBoard ? " active" : ""}`}
-            onClick={() => setShowMenuBoard((v) => !v)}
-          >
-            Menu Board
-          </button>
           <h1>Team 32's Boba Bar</h1>
+          <div className="header-controls-row">
+          <div className="header-left">
+            <button
+              className={`menu-board-btn${showMenuBoard ? " active" : ""}`}
+              onClick={() => setShowMenuBoard((v) => !v)}
+            >
+              Menu Board
+            </button>
+          </div>
           <div className="header-actions">
             <div
               className="accessibility-wrapper"
@@ -1168,14 +1240,6 @@ export default function CustomerScreen() {
                 </span>
               </div>
             )}
-            {!user?.guest && (
-              <button
-                className="my-orders-btn"
-                onClick={() => setOrdersModalOpen((o) => !o)}
-              >
-                📋 My Orders
-              </button>
-            )}
             <button
               className="exit-btn"
               onClick={() => {
@@ -1186,6 +1250,7 @@ export default function CustomerScreen() {
               Exit
             </button>
           </div>
+          </div>{/* end header-controls-row */}
         </div>
       </header>
 
@@ -1194,359 +1259,143 @@ export default function CustomerScreen() {
       </div>
       <div
         className="customer-content-wrapper"
-        style={{ display: showMenuBoard ? "none" : "block" }}
+        style={{ display: showMenuBoard ? "none" : undefined }}
       >
         {screen === SCREEN.MENU && (
-          <div className="menu-with-cart-layout">
-            {/* ── Left: menu ── */}
+          <div className="menu-full-layout">
             <div className="menu-left-col">
-              <div className="category-tabs">
-                {categories.map((cat) => (
-                  <button
-                    key={cat}
-                    className={`category-tab${selectedCategory === cat ? " active" : ""}`}
-                    onClick={() => setSelectedCategory(cat)}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-              <div className="menu-grid">
-                {selectedCategory === "Favorites" ? (
-                  savedFavorites.length === 0 ? (
-                    <div className="menu-empty-state">
-                      <div className="menu-empty-icon">🤍</div>
-                      <p>
-                        {user?.guest
-                          ? "Sign in to save favorites!"
-                          : "No favorites yet — tap ♥ on any drink to save it."}
-                      </p>
-                    </div>
-                  ) : (
-                    savedFavorites.map((fav) => {
-                      const favItemId =
-                        fav.item_data?.menu_item_id ?? fav.item_data?.id;
-                      const menuItem = menuItems.find(
-                        (m) => m.id === favItemId,
-                      ) || {
-                        id: favItemId,
-                        name: fav.item_data?.name || "Unknown",
-                        cost: Number(fav.item_data?.cost) || 0,
-                        category: fav.item_data?.category || "Other",
-                      };
+              {!selectedCategory ? (
+                /* ── Kiosk: category picker ── */
+                <>
+                <div className="kiosk-category-grid">
+                  {categories
+                    .filter((cat) => !user?.guest || (cat !== "Favorites" && cat !== "Most Ordered"))
+                    .map((cat) => {
                       return (
-                        <button
-                          key={fav.favorite_id}
-                          className="menu-item-card"
-                          onClick={() => handleSelectItem(menuItem)}
-                        >
-                          <button
-                            className="heart-btn heart-btn--active"
-                            onClick={(e) => handleToggleFavorite(menuItem, e)}
-                            aria-label="Remove from favorites"
-                          >
-                            ♥
-                          </button>
-                          <div className="item-name">{menuItem.name}</div>
-                          <div className="item-price">
-                            {currency(menuItem.cost)}
-                          </div>
-                        </button>
-                      );
-                    })
-                  )
-                ) : selectedCategory === "Most Ordered" ? (
-                  mostOrderedItems.length === 0 ? (
-                    <div className="menu-empty-state">
-                      <div className="menu-empty-icon">📊</div>
-                      <p>
-                        {user?.guest
-                          ? "Sign in to see your most ordered drinks."
-                          : "Place your first order to see your favorites here!"}
-                      </p>
-                    </div>
-                  ) : (
-                    mostOrderedItems.map((item) => {
-                      const isFav = !!getFavoriteMatch(item);
-                      return (
-                        <button
-                          key={item.id}
-                          className="menu-item-card"
-                          onClick={() => handleSelectItem(item)}
-                        >
-                          <button
-                            className={`heart-btn${isFav ? " heart-btn--active" : ""}`}
-                            onClick={(e) => handleToggleFavorite(item, e)}
-                            aria-label={
-                              isFav
-                                ? "Remove from favorites"
-                                : "Add to favorites"
-                            }
-                          >
-                            {isFav ? "♥" : "♡"}
-                          </button>
-                          <div className="item-name">{item.name}</div>
-                          <div className="item-price">
-                            {currency(item.cost)}
-                          </div>
-                          {item.order_count && (
-                            <div className="item-order-count">
-                              ordered {item.order_count}×
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })
-                  )
-                ) : (
-                  visibleItems.map((item) => {
-                    const isFav = !!getFavoriteMatch(item);
-                    return (
                       <button
-                        key={item.id}
-                        className="menu-item-card"
-                        onClick={() => handleSelectItem(item)}
+                        key={cat}
+                        className="kiosk-category-card"
+                        onClick={() => setSelectedCategory(cat)}
                       >
-                        <button
-                          className={`heart-btn${isFav ? " heart-btn--active" : ""}`}
-                          onClick={(e) => handleToggleFavorite(item, e)}
-                          aria-label={
-                            isFav ? "Remove from favorites" : "Add to favorites"
-                          }
-                        >
-                          {isFav ? "♥" : "♡"}
-                        </button>
-                        <div className="item-name">{item.name}</div>
-                        <div className="item-price">{currency(item.cost)}</div>
+                        <span className="kiosk-category-name">{cat}</span>
                       </button>
                     );
-                  })
-                )}
-              </div>
-            </div>
-
-            {/* ── Right: cart panel ── */}
-            <div className="cart-side-panel">
-              <h2 className="cart-panel-title">Your Cart</h2>
-
-              {cart.length === 0 ? (
-                <div className="cart-panel-empty">
-                  {weather && !weatherLoading && (
-                    <div className="cart-panel-weather">
-                      <div className="cart-panel-weather-header">
-                        📍 College Station
-                      </div>
-                      <div className="cart-panel-weather-temp">
-                        {Math.round(weather.temperature ?? weather.temp ?? 0)}
-                        °F
-                      </div>
-                      <div className="cart-panel-weather-desc">
-                        {weather.description ??
-                          describeWeatherCode(weather.weather_code)}
-                      </div>
-                      {weeklyWeather.length > 0 && (
-                        <div className="cart-panel-weather-week">
-                          {weeklyWeather.map((day, i) => (
-                            <div key={i} className="cart-panel-weather-day">
-                              <span className="weather-day-label">
-                                {i === 0
-                                  ? "Today"
-                                  : formatWeekdayLabel(day.date)}
-                              </span>
-                              <span className="weather-day-range">
-                                {Math.round(day.maxTemp ?? day.high ?? 0)}° /{" "}
-                                {Math.round(day.minTemp ?? day.low ?? 0)}°
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  <div className="cart-panel-empty-icon">🛒</div>
-                  <p className="cart-panel-empty-msg">Your cart is empty</p>
-                  <p className="cart-panel-empty-sub">
-                    Tap any drink to get started
-                  </p>
+                  })}
                 </div>
-              ) : (
-                <>
-                  <div className="cart-panel-scroll-area">
-                    <div
-                      className={`rewards-summary rewards-tone-${rewardsTone}`}
-                    >
-                      <div className="rewards-line">
-                        <span>Rewards</span>
-                        <span
-                          className={`rewards-tier-badge rewards-tier-${rewardsTone}`}
-                        >
-                          {rewardsStatus.tier}
-                          {rewardsStatus.discountRate > 0
-                            ? ` (${Math.round(rewardsStatus.discountRate * 100)}% off)`
-                            : ""}
-                        </span>
+                {weatherLoading && !weather ? (
+                  <div className="kiosk-weather-strip kiosk-weather-skeleton">
+                    <div className="kiosk-weather-current">
+                      <div className="skeleton-block skeleton-temp" />
+                      <div className="kiosk-weather-current-details">
+                        <span className="skeleton-block skeleton-line-short" />
+                        <span className="skeleton-block skeleton-line-medium" />
                       </div>
-                      {rewardsStatus.note && (
-                        <div className="rewards-note rewards-note-employee">
-                          {rewardsStatus.note}
-                        </div>
-                      )}
-                      {rewardsStatus.tier === "Employee" ? (
-                        <div className="tier-visual-row">
-                          <span className="tier-chip tier-chip-employee active">
-                            Employee Only
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="tier-visual-row">
-                          <span
-                            className={`tier-chip ${["Gold", "Platinum", "Diamond"].includes(rewardsStatus.tier) ? "active" : ""}`}
-                          >
-                            Gold
-                          </span>
-                          <span
-                            className={`tier-chip ${["Platinum", "Diamond"].includes(rewardsStatus.tier) ? "active" : ""}`}
-                          >
-                            Platinum
-                          </span>
-                          <span
-                            className={`tier-chip ${rewardsStatus.tier === "Diamond" ? "active" : ""}`}
-                          >
-                            Diamond
-                          </span>
-                        </div>
-                      )}
-                      <div className="rewards-progress">
-                        <div
-                          className="rewards-progress-fill"
-                          style={{ width: `${tierProgressPercent}%` }}
-                        />
-                      </div>
-                      <div className="rewards-line">
-                        <span>Points (12 mo)</span>
-                        <span>{previousYearPoints}</span>
-                      </div>
-                      <div className="rewards-line">
-                        <span>From this order</span>
-                        <span>+{pointsFromCurrentOrder}</span>
-                      </div>
-                      {rewardsStatus.nextTierAt && (
-                        <div className="rewards-line">
-                          <span>To next tier</span>
-                          <span>{pointsToNextTier}</span>
-                        </div>
-                      )}
-                      {!rewardsStatus.nextTierAt && (
-                        <div className="rewards-line">
-                          <span>Progress</span>
-                          <span>Top tier ✓</span>
-                        </div>
-                      )}
                     </div>
-
-                    <div className="cart-panel-items">
-                      {cart.map((item, index) => (
-                        <div key={item.id} className="cart-item">
-                          <div className="cart-item-header">
-                            <span className="cart-item-number">
-                              {index + 1}.
-                            </span>
-                            <span className="cart-item-name">{item.name}</span>
-                            <span className="cart-item-price">
-                              {currency(item.price * (item.quantity || 1))}
-                            </span>
-                            <button
-                              className="remove-btn"
-                              onClick={() => removeFromCart(item.id)}
-                            >
-                              ×
-                            </button>
-                          </div>
-                          <div className="cart-item-controls">
-                            <span className="cart-item-unit-price">
-                              Each: {currency(item.price)}
-                            </span>
-                            <div className="qty-controls">
-                              <button
-                                className="qty-btn"
-                                onClick={() =>
-                                  updateCartQuantity(
-                                    item.id,
-                                    (item.quantity || 1) - 1,
-                                  )
-                                }
-                                aria-label="Decrease quantity"
-                              >
-                                -
-                              </button>
-                              <span className="qty-value">
-                                {item.quantity || 1}
-                              </span>
-                              <button
-                                className="qty-btn"
-                                onClick={() =>
-                                  updateCartQuantity(
-                                    item.id,
-                                    (item.quantity || 1) + 1,
-                                  )
-                                }
-                                aria-label="Increase quantity"
-                              >
-                                +
-                              </button>
-                            </div>
-                            <button
-                              className="cart-edit-btn"
-                              onClick={() => startEditCartItem(item)}
-                            >
-                              Edit
-                            </button>
-                          </div>
-                          <div className="cart-item-details">
-                            {buildDisplayLines(item).map((line, i) => (
-                              <div key={i} className="cart-item-detail">
-                                {line}
-                              </div>
-                            ))}
-                          </div>
+                    <div className="kiosk-weather-week">
+                      {[0,1,2,3,4,5,6].map((i) => (
+                        <div key={i} className="kiosk-weather-card skeleton-card">
+                          <span className="skeleton-block skeleton-line-short" />
+                          <span className="skeleton-block skeleton-line-medium" />
+                          <span className="skeleton-block skeleton-line-short" />
                         </div>
                       ))}
                     </div>
                   </div>
-                  {/* end cart-panel-scroll-area */}
-
-                  <div className="cart-panel-footer">
-                    <div className="cart-total">
-                      <div className="cart-total-line">
-                        <span>
-                          {rewardsStatus.discountRate > 0
-                            ? "Subtotal"
-                            : "Total"}
-                        </span>
-                        <span>{currency(cartTotal)}</span>
+                ) : weather ? (
+                  <div className="kiosk-weather-strip kiosk-weather-loaded">
+                    <div className="kiosk-weather-current">
+                      <div className="kiosk-weather-current-temp">
+                        {Math.round(weather.temperature ?? weather.temp ?? 0)}°F
                       </div>
-                      {rewardsStatus.discountRate > 0 && (
-                        <>
-                          <div className="cart-total-line">
-                            <span>
-                              Discount (
-                              {Math.round(rewardsStatus.discountRate * 100)}%)
-                            </span>
-                            <span>-{currency(discountAmount)}</span>
-                          </div>
-                          <div className="cart-total-line cart-total-line-final">
-                            <span>Discounted Total</span>
-                            <span>{currency(discountedSubtotal)}</span>
-                          </div>
-                        </>
-                      )}
+                      <div className="kiosk-weather-current-details">
+                        <span className="kiosk-weather-location">📍 College Station</span>
+                        <span className="kiosk-weather-desc">{weather.description ?? describeWeatherCode(weather.weather_code)}</span>
+                      </div>
                     </div>
-                    <button
-                      className="btn-primary cart-panel-checkout-btn"
-                      onClick={() => setScreen(SCREEN.CHECKOUT)}
-                    >
-                      Proceed to Checkout
+                    {weeklyWeather.length > 0 && (
+                      <div className="kiosk-weather-week">
+                        {weeklyWeather.map((day, i) => (
+                          <div key={i} className={`kiosk-weather-card${i === 0 ? ' kiosk-weather-card--today' : ''}`}>
+                            <span className="kiosk-weather-card-day">{i === 0 ? 'Today' : formatWeekdayLabel(day.date)}</span>
+                            <span className="kiosk-weather-card-desc">{day.description || ''}</span>
+                            <span className="kiosk-weather-card-range">
+                              <strong>{Math.round(day.maxTemp ?? day.high ?? 0)}°</strong> / {Math.round(day.minTemp ?? day.low ?? 0)}°
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+                </>
+              ) : (
+                /* ── Drink list for selected category ── */
+                <>
+                  <div className="kiosk-back-row">
+                    <button className="kiosk-back-btn" onClick={() => setSelectedCategory(null)}>
+                      ← Back
                     </button>
+                  </div>
+                  <h2 className="kiosk-category-title">{selectedCategory}</h2>
+                  <div className="menu-grid">
+                    {selectedCategory === "Favorites" ? (
+                      savedFavorites.length === 0 ? (
+                        <div className="menu-empty-state">
+                          <div className="menu-empty-icon">🤍</div>
+                          <p>
+                            {user?.guest
+                              ? "Sign in to save favorites!"
+                              : "No favorites yet — tap ♥ on any drink to save it."}
+                          </p>
+                        </div>
+                      ) : (
+                        savedFavorites.map((fav) => {
+                          const favItemId = fav.item_data?.menu_item_id ?? fav.item_data?.id;
+                          const menuItem = menuItems.find((m) => m.id === favItemId) || {
+                            id: favItemId,
+                            name: fav.item_data?.name || "Unknown",
+                            cost: Number(fav.item_data?.cost) || 0,
+                            category: fav.item_data?.category || "Other",
+                          };
+                          return (
+                            <button key={fav.favorite_id} className="menu-item-card" onClick={() => handleSelectItem(menuItem)}>
+                              <div className="item-name">{menuItem.name}</div>
+                              <div className="item-price">{currency(menuItem.cost)}</div>
+                            </button>
+                          );
+                        })
+                      )
+                    ) : selectedCategory === "Most Ordered" ? (
+                      mostOrderedItems.length === 0 ? (
+                        <div className="menu-empty-state">
+                          <div className="menu-empty-icon">📊</div>
+                          <p>
+                            {user?.guest
+                              ? "Sign in to see your most ordered drinks."
+                              : "Place your first order to see your favorites here!"}
+                          </p>
+                        </div>
+                      ) : (
+                        mostOrderedItems.map((item) => {
+                          return (
+                            <button key={item.id} className="menu-item-card" onClick={() => handleSelectItem(item)}>
+                              <div className="item-name">{item.name}</div>
+                              <div className="item-price">{currency(item.cost)}</div>
+                              {item.order_count && <div className="item-order-count">ordered {item.order_count}×</div>}
+                            </button>
+                          );
+                        })
+                      )
+                    ) : (
+                      visibleItems.map((item) => {
+                        return (
+                          <button key={item.id} className="menu-item-card" onClick={() => handleSelectItem(item)}>
+                            <div className="item-name">{item.name}</div>
+                            <div className="item-price">{currency(item.cost)}</div>
+                          </button>
+                        );
+                      })
+                    )}
                   </div>
                 </>
               )}
@@ -1554,8 +1403,334 @@ export default function CustomerScreen() {
           </div>
         )}
 
+        {screen === SCREEN.CUSTOMIZE && currentItem && (
+          <div className="customize-fullpage">
+            <div className="customize-top-bar">
+              <button className="kiosk-back-btn" onClick={handleCancelCustomization}>
+                ← Back
+              </button>
+              <div className="customize-item-summary">
+                <span className="customize-item-name">{currentItem.name}</span>
+                <span className="customize-item-price">
+                  {currency(
+                    currentItem.cost +
+                    (selectedSugar?.cost || 0) +
+                    (selectedIce?.cost || 0) +
+                    selectedToppings.reduce((sum, t) => sum + t.cost, 0)
+                  )}
+                </span>
+              </div>
+            </div>
+
+            <div className="customize-progress">
+              {['Sugar', 'Ice', 'Toppings', 'Review'].map((label, i) => (
+                <div
+                  key={label}
+                  className={`customize-progress-step${customizeStep === i + 1 ? ' active' : ''}${customizeStep > i + 1 ? ' done' : ''}`}
+                  onClick={() => setCustomizeStep(i + 1)}
+                >
+                  <div className="customize-progress-dot">{customizeStep > i + 1 ? '✓' : i + 1}</div>
+                  <span className="customize-progress-label">{label}</span>
+                </div>
+              ))}
+              <div className="customize-progress-line" />
+            </div>
+
+            <div className="customize-step-content">
+              {customizeStep === 1 && (
+                <div className="customize-step">
+                  <h2 className="customize-step-title">Choose Sugar Level</h2>
+                  <div className="customize-option-grid">
+                    {sugarOptions.map((opt) => (
+                      <button
+                        key={opt.id}
+                        className={`customize-option-card${selectedSugar?.id === opt.id ? ' selected' : ''}`}
+                        onClick={() => setSelectedSugar(opt)}
+                      >
+                        <span className="customize-option-name">{opt.name}</span>
+                        {opt.cost > 0 && <span className="customize-option-cost">+{currency(opt.cost)}</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {customizeStep === 2 && (
+                <div className="customize-step">
+                  <h2 className="customize-step-title">Choose Ice Level</h2>
+                  <div className="customize-option-grid">
+                    {iceOptions.map((opt) => (
+                      <button
+                        key={opt.id}
+                        className={`customize-option-card${selectedIce?.id === opt.id ? ' selected' : ''}`}
+                        onClick={() => setSelectedIce(opt)}
+                      >
+                        <span className="customize-option-name">{opt.name}</span>
+                        {opt.cost > 0 && <span className="customize-option-cost">+{currency(opt.cost)}</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {customizeStep === 3 && (
+                <div className="customize-step">
+                  <h2 className="customize-step-title">Choose Toppings</h2>
+                  <p className="customize-step-subtitle">Select as many as you like</p>
+                  <div className="customize-option-grid">
+                    {toppingOptions.map((opt) => {
+                      const isSelected = selectedToppings.some((t) => t.id === opt.id);
+                      return (
+                        <button
+                          key={opt.id}
+                          className={`customize-option-card${isSelected ? ' selected' : ''}`}
+                          onClick={() => toggleTopping(opt)}
+                        >
+                          <span className="customize-option-name">{opt.name}</span>
+                          {opt.cost > 0 && <span className="customize-option-cost">+{currency(opt.cost)}</span>}
+                          {isSelected && <span className="customize-option-check">✓</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {customizeStep === 4 && (
+                <div className="customize-step">
+                  <h2 className="customize-step-title">Review Your Order</h2>
+                  <div className="customize-review">
+                    <div className="customize-review-header">
+                      <span className="customize-review-header-icon">🧋</span>
+                      <div className="customize-review-header-text">
+                        <h3>{currentItem.name}</h3>
+                        <p>Base price: {currency(currentItem.cost)}</p>
+                      </div>
+                    </div>
+
+                    <div className="customize-review-body">
+                      <div className="customize-review-row">
+                        <span className="customize-review-label">
+                          <span className="customize-review-label-icon">🍯</span> Sugar Level
+                        </span>
+                        <span className="customize-review-value">
+                          {selectedSugar?.name || 'None'}
+                          {selectedSugar?.cost > 0 && (
+                            <span className="customize-review-value-cost">+{currency(selectedSugar.cost)}</span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="customize-review-row">
+                        <span className="customize-review-label">
+                          <span className="customize-review-label-icon">🧊</span> Ice Level
+                        </span>
+                        <span className="customize-review-value">
+                          {selectedIce?.name || 'None'}
+                          {selectedIce?.cost > 0 && (
+                            <span className="customize-review-value-cost">+{currency(selectedIce.cost)}</span>
+                          )}
+                        </span>
+                      </div>
+
+                      {selectedToppings.length > 0 && (
+                        <div className="customize-review-section">
+                          <div className="customize-review-section-title">Toppings</div>
+                          <div className="customize-review-toppings">
+                            {selectedToppings.map((t) => (
+                              <span key={t.id} className="customize-review-topping-chip">
+                                {t.name}
+                                {t.cost > 0 && <span className="customize-review-topping-cost">+{currency(t.cost)}</span>}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {selectedToppings.length === 0 && (
+                        <div className="customize-review-row">
+                          <span className="customize-review-label">
+                            <span className="customize-review-label-icon">🧃</span> Toppings
+                          </span>
+                          <span className="customize-review-value">None</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="customize-review-comments">
+                      <label>Special Instructions</label>
+                      <input
+                        type="text"
+                        className="comments-input"
+                        value={comments}
+                        onChange={(e) => setComments(e.target.value)}
+                        placeholder="e.g., Extra shaken, half boba..."
+                      />
+                    </div>
+
+                    <div className="customize-review-breakdown">
+                      <div className="customize-review-breakdown-row">
+                        <span>Base</span><span>{currency(currentItem.cost)}</span>
+                      </div>
+                      {selectedSugar?.cost > 0 && (
+                        <div className="customize-review-breakdown-row">
+                          <span>{selectedSugar.name}</span><span>+{currency(selectedSugar.cost)}</span>
+                        </div>
+                      )}
+                      {selectedIce?.cost > 0 && (
+                        <div className="customize-review-breakdown-row">
+                          <span>{selectedIce.name}</span><span>+{currency(selectedIce.cost)}</span>
+                        </div>
+                      )}
+                      {selectedToppings.filter(t => t.cost > 0).map((t) => (
+                        <div key={t.id} className="customize-review-breakdown-row">
+                          <span>{t.name}</span><span>+{currency(t.cost)}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="customize-review-total">
+                      <span className="customize-review-total-label">Total</span>
+                      <span className="customize-review-total-price">
+                        {currency(
+                          currentItem.cost +
+                          (selectedSugar?.cost || 0) +
+                          (selectedIce?.cost || 0) +
+                          selectedToppings.reduce((sum, t) => sum + t.cost, 0)
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="customize-nav">
+              {customizeStep > 1 && (
+                <button
+                  className="customize-nav-btn customize-nav-back"
+                  onClick={() => setCustomizeStep((s) => s - 1)}
+                >
+                  ← Previous
+                </button>
+              )}
+              <div className="customize-nav-spacer" />
+              {customizeStep < 4 ? (
+                <button
+                  className="customize-nav-btn customize-nav-next"
+                  onClick={() => setCustomizeStep((s) => s + 1)}
+                >
+                  Next →
+                </button>
+              ) : (
+                <button
+                  className="customize-nav-btn customize-nav-add"
+                  onClick={saveCustomizedItem}
+                >
+                  {editingCartItemId ? 'Save Changes' : 'Add to Order'}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {screen === SCREEN.CART && (
+          <div className="customer-content cart-screen">
+            <div className="kiosk-back-row">
+              <button className="kiosk-back-btn" onClick={() => setScreen(SCREEN.MENU)}>← Back to Menu</button>
+            </div>
+            <h2>Your Cart</h2>
+            {cart.length === 0 ? (
+              <div className="cart-empty-state">
+                <div className="cart-panel-empty-icon">🛒</div>
+                <p className="cart-panel-empty-msg">Your cart is empty</p>
+                <p className="cart-panel-empty-sub">Tap any drink to get started</p>
+                <button className="btn-secondary" onClick={() => setScreen(SCREEN.MENU)}>Browse Menu</button>
+              </div>
+            ) : (
+              <>
+                {!user?.guest && (
+                <div className={`rewards-summary rewards-tone-${rewardsTone}`}>
+                  <div className="rewards-line"><span>Rewards</span><span className={`rewards-tier-badge rewards-tier-${rewardsTone}`}>{rewardsStatus.tier}{rewardsStatus.discountRate > 0 ? ` (${Math.round(rewardsStatus.discountRate * 100)}% off)` : ''}</span></div>
+                  {rewardsStatus.note && <div className="rewards-note rewards-note-employee">{rewardsStatus.note}</div>}
+                  {rewardsStatus.tier === 'Employee' ? (
+                    <div className="tier-visual-row"><span className="tier-chip tier-chip-employee active">Employee Only</span></div>
+                  ) : (
+                    <div className="tier-visual-row">
+                      <span className={`tier-chip ${['Gold', 'Platinum', 'Diamond'].includes(rewardsStatus.tier) ? 'active' : ''}`}>Gold</span>
+                      <span className={`tier-chip ${['Platinum', 'Diamond'].includes(rewardsStatus.tier) ? 'active' : ''}`}>Platinum</span>
+                      <span className={`tier-chip ${rewardsStatus.tier === 'Diamond' ? 'active' : ''}`}>Diamond</span>
+                    </div>
+                  )}
+                  <div className="rewards-progress"><div className="rewards-progress-fill" style={{ width: `${tierProgressPercent}%` }} /></div>
+                  <div className="rewards-line"><span>Points (12 mo)</span><span>{previousYearPoints}</span></div>
+                  <div className="rewards-line"><span>From this order</span><span>+{pointsFromCurrentOrder}</span></div>
+                  {rewardsStatus.nextTierAt && <div className="rewards-line"><span>To next tier</span><span>{pointsToNextTier}</span></div>}
+                  {!rewardsStatus.nextTierAt && <div className="rewards-line"><span>Progress</span><span>Top tier ✓</span></div>}
+                </div>
+                )}
+
+                <div className="cart-items-list">
+                  {cart.map((item, index) => {
+                    const menuRef = menuItems.find((m) => m.id === item.menuItemId) || { id: item.menuItemId, name: item.name, cost: item.price, category: '' };
+                    const isFav = !!getFavoriteMatch(menuRef);
+                    return (
+                    <div key={item.id} className="cart-item">
+                      <div className="cart-item-header">
+                        <span className="cart-item-number">{index + 1}.</span>
+                        <span className="cart-item-name">{item.name}</span>
+                        {!user?.guest && (
+                        <button
+                          className={`cart-fav-btn${isFav ? ' cart-fav-btn--active' : ''}`}
+                          onClick={(e) => handleToggleFavorite(menuRef, e)}
+                          aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                        >
+                          {isFav ? '♥ Saved' : '♡ Save'}
+                        </button>
+                        )}
+                        <span className="cart-item-price">{currency(item.price * (item.quantity || 1))}</span>
+                        <button className="remove-btn" onClick={() => removeFromCart(item.id)}>×</button>
+                      </div>
+                      <div className="cart-item-controls">
+                        <span className="cart-item-unit-price">Each: {currency(item.price)}</span>
+                        <div className="qty-controls">
+                          <button className="qty-btn" onClick={() => updateCartQuantity(item.id, (item.quantity || 1) - 1)} aria-label="Decrease quantity">-</button>
+                          <span className="qty-value">{item.quantity || 1}</span>
+                          <button className="qty-btn" onClick={() => updateCartQuantity(item.id, (item.quantity || 1) + 1)} aria-label="Increase quantity">+</button>
+                        </div>
+                        <button className="cart-edit-btn" onClick={() => startEditCartItem(item)}>Edit</button>
+                      </div>
+                      <div className="cart-item-details">
+                        {buildDisplayLines(item).map((line, i) => (<div key={i} className="cart-item-detail">{line}</div>))}
+                      </div>
+                    </div>
+                    );
+                  })}
+                </div>
+
+                <div className="cart-totals">
+                  <div className="cart-total-line">
+                    <span>{rewardsStatus.discountRate > 0 ? 'Subtotal' : 'Total'}</span>
+                    <span>{currency(cartTotal)}</span>
+                  </div>
+                  {rewardsStatus.discountRate > 0 && (
+                    <>
+                      <div className="cart-total-line"><span>Discount ({Math.round(rewardsStatus.discountRate * 100)}%)</span><span>-{currency(discountAmount)}</span></div>
+                      <div className="cart-total-line cart-total-line-final"><span>Discounted Total</span><span>{currency(discountedSubtotal)}</span></div>
+                    </>
+                  )}
+                </div>
+                <button className="btn-primary full-width" onClick={() => setScreen(SCREEN.CHECKOUT)}>Proceed to Checkout</button>
+              </>
+            )}
+          </div>
+        )}
+
         {screen === SCREEN.CHECKOUT && (
           <div className="customer-content checkout-screen">
+            <div className="kiosk-back-row">
+              <button className="kiosk-back-btn" onClick={() => setScreen(SCREEN.MENU)}>
+                ← Back to Menu
+              </button>
+            </div>
             <h2>Checkout</h2>
             <div className="checkout-summary">
               <div className="summary-row">
@@ -1598,17 +1773,20 @@ export default function CustomerScreen() {
                 💵 Pay with Cash
               </button>
             </div>
-            <div className="cart-actions">
-              <button
-                className="btn-secondary full-width"
-                onClick={() => setScreen(SCREEN.MENU)}
-              >
-                Back to Menu
-              </button>
-            </div>
           </div>
         )}
       </div>
+
+      {screen !== SCREEN.CART && screen !== SCREEN.CHECKOUT && screen !== SCREEN.CUSTOMIZE && (
+        <button
+          id={isMagnified ? 'magnified-cart-badge' : 'real-cart-badge'}
+          className="cart-badge"
+          onClick={isMagnified ? undefined : () => setScreen(SCREEN.CART)}
+          style={isMagnified ? { position: 'absolute' } : {}}
+        >
+          🛒{cartCount > 0 && <span className="cart-badge-count">{cartCount}</span>}
+        </button>
+      )}
 
       {showConfirmation && (
         <div
@@ -1770,130 +1948,7 @@ export default function CustomerScreen() {
         </div>
       )}
 
-      {customizeModalOpen && currentItem && (
-        <div
-          id={
-            isMagnified ? "magnified-customize-modal" : "real-customize-modal"
-          }
-          className="customize-modal-overlay"
-          onClick={isMagnified ? undefined : handleCancelCustomization}
-        >
-          <div
-            className="customize-modal-card"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="customize-modal-image-placeholder">
-              <button
-                className="customize-modal-close"
-                onClick={isMagnified ? undefined : handleCancelCustomization}
-                aria-label="Close"
-              >
-                ✕
-              </button>
-              <span className="customize-modal-image-icon">🧋</span>
-            </div>
-
-            <div className="customize-modal-item-info">
-              <h2 className="customize-modal-item-name">{currentItem.name}</h2>
-              <p className="customize-modal-item-description">
-                Handcrafted fresh to order. Customize it your way below.
-              </p>
-              <div className="customize-modal-base-price">
-                {currency(currentItem.cost)}
-              </div>
-            </div>
-
-            <div className="customize-modal-body">
-              <div className="customize-section">
-                <h3>Sugar Level</h3>
-                <div className="option-grid">
-                  {sugarOptions.map((opt) => (
-                    <button
-                      key={opt.id}
-                      className={`option-btn ${selectedSugar?.id === opt.id ? "selected" : ""}`}
-                      onClick={() => setSelectedSugar(opt)}
-                    >
-                      {opt.name}
-                      {opt.cost > 0 && (
-                        <div className="option-cost">+{currency(opt.cost)}</div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="customize-section">
-                <h3>Ice Level</h3>
-                <div className="option-grid">
-                  {iceOptions.map((opt) => (
-                    <button
-                      key={opt.id}
-                      className={`option-btn ${selectedIce?.id === opt.id ? "selected" : ""}`}
-                      onClick={() => setSelectedIce(opt)}
-                    >
-                      {opt.name}
-                      {opt.cost > 0 && (
-                        <div className="option-cost">+{currency(opt.cost)}</div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="customize-section">
-                <h3>Toppings</h3>
-                <div className="option-grid">
-                  {toppingOptions.map((opt) => {
-                    const isSelected = selectedToppings.some(
-                      (t) => t.id === opt.id,
-                    );
-                    return (
-                      <button
-                        key={opt.id}
-                        className={`option-btn ${isSelected ? "selected" : ""}`}
-                        onClick={() => toggleTopping(opt)}
-                      >
-                        {opt.name}
-                        {opt.cost > 0 && (
-                          <div className="option-cost">
-                            +{currency(opt.cost)}
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="comments-section">
-                <label>Special Instructions</label>
-                <input
-                  type="text"
-                  className="comments-input"
-                  value={comments}
-                  onChange={(e) => setComments(e.target.value)}
-                  placeholder="e.g., Extra shaken, half boba..."
-                />
-              </div>
-            </div>
-
-            <div className="customize-modal-footer">
-              <button
-                className="customize-modal-add-btn"
-                onClick={saveCustomizedItem}
-              >
-                {editingCartItemId ? "Save Changes" : "Add to Order"} —{" "}
-                {currency(
-                  currentItem.cost +
-                    (selectedSugar?.cost || 0) +
-                    (selectedIce?.cost || 0) +
-                    selectedToppings.reduce((sum, t) => sum + t.cost, 0),
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      
     </>
   );
 
