@@ -44,13 +44,15 @@
   font-weight: 500;
 }
 
+/* Two-card top row */
 .portal-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 2rem;
-  margin-bottom: 3rem;
+  margin-bottom: 2rem;
 }
 
+/* Shared card styles */
 .portal-card {
   background: white;
   border: 2px solid #e5d4b8;
@@ -60,19 +62,59 @@
   transition: all 0.3s ease;
   position: relative;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
+/* Full-width horizontal card */
+.portal-card-wide {
+  width: 100%;
+  flex-direction: row;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 2rem 2.5rem;
+  text-align: left;
+  margin-bottom: 3rem;
+  box-sizing: border-box;
+}
+
+.portal-card-wide .card-icon {
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+.portal-card-wide .card-text {
+  flex: 1;
+}
+
+.portal-card-wide h2 {
+  margin: 0 0 0.25rem;
+}
+
+.portal-card-wide p {
+  margin: 0;
+}
+
+.portal-card-wide .card-arrow {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Hover states */
 .portal-card:hover {
   transform: translateY(-8px);
   box-shadow: 0 12px 32px rgba(139, 69, 19, 0.15);
   border-color: #d4a574;
 }
 
-.customer-card:hover {
-  background: linear-gradient(135deg, #fef3e2 0%, #fce7c8 100%);
+.portal-card-wide:hover {
+  transform: translateY(-4px);
 }
 
-.employee-card:hover {
+.customer-card:hover,
+.employee-card:hover,
+.menuboard-card:hover {
   background: linear-gradient(135deg, #fef3e2 0%, #fce7c8 100%);
 }
 
@@ -99,6 +141,10 @@
   color: #666;
   margin: 0 0 1.5rem;
   line-height: 1.5;
+}
+
+.portal-card-wide p {
+  margin: 0;
 }
 
 .card-arrow {
@@ -144,6 +190,11 @@
 
   .portal-card {
     padding: 2.5rem 1.5rem;
+  }
+
+  .portal-card-wide {
+    padding: 1.75rem 1.5rem;
+    gap: 1rem;
   }
 
   .card-icon {
