@@ -5,8 +5,105 @@
   background: #f3f3f3;
   padding: 40px 30px 0 30px;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
+/* Carousel */
+.mb-carousel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.mb-track-wrapper {
+  flex: 1;
+  overflow: hidden;
+}
+
+.mb-track {
+  display: flex;
+  transition: transform 0.4s ease;
+}
+
+.mb-slide {
+  min-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Arrows */
+.mb-arrow {
+  background: none;
+  border: none;
+  font-size: 60px;
+  color: #6f6f6f;
+  cursor: pointer;
+  padding: 0 8px;
+  line-height: 1;
+  transition: color 0.2s;
+  user-select: none;
+}
+
+.mb-arrow:hover:not(:disabled) {
+  color: #2f2f2f;
+}
+
+.mb-arrow:disabled {
+  color: #ccc;
+  cursor: default;
+}
+
+/* Page dots */
+.mb-dots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 0;
+}
+
+.mb-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: none;
+  background: #ccc;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s;
+}
+
+.mb-dot.active {
+  background: #6f6f6f;
+}
+
+/* WIP placeholder */
+.mb-wip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+  color: #888;
+  gap: 12px;
+}
+
+.mb-wip-icon {
+  font-size: 60px;
+}
+
+.mb-wip h2 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.mb-wip p {
+  margin: 0;
+  font-size: 16px;
+}
+
+/* Menu columns */
 .mb-columns {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;

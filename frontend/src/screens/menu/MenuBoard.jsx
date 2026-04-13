@@ -25,18 +25,19 @@ function Section({ title, items }) {
   );
 }
 
-// Defines the exact column layout to match the real Sharetea menu.
-// Update this if categories are ever added/renamed.
 const COLUMN_LAYOUT = [
   ["Milky Series", "Fresh Brew"],
   ["Fruity Beverage", "Non-Caffeinated"],
   ["New Matcha Series", "Ice-Blended"],
 ];
 
+const TOTAL_PAGES = 3;
+
 function MenuBoard() {
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [currentPage, setCurrentPage] = useState(0);
 
   async function loadMenuItems() {
     try {
@@ -61,7 +62,6 @@ function MenuBoard() {
 
       rows.sort((a, b) => a.menu_item_id - b.menu_item_id);
 
-      // Group items by category, preserving insertion order
       const categoryMap = new Map();
       for (const item of rows) {
         if (!categoryMap.has(item.category)) {
@@ -99,22 +99,79 @@ function MenuBoard() {
 
   return (
     <div className="mb-board">
-      <div className="mb-columns">
-        {COLUMN_LAYOUT.map((categoryNames, colIdx) => (
-          <div className="mb-column" key={colIdx}>
-            {categoryNames.map((categoryName) => {
-              const section = sections.find(
-                (s) => s.title === categoryName.toUpperCase()
-              );
-              return (
-                <Section
-                  key={categoryName}
-                  title={categoryName.toUpperCase()}
-                  items={section ? section.items : []}
-                />
-              );
-            })}
+      <div className="mb-carousel">
+        <button
+          className="mb-arrow mb-arrow-left"
+          onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
+          disabled={currentPage === 0}
+        >
+          ‹
+        </button>
+
+        <div className="mb-track-wrapper">
+          <div
+            className="mb-track"
+            style={{ transform: `translateX(-${currentPage * 100}%)` }}
+          >
+            {/* Page 0 — menu */}
+            <div className="mb-slide">
+              <div className="mb-columns">
+                {COLUMN_LAYOUT.map((categoryNames, colIdx) => (
+                  <div className="mb-column" key={colIdx}>
+                    {categoryNames.map((categoryName) => {
+                      const section = sections.find(
+                        (s) => s.title === categoryName.toUpperCase()
+                      );
+                      return (
+                        <Section
+                          key={categoryName}
+                          title={categoryName.toUpperCase()}
+                          items={section ? section.items : []}
+                        />
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Page 1 — WIP */}
+            <div className="mb-slide">
+              <div className="mb-wip">
+                <div className="mb-wip-icon">🚧</div>
+                <h2>Coming Soon</h2>
+                <p>This page is a work in progress.</p>
+              </div>
+            </div>
+
+            {/* Page 2 — WIP */}
+            <div className="mb-slide">
+              <div className="mb-wip">
+                <div className="mb-wip-icon">🚧</div>
+                <h2>Coming Soon</h2>
+                <p>This page is a work in progress.</p>
+              </div>
+            </div>
           </div>
+        </div>
+
+        <button
+          className="mb-arrow mb-arrow-right"
+          onClick={() => setCurrentPage((p) => Math.min(TOTAL_PAGES - 1, p + 1))}
+          disabled={currentPage === TOTAL_PAGES - 1}
+        >
+          ›
+        </button>
+      </div>
+
+      {/* Page dots */}
+      <div className="mb-dots">
+        {Array.from({ length: TOTAL_PAGES }).map((_, i) => (
+          <button
+            key={i}
+            className={`mb-dot${currentPage === i ? " active" : ""}`}
+            onClick={() => setCurrentPage(i)}
+          />
         ))}
       </div>
 
