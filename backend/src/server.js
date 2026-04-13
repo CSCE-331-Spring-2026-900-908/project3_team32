@@ -819,6 +819,44 @@ app.post('/api/cashier/orders', async (req, res, next) => {
   }
 });
 
+// Get order status (customer polls this)
+app.get('/api/orders/:id/status', async (req, res, next) => {
+  const orderId = Number(req.params.id);
+  if (!Number.isInteger(orderId) || orderId <= 0) {
+    return res.status(400).json({ error: 'Invalid order id' });
+  }
+  try {
+    const result = await pool.query(
+      'SELECT order_id, status FROM customer_order WHERE order_id = $1',
+      [orderId]
+    );
+    if (!result.rowCount) return res.status(404).json({ error: 'Order not found' });
+    res.json(result.rows[0]);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Update order status (cashier marks as Ready/Completed)
+app.patch('/api/orders/:id/status', requireAuth('manager', 'cashier'), async (req, res, next) => {
+  const orderId = Number(req.params.id);
+  const { status } = req.body;
+  const allowed = ['In Progress', 'Ready', 'Completed'];
+  if (!allowed.includes(status)) {
+    return res.status(400).json({ error: `status must be one of: ${allowed.join(', ')}` });
+  }
+  try {
+    const result = await pool.query(
+      'UPDATE customer_order SET status = $1 WHERE order_id = $2 RETURNING order_id, status',
+      [status, orderId]
+    );
+    if (!result.rowCount) return res.status(404).json({ error: 'Order not found' });
+    res.json(result.rows[0]);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Today's orders for the cashier screen
 app.get('/api/cashier/orders/today', async (req, res, next) => {
   try {
