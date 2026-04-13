@@ -4,16 +4,17 @@ import { apiRequest, unwrapList } from "../employee/manager/managerApi.js";
 
 function Section({ title, items }) {
   return (
-    <div className="section">
-      <h2 className="section-title">{title}</h2>
-      <div className="section-line" />
-      <div className="item-list">
+    <div className="mb-section">
+      <h2 className="mb-section-title">{title}</h2>
+      <div className="mb-section-line" />
+      <div className="mb-item-list">
         {items.map((item) => (
-          <div className="menu-item" key={item.menu_item_id}>
-            <span className="item-number">{item.menu_item_id}</span>
-            <div className="item-details">
-              <span className="item-name">{item.name}</span>
-              <span className="item-price">
+          <div className="mb-item" key={item.menu_item_id}>
+            <span className="mb-item-number">{item.menu_item_id}</span>
+            <div className="mb-item-details">
+              <span className="mb-item-name">{item.name}</span>
+              <span className="mb-item-dots" />
+              <span className="mb-item-price">
                 ${Number(item.cost).toFixed(2)}
               </span>
             </div>
@@ -24,16 +25,13 @@ function Section({ title, items }) {
   );
 }
 
-const NUM_COLUMNS = 3;
-
-function distributeIntoColumns(sections, numColumns) {
-  const chunkSize = Math.ceil(sections.length / numColumns);
-  const columns = [];
-  for (let i = 0; i < numColumns; i++) {
-    columns.push(sections.slice(i * chunkSize, (i + 1) * chunkSize));
-  }
-  return columns;
-}
+// Defines the exact column layout to match the real Sharetea menu.
+// Update this if categories are ever added/renamed.
+const COLUMN_LAYOUT = [
+  ["Milky Series", "Fresh Brew"],
+  ["Fruity Beverage", "Non-Caffeinated"],
+  ["New Matcha Series", "Ice-Blended"],
+];
 
 function MenuBoard() {
   const [sections, setSections] = useState([]);
@@ -92,43 +90,46 @@ function MenuBoard() {
   }, []);
 
   if (loading) {
-    return <div className="menu-board">Loading menu...</div>;
+    return <div className="mb-board">Loading menu...</div>;
   }
 
   if (error) {
-    return <div className="menu-board">Error: {error}</div>;
+    return <div className="mb-board">Error: {error}</div>;
   }
 
-  const columns = distributeIntoColumns(sections, NUM_COLUMNS);
-
   return (
-    <div className="menu-board">
-      <div className="menu-columns">
-        {columns.map((columnSections, colIdx) => (
-          <div className="menu-column" key={colIdx}>
-            {columnSections.map((section) => (
-              <Section
-                key={section.title}
-                title={section.title}
-                items={section.items}
-              />
-            ))}
+    <div className="mb-board">
+      <div className="mb-columns">
+        {COLUMN_LAYOUT.map((categoryNames, colIdx) => (
+          <div className="mb-column" key={colIdx}>
+            {categoryNames.map((categoryName) => {
+              const section = sections.find(
+                (s) => s.title === categoryName.toUpperCase()
+              );
+              return (
+                <Section
+                  key={categoryName}
+                  title={categoryName.toUpperCase()}
+                  items={section ? section.items : []}
+                />
+              );
+            })}
           </div>
         ))}
       </div>
 
-      <div className="bottom-bar">
-        <div className="bottom-group">
+      <div className="mb-bottom-bar">
+        <div className="mb-bottom-group">
           <h4>ICE LEVEL</h4>
           <p>No Ice • Less Ice • Regular • Extra Ice</p>
         </div>
 
-        <div className="bottom-group">
+        <div className="mb-bottom-group">
           <h4>SUGAR LEVEL</h4>
           <p>0% • 25% • 50% • 75% • 100% • 125%</p>
         </div>
 
-        <div className="bottom-group">
+        <div className="mb-bottom-group">
           <h4>TOPPING</h4>
           <p>
             Tapioca Pearls • Crystal Boba • Popping Boba (Strawberry) • Popping
