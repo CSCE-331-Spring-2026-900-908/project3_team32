@@ -17,7 +17,9 @@ CREATE TABLE employee (
     employee_id INT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     position VARCHAR(100) NOT NULL,
-    hire_date DATE NOT NULL
+    hire_date DATE NOT NULL,
+    google_email VARCHAR(255),
+    employee_pin VARCHAR(4) CHECK (employee_pin IS NULL OR employee_pin ~ '^[0-9]{4}$')
 );
 
 -- Create Inventory table

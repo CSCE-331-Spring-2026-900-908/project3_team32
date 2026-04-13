@@ -10,25 +10,38 @@
   color: white;
   padding: 1.5rem 2rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 700;
 }
 
 .header-content {
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
+  padding: 0 2rem;
+  box-sizing: border-box;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  /* Right side items flush right; title is absolutely centered */
+  position: relative;
+  justify-content: flex-end;
 }
 
 .customer-header h1 {
   margin: 0;
   font-size: 2rem;
+  /* True viewport center regardless of right-side button widths */
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
   gap: 1rem;
+  position: relative; /* sits above the abs-positioned h1 */
+  z-index: 1;
 }
 
 .customer-user-badge {
@@ -335,13 +348,51 @@
 
 .cart-screen,
 .checkout-screen {
-  max-width: 800px;
+  max-width: 1200px;
+  width: 100%;
 }
 
-.cart-screen h2,
+.cart-screen {
+  display: flex;
+  flex-direction: column;
+}
+
+.cart-screen h2 {
+  margin: 0;
+  color: #8b4513;
+}
+
 .checkout-screen h2 {
   margin-bottom: 2rem;
   color: #8b4513;
+}
+
+.cart-screen-top {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.cart-back-btn {
+  background: white;
+  color: #8b4513;
+  border: 2px solid #8b4513;
+  border-radius: 12px;
+  padding: 0.55rem 1rem;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cart-back-btn:hover {
+  background: #fef3e2;
+}
+
+.cart-screen-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .empty-cart {
@@ -359,7 +410,168 @@
   background: white;
   border-radius: 20px;
   padding: 1.5rem;
-  margin-bottom: 2rem;
+  overflow-y: auto;
+  max-height: min(44vh, 460px);
+}
+
+.cart-items-title {
+  margin: 0 0 0.75rem 0;
+  color: #8b4513;
+  font-size: 1.1rem;
+}
+
+.rewards-summary {
+  background: white;
+  border: 2px solid #e5d4b8;
+  border-radius: 16px;
+  padding: 1rem 1.25rem;
+}
+
+.rewards-tone-member {
+  border-color: #e5d4b8;
+  background: #fffdf9;
+}
+
+.rewards-tone-employee {
+  border-color: #dc2626;
+  background: #fff1f2;
+}
+
+.rewards-tone-gold {
+  border-color: #d4a017;
+  background: #fff8dc;
+}
+
+.rewards-tone-platinum {
+  border-color: #9aa6b2;
+  background: #f5f8fb;
+}
+
+.rewards-tone-diamond {
+  border-color: #0ea5e9;
+  background: #eef9ff;
+}
+
+.rewards-tier-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  font-weight: 800;
+}
+
+.rewards-tier-member {
+  color: #8b4513;
+  border-color: #d4a574;
+  background: #fef3e2;
+}
+
+.rewards-tier-employee {
+  color: #7f1d1d;
+  border-color: #dc2626;
+  background: #fecdd3;
+}
+
+.rewards-tier-gold {
+  color: #7a5200;
+  border-color: #d4a017;
+  background: #ffefb3;
+}
+
+.rewards-tier-platinum {
+  color: #334155;
+  border-color: #94a3b8;
+  background: #e2e8f0;
+}
+
+.rewards-tier-diamond {
+  color: #0c4a6e;
+  border-color: #0ea5e9;
+  background: #bae6fd;
+}
+
+.tier-visual-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.tier-chip {
+  border: 2px solid #d4a574;
+  color: #8b4513;
+  border-radius: 999px;
+  padding: 0.25rem 0.8rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  background: #fef3e2;
+}
+
+.tier-chip.active {
+  background: #8b4513;
+  border-color: #8b4513;
+  color: white;
+}
+
+.tier-chip-employee {
+  border-color: #dc2626;
+  color: #7f1d1d;
+  background: #fecdd3;
+}
+
+.tier-chip-employee.active {
+  border-color: #b91c1c;
+  background: #dc2626;
+  color: white;
+}
+
+.rewards-progress {
+  width: 100%;
+  height: 14px;
+  border-radius: 999px;
+  background: #f3e5cf;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.rewards-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #d4a574 0%, #8b4513 100%);
+  transition: width 0.2s ease;
+}
+
+.rewards-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: #2c2c2c;
+  font-weight: 600;
+}
+
+.rewards-line + .rewards-line {
+  margin-top: 0.45rem;
+}
+
+.rewards-note {
+  margin-top: 0.35rem;
+  color: #8b4513;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.rewards-note-employee {
+  display: inline-block;
+  margin-top: 0.6rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 10px;
+  border: 2px solid #991b1b;
+  background: #fee2e2;
+  color: #991b1b;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-weight: 800;
 }
 
 .cart-item {
@@ -393,6 +605,68 @@
   font-weight: 800;
   color: #8b4513;
   font-size: 1.1rem;
+}
+
+.cart-item-controls {
+  margin-left: 2rem;
+  margin-bottom: 0.45rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.cart-item-unit-price {
+  color: #666;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.qty-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.qty-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 2px solid #8b4513;
+  background: white;
+  color: #8b4513;
+  font-size: 1.15rem;
+  font-weight: 800;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.qty-btn:hover {
+  background: #fef3e2;
+}
+
+.qty-value {
+  min-width: 30px;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #2c2c2c;
+}
+
+.cart-edit-btn {
+  margin-left: auto;
+  border: 2px solid #8b4513;
+  background: white;
+  color: #8b4513;
+  border-radius: 10px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cart-edit-btn:hover {
+  background: #fef3e2;
 }
 
 .remove-btn {
@@ -430,11 +704,25 @@
   color: white;
   padding: 1.5rem;
   border-radius: 16px;
+}
+
+.cart-total-line {
   display: flex;
   justify-content: space-between;
-  font-size: 1.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.cart-total-line + .cart-total-line {
+  margin-top: 0.4rem;
+}
+
+.cart-total-line-final {
+  font-size: 1.4rem;
   font-weight: 800;
-  margin-bottom: 2rem;
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 2px solid rgba(255, 255, 255, 0.35);
 }
 
 .cart-actions {
@@ -856,4 +1144,839 @@
     padding: 0.6rem 1rem;
     font-size: 1rem;
   }
+}
+
+/* Stepper control for Font Size */
+.a11y-font-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.a11y-step-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid #8b4513;
+  background: white;
+  color: #8b4513;
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  padding: 0;
+}
+
+.a11y-step-btn:hover:not(:disabled) {
+  background: #8b4513;
+  color: white;
+}
+
+.a11y-step-btn:disabled {
+  border-color: #ccc;
+  color: #ccc;
+  cursor: not-allowed;
+  background: white;
+}
+
+.a11y-step-value {
+  min-width: 4rem;
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #8b4513;
+  background: #fef3e2;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+}
+
+/* ── My Orders button ────────────────────────────────────── */
+
+.my-orders-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid white;
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.my-orders-btn:hover {
+  background: white;
+  color: #8b4513;
+}
+
+/* ── Orders modal ─────────────────────────────────────────── */
+
+.orders-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5.75rem 1rem 1rem;
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+.magnified-content .orders-modal-overlay {
+  position: absolute;
+  inset: auto;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  padding: 5.75rem 1rem 1rem;
+}
+
+.orders-modal-card {
+  background: white;
+  border-radius: 28px;
+  width: min(680px, 100%);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.3);
+  animation: modalSlideUp 0.25s ease-out;
+}
+
+.orders-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.4rem 1.5rem 1.2rem;
+  border-bottom: 2px solid #f0e8da;
+  flex-shrink: 0;
+}
+
+/* Override the absolute positioning that works for the image-area close btn */
+.orders-modal-header .customize-modal-close {
+  position: static;
+  top: auto;
+  right: auto;
+  flex-shrink: 0;
+}
+
+.orders-modal-title {
+  margin: 0;
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #8b4513;
+}
+
+.orders-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Empty state ── */
+
+.orders-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.orders-empty-icon {
+  font-size: 3.5rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.4;
+}
+
+.orders-empty-msg {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #555;
+}
+
+.orders-empty-sub {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #aaa;
+}
+
+/* ── Individual order card ── */
+
+.order-history-card {
+  background: #fef9f4;
+  border: 2px solid #e5d4b8;
+  border-radius: 16px;
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.order-history-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.order-history-id {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #2c2c2c;
+}
+
+.order-status-chip {
+  font-size: 0.8rem;
+  font-weight: 800;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  white-space: nowrap;
+}
+
+.order-status-done {
+  background: #d1fae5;
+  color: #065f46;
+  border-color: #6ee7b7;
+}
+
+.order-status-progress {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fcd34d;
+}
+
+.order-history-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 600;
+}
+
+.order-history-items {
+  background: white;
+  border: 2px solid #f0e8da;
+  border-radius: 10px;
+  padding: 0.6rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.order-history-item-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.order-history-item-qty {
+  font-weight: 800;
+  color: #8b4513;
+  flex-shrink: 0;
+  min-width: 1.5rem;
+}
+
+.order-history-item-name {
+  flex: 1;
+  color: #2c2c2c;
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.order-history-item-price {
+  flex-shrink: 0;
+  font-weight: 700;
+  color: #555;
+}
+
+.order-history-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.5rem;
+  border-top: 2px solid #f0e8da;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #8b4513;
+}
+
+/* ── Menu + Cart side-panel layout ──────────────────────── */
+
+.customer-content-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Two-column menu layout: left scrolls, right panel is a fixed structural section */
+.menu-with-cart-layout {
+  display: flex;
+  /* Fill exactly the viewport below the header so columns scroll independently */
+  height: calc(100vh - 5.75rem);
+  overflow: hidden;
+  width: 100%;
+}
+
+.menu-left-col {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 2rem;
+}
+
+/* ── Cart side panel — built-in structural section ── */
+
+.cart-side-panel {
+  width: 380px;
+  flex-shrink: 0;
+  background: #fef8f2;
+  border-left: 2px solid #e5d4b8;
+  /* No overflow here — child areas manage their own scroll */
+  display: flex;
+  flex-direction: column;
+  /* Panel fills the full column height so footer sticks to bottom */
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Scrollable middle: rewards + items */
+.cart-panel-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  /* smooth overscroll on touch */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Pinned bottom: totals + checkout button */
+.cart-panel-footer {
+  flex-shrink: 0;
+  border-top: 2px solid #e5d4b8;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: #fef8f2;
+}
+
+.cart-panel-title {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #8b4513;
+  padding: 1.25rem 1.25rem 1rem;
+  border-bottom: 2px solid #e5d4b8;
+  flex-shrink: 0;
+}
+
+.cart-panel-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1rem;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.cart-panel-empty-icon {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.5;
+}
+
+.cart-panel-empty-msg {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #555;
+}
+
+.cart-panel-empty-sub {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #aaa;
+}
+
+.cart-panel-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-radius: 12px;
+  border: 2px solid #f0e8da;
+  overflow: hidden;
+  /* Prevents items from stretching the panel width at large font sizes */
+  min-width: 0;
+}
+
+.cart-panel-items .cart-item {
+  padding: 0.75rem 0.9rem;
+  border-bottom: 2px solid #f5f5f5;
+  /* Allow item rows to contract when font is large */
+  min-width: 0;
+}
+
+.cart-panel-items .cart-item:last-child {
+  border-bottom: none;
+}
+
+/* ── Font-resilient cart item rows ── */
+
+/* Name row: number + name ellipsis + price + remove */
+.cart-panel-items .cart-item-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.cart-panel-items .cart-item-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.95rem;
+}
+
+.cart-panel-items .cart-item-price {
+  flex-shrink: 0;
+  font-size: 0.95rem;
+}
+
+/* Controls row: unit price + qty + edit — wrap when font is large */
+.cart-panel-items .cart-item-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.35rem;
+  min-width: 0;
+}
+
+.cart-panel-items .cart-item-unit-price {
+  font-size: 0.82rem;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Compact rewards summary inside panel */
+.cart-side-panel .rewards-summary {
+  font-size: 0.88rem;
+}
+
+.cart-side-panel .rewards-line {
+  font-size: 0.88rem;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.cart-side-panel .tier-chip {
+  font-size: 0.8rem;
+  padding: 0.2rem 0.55rem;
+}
+
+/* Cart total inside footer — compact */
+.cart-panel-footer .cart-total {
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.cart-panel-footer .cart-total-line {
+  font-size: 1rem;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.cart-panel-footer .cart-total-line-final {
+  font-size: 1.2rem;
+}
+
+.cart-panel-checkout-btn {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  border-radius: 12px;
+}
+
+/* ── Customize Modal ─────────────────────────────────────── */
+
+.customize-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* push card below the sticky header (~5.5rem tall) */
+  padding: 5.75rem 1rem 1rem;
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.customize-modal-card {
+  background: white;
+  border-radius: 28px;
+  width: min(620px, 100%);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.3);
+  animation: modalSlideUp 0.25s ease-out;
+}
+
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+.customize-modal-image-placeholder {
+  width: 100%;
+  height: 200px;
+  background: #8b4513;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle radial glow behind the icon */
+.customize-modal-image-placeholder::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 60%, rgba(255,255,255,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.customize-modal-image-icon {
+  font-size: 6rem;
+  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.25));
+  position: relative;
+}
+
+.customize-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: white;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  z-index: 10;
+  line-height: 1;
+}
+
+.customize-modal-close:hover {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.customize-modal-item-info {
+  padding: 1.2rem 1.5rem 1rem;
+  flex-shrink: 0;
+  border-bottom: 2px solid #f0e8da;
+}
+
+.customize-modal-item-name {
+  margin: 0 0 0.3rem 0;
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #2c2c2c;
+  line-height: 1.2;
+}
+
+.customize-modal-item-description {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  color: #888;
+  line-height: 1.5;
+}
+
+.customize-modal-base-price {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #8b4513;
+}
+
+.customize-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.customize-modal-body .customize-section {
+  margin-bottom: 0.5rem;
+}
+
+.customize-modal-body .customize-section h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #8b4513;
+  margin: 0 0 0.75rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.customize-modal-body .option-grid {
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0;
+}
+
+.customize-modal-body .option-btn {
+  padding: 1rem;
+  font-size: 0.95rem;
+}
+
+.customize-modal-body .comments-section {
+  margin-top: 0.25rem;
+}
+
+.customize-modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 2px solid #f0e8da;
+  flex-shrink: 0;
+  background: white;
+}
+
+.customize-modal-add-btn {
+  width: 100%;
+  padding: 1.1rem 1.5rem;
+  background: #8b4513;
+  color: white;
+  border: none;
+  border-radius: 16px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  letter-spacing: 0.01em;
+}
+
+.customize-modal-add-btn:hover {
+  background: #6b3410;
+  transform: translateY(-2px);
+}
+
+/* Inside the magnifier lens the overlay needs position:absolute (fixed
+   breaks in transformed containers) with viewport-sized dimensions so the
+   flex-centered card lands at the same coordinates as the real overlay. */
+.magnified-content .customize-modal-overlay {
+  position: absolute;
+  inset: auto;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  padding: 5.75rem 1rem 1rem;
+}
+
+@media (max-width: 480px) {
+  .customize-modal-overlay {
+    padding-top: 5rem;
+  }
+  .customize-modal-image-placeholder {
+    height: 150px;
+  }
+  .customize-modal-body .option-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  }
+}
+
+/* ── Heart / Favorite button on menu cards ────────────────────────── */
+.menu-item-card {
+  position: relative;
+}
+
+.heart-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: rgba(255, 255, 255, 0.85);
+  border: none;
+  border-radius: 50%;
+  width: 2rem;
+  height: 2rem;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ccc;
+  transition: color 0.18s, transform 0.15s, background 0.18s;
+  z-index: 2;
+  padding: 0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+
+.heart-btn:hover {
+  transform: scale(1.2);
+  background: white;
+}
+
+.heart-btn--active {
+  color: #e53935;
+}
+
+/* ── Menu empty state (Favorites / Most Ordered with no data) ─────── */
+.menu-empty-state {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  color: #a0856c;
+  text-align: center;
+  gap: 0.75rem;
+}
+
+.menu-empty-icon {
+  font-size: 3rem;
+  margin-bottom: 0.25rem;
+}
+
+.menu-empty-state p {
+  font-size: 1rem;
+  max-width: 260px;
+  line-height: 1.5;
+}
+
+/* ── Most Ordered count badge on card ────────────────────────────── */
+.item-order-count {
+  font-size: 0.75rem;
+  color: #a0856c;
+  margin-top: 0.25rem;
+  font-style: italic;
+}
+
+/* ── Weather widget in cart empty panel ──────────────────────────── */
+.cart-panel-weather {
+  width: 100%;
+  background: linear-gradient(135deg, #e8f4fd, #d0e8f5);
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+  margin-bottom: 1.25rem;
+  text-align: center;
+  border: 1px solid #b8d4e8;
+}
+
+.cart-panel-weather-header {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #5a7fa0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.25rem;
+}
+
+.cart-panel-weather-temp {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #2c5f8a;
+  line-height: 1.1;
+}
+
+.cart-panel-weather-desc {
+  font-size: 0.85rem;
+  color: #4a7aa0;
+  margin-top: 0.15rem;
+  margin-bottom: 0.75rem;
+}
+
+.cart-panel-weather-week {
+  display: flex;
+  gap: 0.3rem;
+  overflow-x: auto;
+  padding: 0 0.25rem 0.25rem;
+  scrollbar-width: none;
+}
+
+.cart-panel-weather-week::-webkit-scrollbar { display: none; }
+
+.cart-panel-weather-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 2.8rem;
+  background: rgba(255,255,255,0.55);
+  border-radius: 8px;
+  padding: 0.35rem 0.25rem;
+  flex-shrink: 0;
+}
+
+.weather-day-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #4a7aa0;
+  text-transform: uppercase;
+}
+
+.weather-day-range {
+  font-size: 0.68rem;
+  color: #2c5f8a;
+  white-space: nowrap;
 }

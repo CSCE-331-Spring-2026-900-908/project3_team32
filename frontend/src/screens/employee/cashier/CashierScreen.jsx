@@ -1,18 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiCreditCard, FiDollarSign, FiGift } from 'react-icons/fi';
+import { useAuth } from '../../../context/AuthContext.jsx';
 import './CashierScreen.css';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 const SCREEN = {
   HOME: 'HOME',
-  ITEM_SELECT: 'ITEM_SELECT',
+  ITEM_SELECT: 'MENU ITEMS',
   SIZE: 'SIZE',
-  SUGAR: 'SUGAR',
-  ICE: 'ICE',
+  SUGAR: 'SUGAR LEVEL',
+  ICE: 'ICE LEVEL',
   TOPPINGS: 'TOPPINGS',
   CHECKOUT: 'CHECKOUT',
+  TIP: 'TIP',              
+  FINAL_TOTAL: 'FINAL_TOTAL', 
   CONFIRMATION: 'CONFIRMATION',
 };
 
@@ -32,6 +35,7 @@ function buildDisplayLines(item) {
 
 export default function CashierPOS() {
   const navigate = useNavigate();
+  const { user, token, logout, isManager } = useAuth();
   const [screen, setScreen] = useState(SCREEN.HOME);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [orderItems, setOrderItems] = useState([]);
@@ -48,6 +52,13 @@ export default function CashierPOS() {
   const [completedOrderId, setCompletedOrderId] = useState(null);
   const [completedOrderTotal, setCompletedOrderTotal] = useState(0);
   const [completedPaymentMethod, setCompletedPaymentMethod] = useState('');
+  const [tipAmount, setTipAmount] = useState(0);
+  const [pendingPaymentMethod, setPendingPaymentMethod] = useState(null);
+  const [showCustomTip, setShowCustomTip] = useState(false);
+  const [customTipValue, setCustomTipValue] = useState('');
+  const [todayOrders, setTodayOrders] = useState([]);
+  const [completedOrders, setCompletedOrders] = useState(new Set());
+  const [ordersDropdownOpen, setOrdersDropdownOpen] = useState(false);
   
   // API data
   const [menuItems, setMenuItems] = useState([]);
@@ -121,6 +132,26 @@ export default function CashierPOS() {
     
     loadData();
   }, []);
+
+  useEffect(() => {
+    async function loadTodayOrders() {
+      try {
+        const headers = {};
+        if (token) headers.Authorization = `Bearer ${token}`;
+        const res = await fetch(`${API_BASE}/cashier/orders/today`, { headers });
+        if (!res.ok) return;
+        const data = await res.json();
+        const orders = data.orders || data || [];
+        setTodayOrders(orders.map(order => ({
+          id: order.order_id,
+          items: (order.items || []).map(i => i.name || i.menu_item_name || `Item ${i.menu_item_id}`),
+        })));
+      } catch {
+        // silently fail — dropdown will just be empty until an order is placed
+      }
+    }
+    loadTodayOrders();
+  }, [token]);
 
   const mostCommonItems = useMemo(() => menuItems.slice(0, 9), [menuItems]);
   const visibleItems = useMemo(() => {
@@ -197,11 +228,34 @@ export default function CashierPOS() {
     setOrderItems((prev) => prev.filter((item) => item.id !== itemId));
   }
 
+  function handlePaymentSelection(method) {
+    if (method === 'Card' || method === 'Gift Card') {
+      setPendingPaymentMethod(method);
+      setShowCustomTip(false);
+      setCustomTipValue('');
+      setScreen(SCREEN.TIP);
+    } else {
+      setTipAmount(0);
+      completeOrder(method);
+    }
+  }
+
+  function handleTipSelection(amount) {
+    setTipAmount(amount);
+    setScreen(SCREEN.FINAL_TOTAL);
+  }
+
   function completeOrder(paymentMethod) {
     async function submitOrder() {
       try {
+        const employeeId = Number(user?.employee_id);
+        if (!Number.isInteger(employeeId) || employeeId <= 0) {
+          setStatusMessage('Unable to identify logged-in employee. Please sign in again.');
+          return;
+        }
+
         const orderPayload = {
-          employee_id: 1, // TODO: Get from logged-in employee
+          employee_id: employeeId,
           payment_type: paymentMethod.toUpperCase(),
           items: orderItems.map(item => ({
             menu_item_id: item.menuItemId,
@@ -212,10 +266,13 @@ export default function CashierPOS() {
         };
         
         console.log('Submitting order:', orderPayload); // Debug log
-        
+
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers.Authorization = `Bearer ${token}`;
+
         const response = await fetch(`${API_BASE}/cashier/orders`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify(orderPayload)
         });
         
@@ -230,8 +287,14 @@ export default function CashierPOS() {
         
         // Store order details for confirmation screen
         setCompletedOrderId(completedOrder);
-        setCompletedOrderTotal(orderTotal);
+        setCompletedOrderTotal(orderTotal + tipAmount);
         setCompletedPaymentMethod(paymentMethod);
+
+        // Add to today's orders dropdown
+        setTodayOrders(prev => [...prev, {
+          id: completedOrder,
+          items: orderItems.map(i => i.name),
+        }]);
         
         // Show confirmation screen
         setScreen(SCREEN.CONFIRMATION);
@@ -253,29 +316,99 @@ export default function CashierPOS() {
     setCompletedOrderId(null);
     setCompletedOrderTotal(0);
     setCompletedPaymentMethod('');
+    setTipAmount(0);
+    setPendingPaymentMethod(null);
+    setShowCustomTip(false);
+    setCustomTipValue('');
     setScreen(SCREEN.HOME);
+  }
+
+  console.log("Current User Data:", user);
+  function handleExit() {
+    if (isManager) {
+      navigate('/employee', { replace: true });
+      return;
+    }
+
+    logout();
+    localStorage.removeItem('role');
+    localStorage.removeItem('employee');
+    localStorage.removeItem('user');
+    sessionStorage.clear();
+    navigate('/login/employee', { replace: true });
   }
 
   return (
     <div className="cashier-page">
       <div className="cashier-shell">
         <header className="cashier-header">
-          <div>
+          <div className="header-left">
             <h1>Cashier</h1>
           </div>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+
+          <div className="header-right">
+            <div className="today-orders-wrapper">
+              <button
+                className="today-orders-btn"
+                onClick={() => setOrdersDropdownOpen(o => !o)}
+                aria-expanded={ordersDropdownOpen}
+              >
+                Today's Orders
+                <span className={`today-orders-caret${ordersDropdownOpen ? ' open' : ''}`}>▾</span>
+              </button>
+
+              {ordersDropdownOpen && (
+                <div className="today-orders-dropdown">
+                  {todayOrders.length === 0 ? (
+                    <div className="today-orders-empty">No orders placed today yet.</div>
+                  ) : (
+                    todayOrders.map(order => (
+                      <div key={order.id} className={`today-order-entry${completedOrders.has(order.id) ? ' completed' : ''}`}>
+                        <div className="today-order-main">
+                          <div className="today-order-info">
+                            <span className="today-order-number">Order #{order.id}</span>
+                            <ul className="today-order-items">
+                              {order.items.map((item, i) => (
+                                <li key={i}>{item}</li>
+                              ))}
+                            </ul>
+                          </div>
+                          <label className="today-order-check" title="Mark as completed">
+                            <input
+                              type="checkbox"
+                              checked={completedOrders.has(order.id)}
+                              onChange={() => {
+                                setCompletedOrders(prev => {
+                                  const next = new Set(prev);
+                                  if (next.has(order.id)) next.delete(order.id);
+                                  else next.add(order.id);
+                                  return next;
+                                });
+                              }}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="cashier-pill">{screen}</div>
+
+            {user && (
+              <div className="cashier-user-block">
+                <span className="cashier-user-label">Signed In As</span>
+                <span className="cashier-user-name">{user.name || 'Brian Qiu'}</span>
+                <span className="cashier-user-role">{user.position || user.role || 'Cashier'}</span>
+              </div>
+            )}
             <button
-              className="secondary-action"
-              onClick={() => {
-                localStorage.removeItem('role');
-                localStorage.removeItem('employee');
-                localStorage.removeItem('user');
-                sessionStorage.clear();
-                navigate('/login/employee');
-              }}
+              className="cashier-exit-button"
+              onClick={handleExit}
             >
-              Logout
+              Exit
             </button>
           </div>
         </header>
@@ -476,7 +609,6 @@ export default function CashierPOS() {
               <h2>Complete Payment</h2>
             </div>
             
-            {/* Order Summary */}
             <div className="checkout-order-summary">
               <h3>Order Summary</h3>
               <div className="checkout-order-list">
@@ -505,20 +637,114 @@ export default function CashierPOS() {
             <div className="payment-section">
               <h3>Select Payment Method</h3>
               <div className="checkout-grid">
-                <button className="payment-method-btn" onClick={() => completeOrder('Card')}>
+                <button className="payment-method-btn" onClick={() => handlePaymentSelection('Card')}>
                   <FiCreditCard className="payment-icon" />
                   <span className="payment-label">Card</span>
                 </button>
-                <button className="payment-method-btn" onClick={() => completeOrder('Cash')}>
+                <button className="payment-method-btn" onClick={() => handlePaymentSelection('Cash')}>
                   <FiDollarSign className="payment-icon" />
                   <span className="payment-label">Cash</span>
                 </button>
-                <button className="payment-method-btn" onClick={() => completeOrder('Gift Card')}>
+                <button className="payment-method-btn" onClick={() => handlePaymentSelection('Gift Card')}>
                   <FiGift className="payment-icon" />
                   <span className="payment-label">Gift Card</span>
                 </button>
               </div>
             </div>
+          </section>
+        )}
+
+        {screen === SCREEN.TIP && (
+          <div className="tip-overlay">
+            <div className="tip-modal">
+              <h2>Select Tip Amount</h2>
+              
+              {!showCustomTip ? (
+                <div className="tip-options">
+                  <button className="tip-button" onClick={() => handleTipSelection(orderTotal * 0.20)}>
+                    20%
+                    <span className="tip-amount-label">{currency(orderTotal * 0.20)}</span>
+                  </button>
+                  <button className="tip-button" onClick={() => handleTipSelection(orderTotal * 0.25)}>
+                    25%
+                    <span className="tip-amount-label">{currency(orderTotal * 0.25)}</span>
+                  </button>
+                  <button className="tip-button" onClick={() => handleTipSelection(orderTotal * 0.30)}>
+                    30%
+                    <span className="tip-amount-label">{currency(orderTotal * 0.30)}</span>
+                  </button>
+                  <button className="tip-button" onClick={() => setShowCustomTip(true)}>
+                    Custom
+                    <span className="tip-amount-label">Enter Custom Amount</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="custom-tip-container">
+                  <div className="custom-tip-input-wrapper">
+                    <span className="custom-tip-currency">$</span>
+                    <input
+                      type="number"
+                      className="custom-tip-input"
+                      value={customTipValue}
+                      onChange={(e) => setCustomTipValue(e.target.value)}
+                      placeholder="0.00"
+                      min="0"
+                      step="0.01"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="custom-tip-actions">
+                    <button 
+                      className="secondary-action" 
+                      style={{ padding: '20px', fontSize: '1.5rem', flex: 1 }} 
+                      onClick={() => setShowCustomTip(false)}
+                    >
+                      Back
+                    </button>
+                    <button 
+                      className="primary-action" 
+                      style={{ padding: '20px', fontSize: '1.5rem', flex: 2, background: '#8b4513', color: 'white', border: 'none' }} 
+                      onClick={() => handleTipSelection(Number(customTipValue) || 0)}
+                    >
+                      Confirm Tip
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <button className="tip-cancel-btn" onClick={() => setScreen(SCREEN.CHECKOUT)}>Cancel Payment</button>
+            </div>
+          </div>
+        )}
+
+        {screen === SCREEN.FINAL_TOTAL && (
+          <section className="cashier-panel checkout-panel">
+             <div className="checkout-header">
+                <button className="cancel-checkout-btn" onClick={() => setScreen(SCREEN.TIP)}>Back</button>
+                <h2>Final Total</h2>
+             </div>
+             <div className="checkout-order-summary" style={{ padding: '30px' }}>
+                <div style={{ fontSize: '1.25rem', marginBottom: '15px', display: 'flex', justifyContent: 'space-between', color: '#495057' }}>
+                  <span>Subtotal:</span>
+                  <span>{currency(orderTotal)}</span>
+                </div>
+                <div style={{ fontSize: '1.25rem', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', color: '#495057' }}>
+                  <span>Tip:</span>
+                  <span>{currency(tipAmount)}</span>
+                </div>
+                <div style={{ fontSize: '2.5rem', fontWeight: '800', borderTop: '2px solid #dee2e6', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', color: '#8b4513' }}>
+                  <span>Total:</span>
+                  <span>{currency(orderTotal + tipAmount)}</span>
+                </div>
+             </div>
+             <button 
+                className="payment-method-btn" 
+                style={{ width: '100%', padding: '24px', fontSize: '1.5rem', marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '15px', background: '#8b4513', color: 'white', borderColor: '#8b4513' }} 
+                onClick={() => completeOrder(pendingPaymentMethod)}
+             >
+                <FiCreditCard size={32} />
+                <span>Tap to Pay {currency(orderTotal + tipAmount)}</span>
+             </button>
           </section>
         )}
 

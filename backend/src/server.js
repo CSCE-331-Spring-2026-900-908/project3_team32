@@ -11,6 +11,40 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+function normalizeEmployeePin(value) {
+  if (value === undefined || value === null) return null;
+  const normalized = String(value).trim();
+  if (!normalized) return null;
+  return normalized;
+}
+
+function isValidEmployeePin(pin) {
+  return /^\d{4}$/.test(pin);
+}
+
+async function ensureEmployeeAuthSchema() {
+  await pool.query('ALTER TABLE employee ADD COLUMN IF NOT EXISTS google_email VARCHAR(255)');
+  await pool.query('ALTER TABLE employee ADD COLUMN IF NOT EXISTS employee_pin VARCHAR(4)');
+  await pool.query(
+    `DO $$
+     BEGIN
+       IF NOT EXISTS (
+         SELECT 1
+         FROM pg_constraint
+         WHERE conname = 'employee_pin_format_chk'
+       ) THEN
+         ALTER TABLE employee
+           ADD CONSTRAINT employee_pin_format_chk
+           CHECK (employee_pin IS NULL OR employee_pin ~ '^[0-9]{4}$');
+       END IF;
+     END $$;`,
+  );
+}
+
+await ensureEmployeeAuthSchema().catch((error) => {
+  console.error('Failed to ensure employee auth schema:', error.message);
+});
+
 // ── JWT helpers ────────────────────────────────────────────────────────────────
 
 function signToken(payload) {
@@ -155,6 +189,27 @@ app.post('/api/auth/google/customer', async (req, res, next) => {
   }
 });
 
+// Customer guest login — no account required
+app.post('/api/auth/guest/customer', async (req, res) => {
+  const guestSessionId = `guest-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+  const token = signToken({
+    type: 'customer',
+    guest: true,
+    guest_session_id: guestSessionId,
+    name: 'Guest',
+  });
+
+  res.json({
+    token,
+    user: {
+      type: 'customer',
+      guest: true,
+      name: 'Guest',
+      guest_session_id: guestSessionId,
+    },
+  });
+});
+
 // Employee Google login — must already have google_email pre-registered
 app.post('/api/auth/google/employee', async (req, res, next) => {
   const { credential } = req.body;
@@ -173,6 +228,43 @@ app.post('/api/auth/google/employee', async (req, res, next) => {
       return res.status(403).json({
         error: 'No employee account found for this Google email. Contact your manager.',
       });
+    }
+
+    const employee = result.rows[0];
+    const token = signToken({
+      type: 'employee',
+      employee_id: employee.employee_id,
+      name: employee.name,
+      position: employee.position,
+    });
+
+    res.json({ token, user: { ...employee } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Employee PIN login — uses 4-digit PIN only
+app.post('/api/auth/pin/employee', async (req, res, next) => {
+  const pin = normalizeEmployeePin(req.body?.pin);
+
+  if (!pin || !isValidEmployeePin(pin)) {
+    return res.status(400).json({ error: 'pin must be a 4-digit code' });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT employee_id, name, position, hire_date, google_email
+       FROM employee
+       WHERE employee_pin = $1`,
+      [pin],
+    );
+
+    if (!result.rowCount) {
+      return res.status(401).json({ error: 'Invalid PIN' });
+    }
+    if (result.rowCount > 1) {
+      return res.status(409).json({ error: 'PIN is assigned to multiple employees. Ask manager to reset PINs.' });
     }
 
     const employee = result.rows[0];
@@ -435,7 +527,10 @@ app.delete('/api/inventory/:id', async (req, res, next) => {
 app.get('/api/employees', async (req, res, next) => {
   try {
     const result = await pool.query(
-      'SELECT employee_id, name, position, hire_date, google_email FROM employee ORDER BY employee_id',
+      `SELECT employee_id, name, position, hire_date, google_email, employee_pin,
+              (employee_pin IS NOT NULL) AS pin_set
+       FROM employee
+       ORDER BY employee_id`,
     );
     res.json({ employees: result.rows });
   } catch (error) {
@@ -445,16 +540,30 @@ app.get('/api/employees', async (req, res, next) => {
 
 app.post('/api/employees', async (req, res, next) => {
   const { employee_id, name, position, hire_date, google_email } = req.body;
+  const pin = normalizeEmployeePin(req.body?.employee_pin);
   if (!employee_id || !name || !position || !parseDateInput(hire_date)) {
     return res.status(400).json({ error: 'employee_id, name, position, hire_date are required' });
   }
+  if (pin && !isValidEmployeePin(pin)) {
+    return res.status(400).json({ error: 'employee_pin must be exactly 4 digits' });
+  }
 
   try {
+    if (pin) {
+      const pinInUse = await pool.query(
+        'SELECT employee_id FROM employee WHERE employee_pin = $1 LIMIT 1',
+        [pin],
+      );
+      if (pinInUse.rowCount) {
+        return res.status(409).json({ error: 'This PIN is already assigned to another employee' });
+      }
+    }
+
     const result = await pool.query(
-      `INSERT INTO employee (employee_id, name, position, hire_date, google_email)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING employee_id, name, position, hire_date, google_email`,
-      [Number(employee_id), name.trim(), position.trim(), hire_date, google_email?.trim() || null],
+      `INSERT INTO employee (employee_id, name, position, hire_date, google_email, employee_pin)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING employee_id, name, position, hire_date, google_email, employee_pin, (employee_pin IS NOT NULL) AS pin_set`,
+      [Number(employee_id), name.trim(), position.trim(), hire_date, google_email?.trim() || null, pin],
     );
     res.status(201).json({ employee: result.rows[0] });
   } catch (error) {
@@ -468,13 +577,43 @@ app.put('/api/employees/:id', async (req, res, next) => {
     return res.status(400).json({ error: 'name, position, hire_date are required' });
   }
 
+  const hasPinField = Object.prototype.hasOwnProperty.call(req.body, 'employee_pin');
+  const pin = normalizeEmployeePin(req.body?.employee_pin);
+  if (hasPinField && pin && !isValidEmployeePin(pin)) {
+    return res.status(400).json({ error: 'employee_pin must be exactly 4 digits' });
+  }
+
   try {
+    if (hasPinField && pin) {
+      const pinInUse = await pool.query(
+        'SELECT employee_id FROM employee WHERE employee_pin = $1 AND employee_id <> $2 LIMIT 1',
+        [pin, req.params.id],
+      );
+      if (pinInUse.rowCount) {
+        return res.status(409).json({ error: 'This PIN is already assigned to another employee' });
+      }
+    }
+
+    const values = [name.trim(), position.trim(), hire_date, google_email?.trim() || null];
+    const setClauses = [
+      'name = $1',
+      'position = $2',
+      'hire_date = $3',
+      'google_email = $4',
+    ];
+
+    if (hasPinField) {
+      values.push(pin);
+      setClauses.push(`employee_pin = $${values.length}`);
+    }
+
+    values.push(req.params.id);
     const result = await pool.query(
       `UPDATE employee
-       SET name = $1, position = $2, hire_date = $3, google_email = $4
-       WHERE employee_id = $5
-       RETURNING employee_id, name, position, hire_date, google_email`,
-      [name.trim(), position.trim(), hire_date, google_email?.trim() || null, req.params.id],
+       SET ${setClauses.join(', ')}
+       WHERE employee_id = $${values.length}
+       RETURNING employee_id, name, position, hire_date, google_email, employee_pin, (employee_pin IS NOT NULL) AS pin_set`,
+      values,
     );
     if (!result.rowCount) return res.status(404).json({ error: 'Employee not found' });
     res.json({ employee: result.rows[0] });
@@ -528,6 +667,23 @@ app.get('/api/cashier/modifications', async (req, res, next) => {
     res.json({ sugar, ice, toppings, sizes });
   } catch (error) {
     next(error);
+  }
+});
+
+app.get('/api/cashier/most-ordered', async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT m.menu_item_id, m.name, m.cost, m.category, SUM(oi.quantity) as order_count
+       FROM order_item oi
+       JOIN menu_item m ON oi.menu_item_id = m.menu_item_id
+       GROUP BY m.menu_item_id, m.name, m.cost, m.category
+       ORDER BY order_count DESC
+       LIMIT 9`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Cashier Most Ordered Error:", error);
+    res.status(500).json({ error: 'Failed to fetch global most ordered' });
   }
 });
 
@@ -660,6 +816,37 @@ app.post('/api/cashier/orders', async (req, res, next) => {
     next(error);
   } finally {
     client.release();
+  }
+});
+
+// Today's orders for the cashier screen
+app.get('/api/cashier/orders/today', async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT
+         co.order_id,
+         co.order_date,
+         co.total_cost,
+         co.payment_type,
+         json_agg(
+           json_build_object(
+             'order_item_id', oi.order_item_id,
+             'menu_item_id',  oi.menu_item_id,
+             'name',          m.name,
+             'quantity',      oi.quantity,
+             'item_price',    oi.item_price
+           ) ORDER BY oi.order_item_id
+         ) AS items
+       FROM customer_order co
+       JOIN order_item oi ON co.order_id = oi.order_id
+       JOIN menu_item  m  ON oi.menu_item_id = m.menu_item_id
+       WHERE co.order_date::date = CURRENT_DATE
+       GROUP BY co.order_id, co.order_date, co.total_cost, co.payment_type
+       ORDER BY co.order_id DESC`,
+    );
+    res.json({ orders: result.rows });
+  } catch (error) {
+    next(error);
   }
 });
 
@@ -1148,6 +1335,32 @@ app.post('/api/reports/z-report', async (req, res, next) => {
     );
 
     await client.query('COMMIT');
+    if (req.body.customer_email) {
+      try {
+          const email = req.body.customer_email;
+          const name = req.body.customer_name || email.split('@')[0];
+          const googleId = req.body.google_id || email;
+          console.log(`[CHECKOUT] Attempting to link order ${orderId} to email: ${email}`);
+          let custRes = await pool.query(`SELECT customer_id FROM customer WHERE email = $1 LIMIT 1`, [email]);
+          let custId = custRes.rows[0]?.customer_id;
+          if (!custId) {
+              console.log(`[CHECKOUT] Customer not found. Auto-registering: ${email}`);
+              const insertRes = await pool.query(
+                  `INSERT INTO customer (email, name, google_id) VALUES ($1, $2, $3) RETURNING customer_id`,
+                  [email, name, googleId]
+              );
+              custId = insertRes.rows[0].customer_id;
+          }
+          await pool.query(
+            `UPDATE customer_order SET customer_id = $1 WHERE order_id = $2`,
+            [custId, orderId]
+          );
+          console.log(`[CHECKOUT] Successfully linked order ${orderId} to customer_id ${custId}`);
+          
+      } catch (linkError) {
+          console.error("[CHECKOUT] FAILED TO LINK CUSTOMER:", linkError.message);
+      }
+   }
 
     res.json({
       totalOrders: totals.rows[0]?.total_orders || 0,
@@ -1163,6 +1376,97 @@ app.post('/api/reports/z-report', async (req, res, next) => {
     next(error);
   } finally {
     client.release();
+  }
+});
+
+app.get('/api/customer/most-ordered', requireAuth(), async (req, res, next) => {
+  const email = req.user?.email;
+  if (!email) return res.status(401).json({ error: 'User email not found.' });
+
+  try {
+    const result = await pool.query(
+      `SELECT m.menu_item_id, m.name, m.cost, m.category, SUM(oi.quantity) as order_count
+       FROM customer_order co
+       JOIN customer c ON co.customer_id = c.customer_id
+       JOIN order_item oi ON co.order_id = oi.order_id
+       JOIN menu_item m ON oi.menu_item_id = m.menu_item_id
+       WHERE c.email = $1
+       GROUP BY m.menu_item_id, m.name, m.cost, m.category
+       ORDER BY order_count DESC
+       LIMIT 12
+       `,
+      [email]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Most Ordered SQL Error:", error.message);
+    res.json([]); 
+  }
+});
+
+app.get('/api/customer/saved-favorites', requireAuth(), async (req, res, next) => {
+  const email = req.user?.email;
+  if (!email) return res.status(401).json({ error: 'User email not found.' });
+  try {
+    const result = await pool.query(
+      `SELECT f.favorite_id, f.item_data
+       FROM customer_favorite f
+       JOIN customer c ON f.customer_id = c.customer_id
+       WHERE c.email = $1
+       ORDER BY f.favorite_id DESC`,
+      [email]
+    );
+    const parsed = result.rows.map(row => {
+        let safeData = row.item_data;
+        if (typeof row.item_data === 'string') {
+            try { safeData = JSON.parse(row.item_data); } catch(e) {}
+        }
+        return {
+            favorite_id: row.favorite_id,
+            item_data: safeData
+        };
+    });
+    res.json(parsed);
+  } catch (error) {
+    console.error("Saved Favorites Fetch Error:", error.message);
+    res.json([]);
+  }
+});
+
+app.post('/api/customer/saved-favorites', requireAuth(), async (req, res, next) => {
+  const email = req.body.customer_email;
+  const name = req.body.customer_name || email.split('@')[0];
+  const googleId = req.body.google_id || email;
+  const itemDataStr = JSON.stringify(req.body.item_data);
+
+  try {
+      let custRes = await pool.query(`SELECT customer_id FROM customer WHERE email = $1 LIMIT 1`, [email]);
+      let custId = custRes.rows[0]?.customer_id;
+      if (!custId) {
+          const insertRes = await pool.query(
+              `INSERT INTO customer (email, name, google_id) VALUES ($1, $2, $3) RETURNING customer_id`,
+              [email, name, googleId]
+          );
+          custId = insertRes.rows[0].customer_id;
+      }
+      const favRes = await pool.query(
+          `INSERT INTO customer_favorite (customer_id, item_data) VALUES ($1, $2) RETURNING favorite_id`,
+          [custId, itemDataStr]
+      );
+      res.json({ favorite_id: favRes.rows[0].favorite_id });
+  } catch (err) {
+      console.error("Failed to save favorite:", err.message);
+      res.status(500).json({ error: 'Failed to save favorite' });
+  }
+});
+
+app.delete('/api/customer/saved-favorites/:id', requireAuth(), async (req, res, next) => {
+  try {
+      await pool.query(`DELETE FROM customer_favorite WHERE favorite_id = $1`, [req.params.id]);
+      res.json({ success: true });
+  } catch (err) {
+      console.error("Failed to delete favorite:", err.message);
+      res.status(500).json({ error: 'Failed to delete favorite' });
   }
 });
 

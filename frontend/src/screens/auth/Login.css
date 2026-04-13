@@ -14,6 +14,49 @@
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
 }
 
+.login.employee-login {
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.75rem 0.5rem;
+  overflow-y: hidden;
+  overflow-x: hidden;
+}
+
+.employee-login .login-card {
+  max-width: 920px;
+  width: min(100%, 920px);
+  height: calc(100vh - 0.85rem);
+  padding: 0.8rem 1.1rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+}
+
+.employee-login .login-icon {
+  font-size: 2rem;
+  margin: 0 0 0.18rem;
+}
+
+.employee-login .login-card h1 {
+  font-size: 1.5rem;
+  margin-bottom: 0.15rem;
+}
+
+.employee-login .login-subtitle {
+  font-size: 0.86rem;
+  margin: 0 0 0.35rem;
+  line-height: 1.2;
+}
+
+.employee-login .login-content {
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 .login-card {
   position: relative;
   background: white;
@@ -166,6 +209,190 @@
   margin: 1.5rem 0;
 }
 
+.customer-login-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
+.guest-login-btn {
+  background: white;
+  color: #8b4513;
+  border: 2px solid #d4a574;
+  padding: 0.9rem 1.15rem;
+}
+
+.guest-login-btn:hover {
+  background: #fef3e2;
+  border-color: #8b4513;
+}
+
+.guest-login-note {
+  color: #666;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.login-divider {
+  margin: 0.15rem 0 0.35rem;
+  color: #7a7a7a;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.employee-login-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(305px, 340px);
+  gap: 0.7rem;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+}
+
+.employee-pin-section,
+.employee-google-section {
+  background: #fcfaf6;
+  border: 1px solid #ebddc8;
+  border-radius: 12px;
+  padding: 0.66rem;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.employee-google-section .login-divider {
+  margin-top: 0;
+}
+
+.employee-google-section .google-login-wrapper {
+  margin: 0.2rem 0 0;
+  width: 100%;
+  justify-content: stretch;
+}
+
+.employee-google-section .google-login-wrapper > div {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.employee-google-section .google-login-wrapper iframe {
+  width: 100% !important;
+  max-width: none !important;
+  height: 62px !important;
+  min-height: 62px !important;
+}
+
+/* Force Google Identity button internals to fill the panel width */
+.employee-google-section .google-login-wrapper .nsm7Bb-HzV7m-LgbsSe {
+  width: 100% !important;
+  max-width: none !important;
+  height: 62px !important;
+  min-height: 62px !important;
+}
+
+.employee-google-section .google-login-wrapper .nsm7Bb-HzV7m-LgbsSe > div {
+  width: 100% !important;
+  max-width: none !important;
+  height: 62px !important;
+  min-height: 62px !important;
+}
+
+.employee-google-section .google-login-wrapper .L6cTce {
+  width: 100% !important;
+  max-width: none !important;
+  line-height: 62px !important;
+  height: 62px !important;
+}
+
+.pin-login-form {
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  text-align: left;
+  flex: 1;
+}
+
+.pin-login-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  color: #444;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.pin-login-form input {
+  width: 100%;
+  padding: 0.66rem 0.78rem;
+  border: 2px solid #e5d4b8;
+  border-radius: 10px;
+  font-size: 1.12rem;
+  text-align: center;
+  letter-spacing: 0.24em;
+  font-weight: 700;
+}
+
+.pin-login-form input:focus {
+  outline: none;
+  border-color: #8b4513;
+  box-shadow: 0 0 0 2px rgba(139, 69, 19, 0.15);
+}
+
+.pin-login-btn {
+  margin-top: 0.15rem;
+  padding: 0.82rem 0.95rem;
+}
+
+.pin-login-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.pin-pad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.12rem;
+  align-content: start;
+}
+
+.pin-pad-btn {
+  border: 2px solid #d8c2a4;
+  background: #fffdf9;
+  color: #3b2d1f;
+  border-radius: 10px;
+  height: 72px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.pin-pad-btn:hover {
+  background: #fef3e2;
+  border-color: #b48a5a;
+}
+
+.pin-pad-btn:active {
+  transform: scale(0.98);
+}
+
+.pin-pad-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.pin-pad-btn-alt {
+  font-size: 0.92rem;
+}
+
 .login-error {
   background: #fff0f0;
   border: 1px solid #ffcccc;
@@ -176,6 +403,43 @@
   font-size: 0.9rem;
 }
 
+.login-error-slot {
+  min-height: 46px;
+  margin-bottom: 0.45rem;
+}
+
+.employee-login .login-error-slot {
+  min-height: 36px;
+  margin-bottom: 0.24rem;
+}
+
+.employee-login .login-error {
+  margin-bottom: 0;
+  padding: 0.42rem 0.68rem;
+  font-size: 0.82rem;
+}
+
+.login-loading-inline {
+  min-height: 46px;
+  border-radius: 8px;
+  border: 1px solid #eadcc6;
+  background: #fffaf2;
+  color: #8b4513;
+  font-size: 0.86rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.7rem;
+  box-sizing: border-box;
+}
+
+.login-error-hidden {
+  visibility: hidden;
+  pointer-events: none;
+  margin-bottom: 0;
+}
+
 .login-loading {
   color: #8b4513;
   font-size: 1rem;
@@ -184,10 +448,36 @@
 }
 
 .auth-note {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: #888;
-  margin-top: 1rem;
-  line-height: 1.4;
+  margin-top: 0.5rem;
+  line-height: 1.25;
+}
+
+.employee-login .auth-note {
+  margin-top: 0.3rem;
+}
+
+@media (max-height: 860px) and (min-width: 769px) {
+  .employee-login .login-card {
+    padding: 0.8rem 1rem 0.75rem;
+  }
+
+  .employee-login .login-card h1 {
+    font-size: 1.35rem;
+  }
+
+  .employee-login .login-icon {
+    font-size: 2rem;
+  }
+
+  .employee-login-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 312px);
+  }
+
+  .pin-pad-btn {
+    height: 60px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -225,5 +515,13 @@
 
   .info-card p {
     font-size: 0.875rem;
+  }
+
+  .employee-login-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .employee-login .login-card {
+    max-width: 560px;
   }
 }

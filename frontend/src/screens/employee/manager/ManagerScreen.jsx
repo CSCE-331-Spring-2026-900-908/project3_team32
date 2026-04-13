@@ -27,7 +27,7 @@ const PANELS = {
 
 export default function ManagerScreen() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isManager } = useAuth();
   const [active, setActive] = useState('MENU');
   const [weather, setWeather] = useState(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
@@ -60,6 +60,16 @@ export default function ManagerScreen() {
     };
   }, []);
 
+  function handleExit() {
+    if (isManager) {
+      navigate('/employee', { replace: true });
+      return;
+    }
+
+    logout();
+    navigate('/login/employee', { replace: true });
+  }
+
   return (
     <div className="manager-screen">
       <aside className="manager-sidebar">
@@ -89,18 +99,16 @@ export default function ManagerScreen() {
         <div className="sidebar-footer">
           {user && (
             <div className="sidebar-user">
+              <span className="sidebar-user-title">Currently Signed In</span>
               <span className="sidebar-user-name">{user.name}</span>
               <span className="sidebar-user-role">{user.position}</span>
             </div>
           )}
           <button
-            onClick={() => {
-              logout();
-              navigate('/login/employee', { replace: true });
-            }}
+            onClick={handleExit}
             className="logout-button"
           >
-            Logout
+            Exit
           </button>
         </div>
       </aside>

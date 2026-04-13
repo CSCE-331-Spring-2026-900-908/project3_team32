@@ -5,7 +5,7 @@
 -- Note: Update file paths if needed based on where you run this from
 
 \echo 'Loading employee data...'
-\COPY employee FROM 'data/employees.csv' WITH CSV HEADER;
+\COPY employee (employee_id, name, position, hire_date) FROM 'data/employees.csv' WITH CSV HEADER;
 
 \echo 'Loading inventory data...'
 \COPY inventory FROM 'data/inventory.csv' WITH CSV HEADER;
