@@ -1442,11 +1442,7 @@
   }
 }
 
-.customer-page * {
-  font-size: calc(var(--a11y-font-size, 100%) / 100 * 1em);
-}
-
-/* Stepper control for Font Size */
+/* ── Font Size Stepper (transferred from NewCustomerScreen.css) ── */
 .a11y-font-stepper {
   display: flex;
   align-items: center;

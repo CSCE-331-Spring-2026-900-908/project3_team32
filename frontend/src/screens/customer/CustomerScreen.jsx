@@ -47,10 +47,18 @@ function getRewardsStatus(points, isEmployee) {
 
 function buildDisplayLines(item) {
   const lines = [];
-  if (item.sugarLevel && item.sugarLevel !== 'Regular') lines.push(`Sugar: ${item.sugarLevel}`);
-  if (item.iceLevel && item.iceLevel !== 'Regular') lines.push(`Ice: ${item.iceLevel}`);
-  if (item.toppingNames?.length) lines.push(`Toppings: ${item.toppingNames.join(', ')}`);
-  if (item.comments) lines.push(`Note: ${item.comments}`);
+  if (item.sugarLevel && item.sugarLevel !== '100% Sugar' && item.sugarLevel !== 'Regular') {
+    lines.push(`Sugar: ${item.sugarLevel}`);
+  }
+  if (item.iceLevel && item.iceLevel !== 'Regular Ice' && item.iceLevel !== 'Regular') {
+    lines.push(`Ice: ${item.iceLevel}`);
+  }
+  if (item.toppingNames?.length) {
+    lines.push(`Toppings: ${item.toppingNames.join(', ')}`);
+  }
+  if (item.comments) {
+    lines.push(`Note: ${item.comments}`);
+  }
   return lines;
 }
 
@@ -124,8 +132,8 @@ export default function CustomerScreen() {
   const [currentItem, setCurrentItem] = useState(null);
   const [editingCartItemId, setEditingCartItemId] = useState(null);
   const [customizeStep, setCustomizeStep] = useState(1);
-  const [selectedSugar, setSelectedSugar] = useState(null);
-  const [selectedIce, setSelectedIce] = useState(null);
+  const [selectedSugar, setSelectedSugar] = useState({ name: "100% Sugar" });
+  const [selectedIce, setSelectedIce] = useState({ name: "Regular Ice" });
   const [selectedToppings, setSelectedToppings] = useState([]);
   const [comments, setComments] = useState('');
   const [orderNumber, setOrderNumber] = useState(null);
@@ -441,35 +449,41 @@ export default function CustomerScreen() {
       document.head.appendChild(tag);
     }
     tag.textContent = `
-      .customer-page .customer-header h1            { font-size: ${2 * scale}rem !important; }
-      .customer-page .accessibility-toggle-btn      { font-size: ${1 * scale}rem !important; }
-      .customer-page .exit-btn                      { font-size: ${1.1 * scale}rem !important; }
-      .customer-page .category-tab                  { font-size: ${1.1 * scale}rem !important; }
-      .customer-page .item-name                     { font-size: ${1.25 * scale}rem !important; }
-      .customer-page .item-price                    { font-size: ${1.5 * scale}rem !important; }
-      .customer-page .customize-header h2           { font-size: ${1.5 * scale}rem !important; }
-      .customer-page .customize-section h3          { font-size: ${1.1 * scale}rem !important; }
-      .customer-page .option-btn                    { font-size: ${1 * scale}rem !important; }
-      .customer-page .btn-primary,
-      .customer-page .btn-secondary                 { font-size: ${1.1 * scale}rem !important; }
-      .customer-page .cart-item-name                { font-size: ${1 * scale}rem !important; }
-      .customer-page .cart-item-price               { font-size: ${1 * scale}rem !important; }
-      .customer-page .cart-total-line               { font-size: ${1.1 * scale}rem !important; }
-      .customer-page .cart-total-line-final         { font-size: ${1.4 * scale}rem !important; }
-      .customer-page .checkout-screen h2            { font-size: ${1.5 * scale}rem !important; }
-      .customer-page .summary-row                   { font-size: ${1.1 * scale}rem !important; }
-      .customer-page .summary-row.total             { font-size: ${1.5 * scale}rem !important; }
-      .customer-page .payment-btn                   { font-size: ${1.1 * scale}rem !important; }
-      .customer-page .cart-badge                    { font-size: ${1.1 * scale}rem !important; }
-      .customer-page .customer-user-name            { font-size: ${0.9 * scale}rem !important; }
-      .customer-page .customize-progress            { font-size: ${1 * scale}rem !important; }
-      .customer-page .cart-items-title              { font-size: ${1.1 * scale}rem !important; }
-      .customer-page .cart-screen h2                { font-size: ${1.5 * scale}rem !important; }
-      .customer-page .rewards-line                  { font-size: ${0.88 * scale}rem !important; }
-      .customer-page .cart-item-detail              { font-size: ${0.9 * scale}rem !important; }
-      .customer-page .option-cost                   { font-size: ${0.9 * scale}rem !important; }
-      .customer-page .comments-input                { font-size: ${1 * scale}rem !important; }
-    `;
+    .customer-page .customer-header h1            { font-size: ${2 * scale}rem !important; }
+    .customer-page .accessibility-toggle-btn      { font-size: ${1 * scale}rem !important; }
+    .customer-page .exit-btn                      { font-size: ${1.1 * scale}rem !important; }
+    .customer-page .category-tab                  { font-size: ${1.1 * scale}rem !important; }
+    .customer-page .item-name                     { font-size: ${1.25 * scale}rem !important; }
+    .customer-page .item-price                    { font-size: ${1.5 * scale}rem !important; }
+    .customer-page .customize-header h2           { font-size: ${1.5 * scale}rem !important; }
+    .customer-page .customize-section h3          { font-size: ${1.1 * scale}rem !important; }
+    .customer-page .option-btn                    { font-size: ${1 * scale}rem !important; }
+    .customer-page .btn-primary,
+    .customer-page .btn-secondary                 { font-size: ${1.1 * scale}rem !important; }
+    .customer-page .cart-item-name                { font-size: ${1 * scale}rem !important; }
+    .customer-page .cart-item-price               { font-size: ${1 * scale}rem !important; }
+    .customer-page .cart-total-line               { font-size: ${1.1 * scale}rem !important; }
+    .customer-page .cart-total-line-final         { font-size: ${1.4 * scale}rem !important; }
+    .customer-page .checkout-screen h2            { font-size: ${1.5 * scale}rem !important; }
+    .customer-page .summary-row                   { font-size: ${1.1 * scale}rem !important; }
+    .customer-page .summary-row.total             { font-size: ${1.5 * scale}rem !important; }
+    .customer-page .payment-btn                   { font-size: ${1.1 * scale}rem !important; }
+    .customer-page .cart-badge                    { font-size: ${1.1 * scale}rem !important; }
+    .customer-page .customer-user-name            { font-size: ${0.9 * scale}rem !important; }
+    .customer-page .customize-progress            { font-size: ${1 * scale}rem !important; }
+    .customer-page .cart-items-title              { font-size: ${1.1 * scale}rem !important; }
+    .customer-page .cart-screen h2                { font-size: ${1.5 * scale}rem !important; }
+
+    /* === INITIAL HOME SCREEN (the one in your screenshot) === */
+    .customer-page .customer-home-intro h1        { font-size: ${2.4 * scale}rem !important; }
+    .customer-page .customer-home-intro p         { font-size: ${1.1 * scale}rem !important; }
+    .customer-page .home-section-btn              { font-size: ${1.35 * scale}rem !important; }
+    .customer-page .customer-home-weather-current { font-size: ${0.95 * scale}rem !important; }
+    .customer-page .customer-home-day-label       { font-size: ${0.76 * scale}rem !important; }
+    .customer-page .customer-home-day-date        { font-size: ${0.68 * scale}rem !important; }
+    .customer-page .customer-home-day-temps       { font-size: ${0.82 * scale}rem !important; }
+    .customer-page .customer-home-day-desc        { font-size: ${0.72 * scale}rem !important; }
+  `;
     return () => { tag.textContent = ''; };
   }, [fontSize]);
 
@@ -617,8 +631,9 @@ export default function CustomerScreen() {
   }, [rewardsStatus.tier]);
 
   function clearCustomization() {
-    setSelectedSugar(null); setSelectedIce(null);
     setSelectedToppings([]); setComments(''); setCustomizeStep(1);
+    setSelectedSugar("100% Sugar");
+    setSelectedIce("Regular Ice");
   }
   
   function handleSelectItem(item) {
@@ -678,9 +693,14 @@ export default function CustomerScreen() {
     const totalPrice = currentItem.cost + (selectedSugar?.cost || 0) + (selectedIce?.cost || 0) + selectedToppings.reduce((sum, t) => sum + t.cost, 0);
     const modificationIds = [selectedSugar?.id, selectedIce?.id, ...selectedToppings.map(t => t.id)].filter(Boolean);
     const itemPayload = {
-      menuItemId: currentItem.id, name: currentItem.name, price: totalPrice,
-      sugarLevel: selectedSugar?.name || 'Regular', iceLevel: selectedIce?.name || 'Regular',
-      toppingNames: selectedToppings.map(t => t.name), comments: comments.trim(), modificationIds
+      menuItemId: currentItem.id,
+      name: currentItem.name,
+      price: totalPrice,
+      sugarLevel: selectedSugar?.name || "100%",
+      iceLevel: selectedIce?.name || "Regular",
+      toppingNames: selectedToppings.map((t) => t.name),
+      comments: comments.trim(),
+      modificationIds,
     };
     if (editingCartItemId) {
       setCart(prev => prev.map(item => (
