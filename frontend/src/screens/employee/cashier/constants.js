@@ -1,0 +1,14 @@
+export const API_BASE = import.meta.env.VITE_API_URL || "/api";
+
+export const SCREEN = {
+  HOME: "HOME",
+  ITEM_SELECT: "MENU ITEMS",
+  SIZE: "SIZE",
+  SUGAR: "SUGAR LEVEL",
+  ICE: "ICE LEVEL",
+  TOPPINGS: "TOPPINGS",
+  CHECKOUT: "CHECKOUT",
+  TIP: "TIP",
+  FINAL_TOTAL: "FINAL_TOTAL",
+  CONFIRMATION: "CONFIRMATION",
+};
