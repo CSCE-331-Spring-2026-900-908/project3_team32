@@ -1,4 +1,4 @@
-import { FiArrowLeft, FiShoppingCart, FiHeart, FiX } from "react-icons/fi";
+import { FiArrowLeft, FiShoppingCart, FiHeart, FiX, FiCheck } from "react-icons/fi";
 import { SCREEN } from "../constants";
 import { currency, buildDisplayLines } from "../utils";
 
