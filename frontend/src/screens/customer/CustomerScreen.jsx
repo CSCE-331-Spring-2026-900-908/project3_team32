@@ -64,6 +64,7 @@ export default function CustomerScreen() {
     customerOrders,
     setCustomerOrders,
     mostOrderedItems,
+    customerMostOrderedItems,
     savedFavorites,
     setSavedFavorites,
     isEmployeeRewardsUser,
@@ -276,8 +277,13 @@ export default function CustomerScreen() {
   }
 
   async function handleToggleFavorite(menuItem, cartItem, e) {
-    e.stopPropagation();
-    if (!user || !token || user.guest) { alert("Sign in to save favorites!"); return; }
+    if (e && typeof e.stopPropagation === "function") {
+      e.stopPropagation();
+    }
+    if (!user || !token || user.guest) {
+      alert("Sign in to save favorites!");
+      return;
+    }
     const fav = getFavoriteMatch(menuItem, cartItem);
     try {
       if (fav) {
@@ -288,11 +294,16 @@ export default function CustomerScreen() {
         setSavedFavorites((prev) => prev.filter((f) => f.favorite_id !== fav.favorite_id));
       } else {
         const itemData = {
-          menu_item_id: menuItem.id, name: cartItem.name,
-          cost: menuItem.cost ?? cartItem.price, category: menuItem.category || "",
-          sugarLevel: cartItem.sugarLevel || "", iceLevel: cartItem.iceLevel || "",
-          toppingNames: cartItem.toppingNames || [], comments: cartItem.comments || "",
-          modificationIds: cartItem.modificationIds || [], price: cartItem.price,
+          menu_item_id: menuItem.id,
+          name: cartItem?.name ?? menuItem.name,
+          cost: menuItem.cost ?? cartItem?.price,
+          category: menuItem.category || "",
+          sugarLevel: cartItem?.sugarLevel || "",
+          iceLevel: cartItem?.iceLevel || "",
+          toppingNames: cartItem?.toppingNames || [],
+          comments: cartItem?.comments || "",
+          modificationIds: cartItem?.modificationIds || [],
+          price: cartItem?.price ?? menuItem.cost,
         };
         const res = await fetch(`${API_BASE}/customer/saved-favorites`, {
           method: "POST",
@@ -531,10 +542,12 @@ export default function CustomerScreen() {
             user={user}
             savedFavorites={savedFavorites}
             mostOrderedItems={mostOrderedItems}
+            customerMostOrderedItems={customerMostOrderedItems}
             menuItems={menuItems}
             visibleItems={visibleItems}
             handleSelectItem={handleSelectItem}
             addFavoriteToCart={addFavoriteToCart}
+            handleToggleFavorite={handleToggleFavorite}
             weather={weather}
             weeklyWeather={weeklyWeather}
             weatherLoading={weatherLoading}

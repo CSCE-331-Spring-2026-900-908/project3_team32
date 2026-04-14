@@ -13,6 +13,7 @@ export function useCustomerData({ token, user }) {
   const [toppingOptions, setToppingOptions] = useState([]);
   const [customerOrders, setCustomerOrders] = useState([]);
   const [mostOrderedItems, setMostOrderedItems] = useState([]);
+  const [customerMostOrderedItems, setCustomerMostOrderedItems] = useState([]);
   const [savedFavorites, setSavedFavorites] = useState([]);
   const [isEmployeeRewardsUser, setIsEmployeeRewardsUser] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -166,6 +167,41 @@ export function useCustomerData({ token, user }) {
       .catch(console.error);
   }, []);
 
+  useEffect(() => {
+    if (!customerOrders.length || !menuItems.length) {
+      setCustomerMostOrderedItems([]);
+      return;
+    }
+
+    const itemFrequency = {};
+
+    customerOrders.forEach((order) => {
+      if (Array.isArray(order.items)) {
+        order.items.forEach((item) => {
+          const menuItemId = item.menu_item_id || item.id;
+          if (menuItemId != null) {
+            itemFrequency[menuItemId] = (itemFrequency[menuItemId] || 0) + (Number(item.quantity) || 1);
+          }
+        });
+      }
+    });
+    const personalized = Object.entries(itemFrequency)
+      .map(([idStr, count]) => {
+        const id = Number(idStr);
+        const menuItem = menuItems.find((m) => m.id === id);
+        if (!menuItem) return null;
+        return {
+          ...menuItem,
+          order_count: count,
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.order_count - a.order_count)
+      .slice(0, 12);   // top 12 personal favorites
+
+    setCustomerMostOrderedItems(personalized);
+  }, [customerOrders, menuItems]);
+
   // Saved favorites (DB-backed, per signed-in customer)
   useEffect(() => {
     if (!user || !token || user.type !== "customer" || user.guest) { setSavedFavorites([]); return; }
@@ -185,6 +221,7 @@ export function useCustomerData({ token, user }) {
     customerOrders,
     setCustomerOrders,
     mostOrderedItems,
+    customerMostOrderedItems,
     savedFavorites,
     setSavedFavorites,
     isEmployeeRewardsUser,
