@@ -819,6 +819,37 @@ app.post('/api/cashier/orders', async (req, res, next) => {
   }
 });
 
+// Today's orders for the cashier screen
+app.get('/api/cashier/orders/today', async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT
+         co.order_id,
+         co.order_date,
+         co.total_cost,
+         co.payment_type,
+         json_agg(
+           json_build_object(
+             'order_item_id', oi.order_item_id,
+             'menu_item_id',  oi.menu_item_id,
+             'name',          m.name,
+             'quantity',      oi.quantity,
+             'item_price',    oi.item_price
+           ) ORDER BY oi.order_item_id
+         ) AS items
+       FROM customer_order co
+       JOIN order_item oi ON co.order_id = oi.order_id
+       JOIN menu_item  m  ON oi.menu_item_id = m.menu_item_id
+       WHERE co.order_date::date = CURRENT_DATE
+       GROUP BY co.order_id, co.order_date, co.total_cost, co.payment_type
+       ORDER BY co.order_id DESC`,
+    );
+    res.json({ orders: result.rows });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Customer order history (requires customer JWT)
 app.get('/api/customer/orders', requireAuth(), async (req, res, next) => {
   if (req.user.type !== 'customer') {

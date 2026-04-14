@@ -10,17 +10,32 @@ const GOLD_POINTS_THRESHOLD = 1000;
 const PLATINUM_POINTS_THRESHOLD = GOLD_POINTS_THRESHOLD + 2500;
 const DIAMOND_POINTS_THRESHOLD = PLATINUM_POINTS_THRESHOLD + 5000;
 const REWARDS_WINDOW_MS = 365 * 24 * 60 * 60 * 1000;
-const WEEKDAY_FORMATTER = new Intl.DateTimeFormat('en-US', { weekday: 'short' });
-const FULL_DATE_FORMATTER = new Intl.DateTimeFormat('en-US');
 
 const LANGUAGE_CODE_ALIASES = { iw: 'he', jw: 'jv' };
+const WEEKDAY_FORMATTER = new Intl.DateTimeFormat('en-US', { weekday: 'short' });
 
-const SCREEN = { HOME: 'HOME', MENU: 'MENU', CUSTOMIZE: 'CUSTOMIZE', CART: 'CART', CHECKOUT: 'CHECKOUT' };
+const SCREEN = { MENU: 'MENU', CUSTOMIZE: 'CUSTOMIZE', CART: 'CART', CHECKOUT: 'CHECKOUT' };
 
 function currency(value) {
   const num = Number(value);
   if (isNaN(num)) return '$0.00';
   return `$${num.toFixed(2)}`;
+}
+
+function describeWeatherCode(code) {
+  const map = {
+    0:'Sunny',1:'Mostly clear',2:'Partly cloudy',3:'Cloudy',45:'Foggy',48:'Rime fog',
+    51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',
+    71:'Light snow',73:'Snow',75:'Heavy snow',80:'Light showers',81:'Showers',82:'Heavy showers',
+    95:'Thunderstorm',96:'Thunderstorm & hail',99:'Heavy hail storm',
+  };
+  return map[Number(code)] || 'Weather unavailable';
+}
+
+function formatWeekdayLabel(dateString) {
+  if (!dateString) return '';
+  const d = new Date(`${dateString}T12:00:00`);
+  return isNaN(d.getTime()) ? '' : WEEKDAY_FORMATTER.format(d);
 }
 
 function pointsFromAmount(amount) {
@@ -73,61 +88,12 @@ function toNativeLanguageName(languageCode, fallback) {
   } catch { return fallback; }
 }
 
-function describeWeatherCode(weatherCode) {
-  const code = Number(weatherCode);
-  const codeMap = {
-    0: 'Sunny',
-    1: 'Mostly clear',
-    2: 'Partly cloudy',
-    3: 'Cloudy',
-    45: 'Foggy',
-    48: 'Rime fog',
-    51: 'Light drizzle',
-    53: 'Drizzle',
-    55: 'Heavy drizzle',
-    56: 'Freezing drizzle',
-    57: 'Heavy freezing drizzle',
-    61: 'Light rain',
-    63: 'Rain',
-    65: 'Heavy rain',
-    66: 'Freezing rain',
-    67: 'Heavy freezing rain',
-    71: 'Light snow',
-    73: 'Snow',
-    75: 'Heavy snow',
-    77: 'Snow grains',
-    80: 'Light showers',
-    81: 'Showers',
-    82: 'Heavy showers',
-    85: 'Light snow showers',
-    86: 'Heavy snow showers',
-    95: 'Thunderstorm',
-    96: 'Thunderstorm and hail',
-    99: 'Heavy hail storm',
-  };
-  return codeMap[code] || 'Weather unavailable';
-}
-
-function formatWeekdayLabel(dateString) {
-  if (!dateString) return '';
-  const parsed = new Date(`${dateString}T12:00:00`);
-  if (Number.isNaN(parsed.getTime())) return '';
-  return WEEKDAY_FORMATTER.format(parsed);
-}
-
-function formatFullDateLabel(dateString) {
-  if (!dateString) return '';
-  const parsed = new Date(`${dateString}T12:00:00`);
-  if (Number.isNaN(parsed.getTime())) return '';
-  return FULL_DATE_FORMATTER.format(parsed);
-}
-
 export default function CustomerScreen() {
   const navigate = useNavigate();
   const { user, token, logout } = useAuth();
-  const [screen, setScreen] = useState(SCREEN.HOME);
+  const [screen, setScreen] = useState(SCREEN.MENU);
   const [textScale, setTextScale] = useState(100);
-  const [selectedCategory, setSelectedCategory] = useState('Favorites');
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [cart, setCart] = useState([]);
   const [currentItem, setCurrentItem] = useState(null);
   const [editingCartItemId, setEditingCartItemId] = useState(null);
@@ -138,6 +104,8 @@ export default function CustomerScreen() {
   const [comments, setComments] = useState('');
   const [orderNumber, setOrderNumber] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [customizeModalOpen, setCustomizeModalOpen] = useState(false);
+  const [ordersModalOpen, setOrdersModalOpen] = useState(false);
 
   const [accessibilityOpen, setAccessibilityOpen] = useState(false);
   const [magnifierEnabled, setMagnifierEnabled] = useState(false);
@@ -157,14 +125,8 @@ export default function CustomerScreen() {
   const [weather, setWeather] = useState(null);
   const [weeklyWeather, setWeeklyWeather] = useState([]);
   const [weatherLoading, setWeatherLoading] = useState(true);
-  const [weatherError, setWeatherError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [categories, setCategories] = useState(['Favorites', 'Most Ordered']);
-  const isGuestCustomer = user?.type === 'customer' && user?.guest === true;
-  const displayCategories = useMemo(
-    () => (isGuestCustomer ? categories.filter((cat) => cat !== 'Favorites' && cat !== 'Most Ordered') : categories),
-    [categories, isGuestCustomer],
-  );
+  const [categories, setCategories] = useState(['Favorites', 'Most Ordered', 'All']);
 
   const magnifierRef = useRef(null);
   const lensInnerRef = useRef(null);
@@ -195,7 +157,7 @@ export default function CustomerScreen() {
           ...CATEGORY_ORDER.filter(c => rawCategories.includes(c)),
           ...rawCategories.filter(c => !CATEGORY_ORDER.includes(c)),
         ];
-        setCategories(['Favorites', 'Most Ordered', ...sortedCategories]);
+        setCategories(['Favorites', 'Most Ordered', 'All', ...sortedCategories]);
         const modRes = await fetch(`${API_BASE}/cashier/modifications`);
         const modData = await modRes.json();
         setSugarOptions((modData.sugar || []).map(m => ({ id: m.modification_type_id, name: m.name, cost: Number(m.cost) })));
@@ -211,74 +173,7 @@ export default function CustomerScreen() {
   }, []);
 
   useEffect(() => {
-    if (!displayCategories.length) return;
-    if (!displayCategories.includes(selectedCategory)) {
-      setSelectedCategory(displayCategories[0]);
-    }
-  }, [displayCategories, selectedCategory]);
-
-  useEffect(() => {
-    let timerId = null;
-    let cancelled = false;
-
-    async function loadWeather() {
-      try {
-        setWeatherLoading(true);
-
-        const currentResponse = await fetch(`${API_BASE}/external/weather?city=College%20Station,US`);
-        if (!currentResponse.ok) throw new Error('Failed to load current weather');
-        const currentData = await currentResponse.json();
-        if (cancelled) return;
-
-        setWeather(currentData);
-        setWeatherError('');
-
-        let nextWeekly = Array.isArray(currentData.dailyForecast) ? currentData.dailyForecast.slice(0, 7) : [];
-        if (!nextWeekly.length) {
-          try {
-            const weeklyResponse = await fetch('https://api.open-meteo.com/v1/forecast?latitude=30.6280&longitude=-96.3344&daily=weather_code,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto&forecast_days=7');
-            if (weeklyResponse.ok) {
-              const weeklyData = await weeklyResponse.json();
-              const daily = weeklyData.daily || {};
-              const times = Array.isArray(daily.time) ? daily.time : [];
-              const codes = Array.isArray(daily.weather_code) ? daily.weather_code : [];
-              const maxTemps = Array.isArray(daily.temperature_2m_max) ? daily.temperature_2m_max : [];
-              const minTemps = Array.isArray(daily.temperature_2m_min) ? daily.temperature_2m_min : [];
-              nextWeekly = times.map((date, index) => ({
-                date,
-                weatherCode: Number(codes[index] ?? -1),
-                description: describeWeatherCode(codes[index]),
-                maxTemp: Number(maxTemps[index]),
-                minTemp: Number(minTemps[index]),
-              }));
-            }
-          } catch (error) {
-            console.error('Weekly weather fetch failed:', error);
-          }
-        }
-
-        if (!cancelled) setWeeklyWeather(nextWeekly);
-      } catch (error) {
-        console.error('Failed to load customer weather:', error);
-        if (cancelled) return;
-        setWeather(null);
-        setWeeklyWeather([]);
-        setWeatherError('Weather unavailable');
-      } finally {
-        if (!cancelled) setWeatherLoading(false);
-      }
-    }
-
-    loadWeather();
-    timerId = window.setInterval(loadWeather, 10 * 60 * 1000);
-    return () => {
-      cancelled = true;
-      if (timerId) window.clearInterval(timerId);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!token || user?.type !== 'customer' || isGuestCustomer) {
+    if (!token || user?.type !== 'customer') {
       setCustomerOrders([]);
       return;
     }
@@ -300,53 +195,9 @@ export default function CustomerScreen() {
 
     loadCustomerOrders();
     return () => { cancelled = true; };
-  }, [token, user?.type, refreshTrigger, isGuestCustomer]);
+  }, [token, user?.type, refreshTrigger]);
 
   useEffect(() => {
-    if (user && token && user.type === 'customer' && !isGuestCustomer) {
-      fetch(`${API_BASE}/customer/most-ordered`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (!data.error && Array.isArray(data)) {
-            const safeItems = data.map(item => ({
-               ...item,
-               id: item.menu_item_id,
-               cost: Number(item.cost)
-            }));
-            setMostOrderedItems(safeItems);
-          }
-        })
-        .catch(console.error);
-    } else if (isGuestCustomer) {
-      setMostOrderedItems([]);
-    }
-  }, [user, token, refreshTrigger, isGuestCustomer]);
-
-  useEffect(() => {
-    if (user && token && user.type === 'customer' && !isGuestCustomer) {
-      fetch(`${API_BASE}/customer/saved-favorites`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (!data.error && Array.isArray(data)) {
-            setSavedFavorites(data);
-          }
-        })
-        .catch(console.error);
-    } else if (isGuestCustomer) {
-      setSavedFavorites([]);
-    }
-  }, [user, token, refreshTrigger, isGuestCustomer]);
-
-  useEffect(() => {
-    if (isGuestCustomer) {
-      setIsEmployeeRewardsUser(false);
-      return;
-    }
-
     const email = (user?.email || '').trim().toLowerCase();
     if (!email) {
       setIsEmployeeRewardsUser(false);
@@ -375,7 +226,72 @@ export default function CustomerScreen() {
 
     loadEmployeeMatch();
     return () => { cancelled = true; };
-  }, [token, user?.email, isGuestCustomer]);
+  }, [token, user?.email]);
+
+  // ── Weather (College Station, refreshes every 10 min) ──────────────
+  useEffect(() => {
+    let cancelled = false;
+    let timerId = null;
+    async function loadWeather() {
+      try {
+        setWeatherLoading(true);
+        const res = await fetch(`${API_BASE}/external/weather?city=College%20Station,US`);
+        if (!res.ok) throw new Error('weather fetch failed');
+        const data = await res.json();
+        if (cancelled) return;
+        setWeather(data);
+        let weekly = Array.isArray(data.dailyForecast) ? data.dailyForecast.slice(0, 7) : [];
+        if (!weekly.length) {
+          try {
+            const wr = await fetch('https://api.open-meteo.com/v1/forecast?latitude=30.6280&longitude=-96.3344&daily=weather_code,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto&forecast_days=7');
+            if (wr.ok) {
+              const wd = await wr.json();
+              const times = wd.daily?.time || [];
+              weekly = times.map((date, i) => ({
+                date,
+                description: describeWeatherCode(wd.daily.weather_code?.[i]),
+                maxTemp: Number(wd.daily.temperature_2m_max?.[i]),
+                minTemp: Number(wd.daily.temperature_2m_min?.[i]),
+              }));
+            }
+          } catch { /* ignore */ }
+        }
+        if (!cancelled) setWeeklyWeather(weekly);
+      } catch {
+        if (!cancelled) { setWeather(null); setWeeklyWeather([]); }
+      } finally {
+        if (!cancelled) setWeatherLoading(false);
+      }
+    }
+    loadWeather();
+    timerId = window.setInterval(loadWeather, 10 * 60 * 1000);
+    return () => { cancelled = true; window.clearInterval(timerId); };
+  }, []);
+
+  // ── Most ordered (per signed-in customer) ─────────────────────────
+  useEffect(() => {
+    if (!user || !token || user.type !== 'customer' || user.guest) return;
+    fetch(`${API_BASE}/customer/most-ordered`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.error && Array.isArray(data)) {
+          setMostOrderedItems(data.map(item => ({ ...item, id: item.menu_item_id, cost: Number(item.cost) })));
+        }
+      })
+      .catch(console.error);
+  }, [user, token, refreshTrigger]);
+
+  // ── Saved favorites (per signed-in customer, DB-backed) ───────────
+  useEffect(() => {
+    if (!user || !token || user.type !== 'customer' || user.guest) {
+      setSavedFavorites([]);
+      return;
+    }
+    fetch(`${API_BASE}/customer/saved-favorites`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => { if (!data.error && Array.isArray(data)) setSavedFavorites(data); })
+      .catch(console.error);
+  }, [user, token, refreshTrigger]);
 
   useEffect(() => {
     let labelInterval = null;
@@ -449,41 +365,81 @@ export default function CustomerScreen() {
       document.head.appendChild(tag);
     }
     tag.textContent = `
-    .customer-page .customer-header h1            { font-size: ${2 * scale}rem !important; }
-    .customer-page .accessibility-toggle-btn      { font-size: ${1 * scale}rem !important; }
-    .customer-page .exit-btn                      { font-size: ${1.1 * scale}rem !important; }
-    .customer-page .category-tab                  { font-size: ${1.1 * scale}rem !important; }
-    .customer-page .item-name                     { font-size: ${1.25 * scale}rem !important; }
-    .customer-page .item-price                    { font-size: ${1.5 * scale}rem !important; }
-    .customer-page .customize-header h2           { font-size: ${1.5 * scale}rem !important; }
-    .customer-page .customize-section h3          { font-size: ${1.1 * scale}rem !important; }
-    .customer-page .option-btn                    { font-size: ${1 * scale}rem !important; }
-    .customer-page .btn-primary,
-    .customer-page .btn-secondary                 { font-size: ${1.1 * scale}rem !important; }
-    .customer-page .cart-item-name                { font-size: ${1 * scale}rem !important; }
-    .customer-page .cart-item-price               { font-size: ${1 * scale}rem !important; }
-    .customer-page .cart-total-line               { font-size: ${1.1 * scale}rem !important; }
-    .customer-page .cart-total-line-final         { font-size: ${1.4 * scale}rem !important; }
-    .customer-page .checkout-screen h2            { font-size: ${1.5 * scale}rem !important; }
-    .customer-page .summary-row                   { font-size: ${1.1 * scale}rem !important; }
-    .customer-page .summary-row.total             { font-size: ${1.5 * scale}rem !important; }
-    .customer-page .payment-btn                   { font-size: ${1.1 * scale}rem !important; }
-    .customer-page .cart-badge                    { font-size: ${1.1 * scale}rem !important; }
-    .customer-page .customer-user-name            { font-size: ${0.9 * scale}rem !important; }
-    .customer-page .customize-progress            { font-size: ${1 * scale}rem !important; }
-    .customer-page .cart-items-title              { font-size: ${1.1 * scale}rem !important; }
-    .customer-page .cart-screen h2                { font-size: ${1.5 * scale}rem !important; }
+      .customer-page .customer-header h1            { font-size: ${2 * scale}rem !important; }
+      .customer-page .accessibility-toggle-btn      { font-size: ${1 * scale}rem !important; }
+      .customer-page .exit-btn                      { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .category-tab                  { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .item-name                     { font-size: ${1.25 * scale}rem !important; }
+      .customer-page .item-price                    { font-size: ${1.5 * scale}rem !important; }
+      .customer-page .customize-header h2           { font-size: ${1.5 * scale}rem !important; }
+      .customer-page .customize-section h3          { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .option-btn                    { font-size: ${1 * scale}rem !important; }
+      .customer-page .btn-primary,
+      .customer-page .btn-secondary                 { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .cart-item-name                { font-size: ${1 * scale}rem !important; }
+      .customer-page .cart-item-price               { font-size: ${1 * scale}rem !important; }
+      .customer-page .cart-total-line               { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .cart-total-line-final         { font-size: ${1.4 * scale}rem !important; }
+      .customer-page .checkout-screen h2            { font-size: ${1.5 * scale}rem !important; }
+      .customer-page .summary-row                   { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .summary-row.total             { font-size: ${1.5 * scale}rem !important; }
+      .customer-page .payment-btn                   { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .cart-badge                    { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .customer-user-name            { font-size: ${0.9 * scale}rem !important; }
+      .customer-page .customize-progress            { font-size: ${1 * scale}rem !important; }
+      .customer-page .cart-items-title              { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .cart-screen h2                { font-size: ${1.5 * scale}rem !important; }
+      .customer-page .rewards-line                  { font-size: ${0.88 * scale}rem !important; }
+      .customer-page .cart-item-detail              { font-size: ${0.9 * scale}rem !important; }
+      .customer-page .option-cost                   { font-size: ${0.9 * scale}rem !important; }
+      .customer-page .comments-input                { font-size: ${1 * scale}rem !important; }
+    `;
+    return () => { tag.textContent = ''; };
+  }, [fontSize]);
 
-    /* === INITIAL HOME SCREEN (the one in your screenshot) === */
-    .customer-page .customer-home-intro h1        { font-size: ${2.4 * scale}rem !important; }
-    .customer-page .customer-home-intro p         { font-size: ${1.1 * scale}rem !important; }
-    .customer-page .home-section-btn              { font-size: ${1.35 * scale}rem !important; }
-    .customer-page .customer-home-weather-current { font-size: ${0.95 * scale}rem !important; }
-    .customer-page .customer-home-day-label       { font-size: ${0.76 * scale}rem !important; }
-    .customer-page .customer-home-day-date        { font-size: ${0.68 * scale}rem !important; }
-    .customer-page .customer-home-day-temps       { font-size: ${0.82 * scale}rem !important; }
-    .customer-page .customer-home-day-desc        { font-size: ${0.72 * scale}rem !important; }
-  `;
+  // fontSize is applied via an injected <style> tag so it overrides rem-based values
+  useEffect(() => {
+    const scale = fontSize / 100;
+    const id = 'customer-font-size-override';
+    let tag = document.getElementById(id);
+    if (!tag) {
+      tag = document.createElement('style');
+      tag.id = id;
+      document.head.appendChild(tag);
+    }
+    tag.textContent = `
+      .customer-page .customer-header h1            { font-size: ${2 * scale}rem !important; }
+      .customer-page .accessibility-toggle-btn      { font-size: ${1 * scale}rem !important; }
+      .customer-page .exit-btn                      { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .category-tab                  { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .item-name                     { font-size: ${1.25 * scale}rem !important; }
+      .customer-page .item-price                    { font-size: ${1.5 * scale}rem !important; }
+      .customer-page .customize-header h2           { font-size: ${1.5 * scale}rem !important; }
+      .customer-page .customize-section h3          { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .option-btn                    { font-size: ${1 * scale}rem !important; }
+      .customer-page .btn-primary,
+      .customer-page .btn-secondary                 { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .cart-item-name                { font-size: ${1 * scale}rem !important; }
+      .customer-page .cart-item-price               { font-size: ${1 * scale}rem !important; }
+      .customer-page .cart-total-line               { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .cart-total-line-final         { font-size: ${1.4 * scale}rem !important; }
+      .customer-page .checkout-screen h2            { font-size: ${1.5 * scale}rem !important; }
+      .customer-page .summary-row                   { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .summary-row.total             { font-size: ${1.5 * scale}rem !important; }
+      .customer-page .payment-btn                   { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .cart-badge                    { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .customer-user-name            { font-size: ${0.9 * scale}rem !important; }
+      .customer-page .customize-progress            { font-size: ${1 * scale}rem !important; }
+      .customer-page .cart-items-title              { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .cart-screen h2                { font-size: ${1.5 * scale}rem !important; }
+      .customer-page .cart-panel-title              { font-size: ${1.4 * scale}rem !important; }
+      .customer-page .cart-panel-empty-msg          { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .cart-panel-empty-sub          { font-size: ${0.95 * scale}rem !important; }
+      .customer-page .cart-panel-checkout-btn       { font-size: ${1.1 * scale}rem !important; }
+      .customer-page .cart-item-detail              { font-size: ${0.9 * scale}rem !important; }
+      .customer-page .option-cost                   { font-size: ${0.9 * scale}rem !important; }
+      .customer-page .comments-input                { font-size: ${1 * scale}rem !important; }
+    `;
     return () => { tag.textContent = ''; };
   }, [fontSize]);
 
@@ -544,6 +500,8 @@ export default function CustomerScreen() {
 
       syncFixedElement('real-cart-badge', 'magnified-cart-badge');
       syncFixedElement('real-confirmation', 'magnified-confirmation');
+      syncFixedElement('real-customize-modal', 'magnified-customize-modal');
+      syncFixedElement('real-orders-modal', 'magnified-orders-modal');
     }
 
     function handleMouseMove(e) {
@@ -567,9 +525,12 @@ export default function CustomerScreen() {
   }, [magnifierEnabled]);
 
 
-  const visibleItems = useMemo(() => (
-    menuItems.filter((item) => item.category === selectedCategory)
-  ), [selectedCategory, menuItems]);
+  const visibleItems = useMemo(() => {
+    if (selectedCategory === 'Favorites') return [];
+    if (selectedCategory === 'Most Ordered') return [];
+    if (selectedCategory === 'All') return menuItems;
+    return menuItems.filter(item => item.category === selectedCategory);
+  }, [selectedCategory, menuItems]);
 
   const cartTotal = useMemo(
     () => cart.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0),
@@ -579,11 +540,7 @@ export default function CustomerScreen() {
     () => cart.reduce((sum, item) => sum + (item.quantity || 1), 0),
     [cart],
   );
-  const isEmployeeDiscount = !isGuestCustomer && (
-    isEmployeeRewardsUser
-    || user?.type === 'employee'
-    || ['Manager', 'Shift Lead', 'Cashier'].includes(user?.position || '')
-  );
+  const isEmployeeDiscount = isEmployeeRewardsUser || user?.type === 'employee' || ['Manager', 'Shift Lead', 'Cashier'].includes(user?.position || '');
 
   const priorYearOrders = useMemo(() => {
     const cutoff = Date.now() - REWARDS_WINDOW_MS;
@@ -630,6 +587,48 @@ export default function CustomerScreen() {
     return 'member';
   }, [rewardsStatus.tier]);
 
+  function getFavoriteMatch(item) {
+    const targetId = item.id ?? item.menu_item_id;
+    return savedFavorites.find(fav => {
+      const favItemId = fav.item_data?.menu_item_id ?? fav.item_data?.id ?? fav.menu_item_id;
+      return favItemId === targetId;
+    });
+  }
+
+  async function handleToggleFavorite(item, e) {
+    e.stopPropagation();
+    if (!user || !token || user.guest) {
+      alert('Sign in to save favorites!');
+      return;
+    }
+    const fav = getFavoriteMatch(item);
+    try {
+      if (fav) {
+        await fetch(`${API_BASE}/customer/saved-favorites/${fav.favorite_id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setSavedFavorites(prev => prev.filter(f => f.favorite_id !== fav.favorite_id));
+      } else {
+        const itemData = { menu_item_id: item.id, name: item.name, cost: item.cost, category: item.category };
+        const res = await fetch(`${API_BASE}/customer/saved-favorites`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            customer_email: user.email,
+            customer_name: user.name || user.email,
+            google_id: user.sub || user.google_id || user.email,
+            item_data: itemData,
+          }),
+        });
+        const data = await res.json();
+        if (!data.error) setSavedFavorites(prev => [...prev, { favorite_id: data.favorite_id, item_data: itemData }]);
+      }
+    } catch (err) {
+      console.error('Toggle favorite failed:', err);
+    }
+  }
+
   function clearCustomization() {
     setSelectedToppings([]); setComments(''); setCustomizeStep(1);
     setSelectedSugar("100% Sugar");
@@ -640,18 +639,18 @@ export default function CustomerScreen() {
     setEditingCartItemId(null);
     setCurrentItem(item);
     clearCustomization();
-    setScreen(SCREEN.CUSTOMIZE);
+    const defaultSugar = sugarOptions.find(opt => opt.name.includes('50')) || null;
+    const defaultIce = iceOptions.find(opt => opt.name.toLowerCase().includes('regular')) || null;
+    setSelectedSugar(defaultSugar);
+    setSelectedIce(defaultIce);
+    setCustomizeModalOpen(true);
   }
 
   function handleCancelCustomization() {
     clearCustomization();
     setCurrentItem(null);
-    if (editingCartItemId) {
-      setEditingCartItemId(null);
-      setScreen(SCREEN.CART);
-      return;
-    }
-    setScreen(SCREEN.HOME);
+    setEditingCartItemId(null);
+    setCustomizeModalOpen(false);
   }
 
   function startEditCartItem(item) {
@@ -677,7 +676,7 @@ export default function CustomerScreen() {
     setSelectedIce(ice);
     setSelectedToppings(toppings.length ? toppings : fallbackToppings);
     setComments(item.comments || '');
-    setScreen(SCREEN.CUSTOMIZE);
+    setCustomizeModalOpen(true);
   }
 
   function toggleTopping(topping) {
@@ -709,7 +708,7 @@ export default function CustomerScreen() {
       clearCustomization();
       setCurrentItem(null);
       setEditingCartItemId(null);
-      setScreen(SCREEN.CART);
+      setCustomizeModalOpen(false);
       return;
     }
 
@@ -717,7 +716,7 @@ export default function CustomerScreen() {
     setCart(prev => [...prev, item]);
     clearCustomization();
     setCurrentItem(null);
-    setScreen(SCREEN.HOME);
+    setCustomizeModalOpen(false);
   }
 
   function removeFromCart(itemId) { 
@@ -740,7 +739,10 @@ export default function CustomerScreen() {
     async function submitOrder() {
       try {
         const orderPayload = {
-          employee_id: 1, payment_type: paymentType, customer_email: user?.email, customer_name: user?.name, google_id: user?.sub || user?.id || user?.email,
+          employee_id: 1, payment_type: paymentType,
+          customer_email: user?.email || null,
+          customer_name: user?.name || null,
+          google_id: user?.sub || user?.google_id || null,
           items: cart.map(item => ({ menu_item_id: item.menuItemId, quantity: item.quantity || 1, modification_ids: item.modificationIds || [], comments: item.comments || '' }))
         };
         const headers = { 'Content-Type': 'application/json' };
@@ -761,46 +763,8 @@ export default function CustomerScreen() {
     submitOrder();
   }
 
-  const getFavoriteMatch = (item) => {
-    const { id, ...itemData } = item;
-    const cartStr = JSON.stringify(itemData);
-    return savedFavorites.find(f => JSON.stringify(f.item_data) === cartStr);
-  };
-  const handleToggleFavorite = async (item) => {
-    if (!user || !token || isGuestCustomer) return;
-    const existingFav = getFavoriteMatch(item);
-    const { id, ...itemData } = item;
-    try {
-        if (existingFav) {
-            await fetch(`${API_BASE}/customer/saved-favorites/${existingFav.favorite_id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-        } else {
-            const payload = {
-                customer_email: user.email,
-                customer_name: user.name,
-                google_id: user.sub || user.id || user.email,
-                item_data: itemData
-            };
-            await fetch(`${API_BASE}/customer/saved-favorites`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(payload)
-            });
-        }
-        setRefreshTrigger(p => p + 1);
-    } catch (error) {
-        console.error("Failed to toggle favorite", error);
-    }
-  };
-
   const textSizePercent = ((textScale - 85) / (140 - 85)) * 100;
   const zoomPercent = ((magnifierZoom - 1.5) / (4 - 1.5)) * 100;
-
-  const itemsToDisplay = selectedCategory === 'Favorites' 
-    ? savedFavorites 
-    : menuItems.filter(item => selectedCategory === 'All' || item.category === selectedCategory);
 
   const renderAppContent = (isMagnified = false) => (
     <>
@@ -830,7 +794,7 @@ export default function CustomerScreen() {
               >
                 <section className="a11y-section">
                   <div className="a11y-section-header">
-                    <span className="a11y-section-title">Text Size</span>
+                    <span className="a11y-section-title">UI Size</span>
                     <span className="a11y-section-value">{textScale}%</span>
                   </div>
                   <input type="range" min="85" max="140" step="5"
@@ -919,365 +883,242 @@ export default function CustomerScreen() {
                 <span className="customer-user-name">{user.name || user.email}</span>
               </div>
             )}
+            {!user?.guest && (
+              <button className="my-orders-btn" onClick={() => setOrdersModalOpen(o => !o)}>
+                📋 My Orders
+              </button>
+            )}
             <button className="exit-btn" onClick={() => { logout(); navigate('/login/customer'); }}>Exit</button>
           </div>
         </div>
       </header>
 
-      <div className={`customer-content-wrapper${screen === SCREEN.MENU && cartCount > 0 ? ' menu-has-floating-cart-space' : ''}`}>
-          {screen === SCREEN.HOME && (
-            <div className="customer-content customer-home">
-              <div className="customer-home-intro">
-                <p>Select a section to get started</p>
-              </div>
-
-              <div className="customer-home-sections">
-                {displayCategories.map((cat) => (
-                  <button
-                    key={cat}
-                    className="home-section-btn"
-                    onClick={() => {
-                      setSelectedCategory(cat);
-                      setScreen(SCREEN.MENU);
-                    }}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-
-              <div className="customer-home-weather">
-                <div className="customer-home-weather-current">
-                  {weatherLoading ? 'Loading weather...' : weather
-                    ? `${Math.round(weather.temperature)}°F • ${weather.description || describeWeatherCode(weather.weatherCode)}`
-                    : weatherError || 'Weather unavailable'}
-                </div>
-                {weeklyWeather.length > 0 && (
-                  <div className="customer-home-weekly">
-                    {weeklyWeather.map((day) => (
-                      <div key={day.date} className="customer-home-day">
-                        <span className="customer-home-day-label">{formatWeekdayLabel(day.date)}</span>
-                        <span className="customer-home-day-date">{formatFullDateLabel(day.date)}</span>
-                        <span className="customer-home-day-temps">
-                          {Math.round(day.maxTemp)}° / {Math.round(day.minTemp)}°
-                        </span>
-                        <span className="customer-home-day-desc">{day.description || describeWeatherCode(day.weatherCode)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
+      <div className="customer-content-wrapper">
           {screen === SCREEN.MENU && (
-            <div className={`customer-content menu-screen${cartCount > 0 ? ' has-floating-cart-space' : ''}`}>
+            <div className="menu-with-cart-layout">
+
+              {/* ── Left: menu ── */}
+              <div className="menu-left-col">
                 <div className="category-tabs">
-                  {displayCategories.map(cat => (
-                    <button 
-                      key={cat} 
-                      className={`category-tab${selectedCategory === cat ? ' active' : ''}`} 
-                      onClick={() => setSelectedCategory(cat)}
-                    >
-                      {cat}
-                    </button>
+                  {categories.map(cat => (
+                    <button key={cat} className={`category-tab${selectedCategory === cat ? ' active' : ''}`} onClick={() => setSelectedCategory(cat)}>{cat}</button>
                   ))}
                 </div>
                 <div className="menu-grid">
-                  {loading ? (
-                    <p className="loading-text">Loading menu...</p>
-                  ) : selectedCategory === 'Favorites' ? (
+                  {selectedCategory === 'Favorites' ? (
                     savedFavorites.length === 0 ? (
-                      <div style={{ padding: '2rem', textAlign: 'center', width: '100%', gridColumn: '1 / -1' }}>
-                         <h3>No Favorites Yet!</h3>
-                         <p>Add items to your cart and click the heart icon to save your favorite drinks.</p>
+                      <div className="menu-empty-state">
+                        <div className="menu-empty-icon">🤍</div>
+                        <p>{user?.guest ? 'Sign in to save favorites!' : 'No favorites yet — tap ♥ on any drink to save it.'}</p>
                       </div>
                     ) : (
                       savedFavorites.map(fav => {
-                        const item = fav.item_data;
+                        const favItemId = fav.item_data?.menu_item_id ?? fav.item_data?.id;
+                        const menuItem = menuItems.find(m => m.id === favItemId) || {
+                          id: favItemId,
+                          name: fav.item_data?.name || 'Unknown',
+                          cost: Number(fav.item_data?.cost) || 0,
+                          category: fav.item_data?.category || 'Other',
+                        };
                         return (
-                          <div key={fav.favorite_id} className="menu-item-card" style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', padding: '15px', cursor: 'default' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                              <h3 style={{ margin: 0, fontSize: '1.1rem', paddingRight: '10px' }}>{item.name}</h3>
-                              <button 
-                                onClick={() => handleToggleFavorite(item)} 
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
-                                title="Remove from Favorites"
-                              >
-                                <svg viewBox="0 0 24 24" fill="#ff4b4b" height="28" width="28">
-                                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                                </svg>
-                              </button>
-                            </div>
-                            <div style={{ fontSize: '0.85rem', color: '#555', flex: 1, marginBottom: '15px' }}>
-                              {buildDisplayLines(item).map((line, i) => <div key={i}>{line}</div>)}
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
-                              <strong style={{ fontSize: '1.1rem' }}>{currency(item.price || item.baseCost)}</strong>
-                              <button 
-                                onClick={() => setCart(prev => [...prev, { ...item, id: Date.now() }])} 
-                                style={{ 
-                                  backgroundColor: '#8b4513', 
-                                  color: 'white', 
-                                  border: 'none',
-                                  padding: '6px 14px', 
-                                  fontSize: '0.85rem', 
-                                  borderRadius: '8px', 
-                                  fontWeight: 'bold',
-                                  cursor: 'pointer',
-                                  margin: 0,
-                                  flex: 'none'
-                                }}
-                              >
-                                Add to Cart
-                              </button>
-                            </div>
-                          </div>
+                          <button key={fav.favorite_id} className="menu-item-card" onClick={() => handleSelectItem(menuItem)}>
+                            <button
+                              className="heart-btn heart-btn--active"
+                              onClick={(e) => handleToggleFavorite(menuItem, e)}
+                              aria-label="Remove from favorites"
+                            >♥</button>
+                            <div className="item-name">{menuItem.name}</div>
+                            <div className="item-price">{currency(menuItem.cost)}</div>
+                          </button>
                         );
                       })
                     )
                   ) : selectedCategory === 'Most Ordered' ? (
                     mostOrderedItems.length === 0 ? (
-                      <div style={{ padding: '2rem', textAlign: 'center', width: '100%', gridColumn: '1 / -1' }}>
-                         <h3>No past orders found.</h3>
+                      <div className="menu-empty-state">
+                        <div className="menu-empty-icon">📊</div>
+                        <p>{user?.guest ? 'Sign in to see your most ordered drinks.' : 'Place your first order to see your favorites here!'}</p>
                       </div>
                     ) : (
-                      mostOrderedItems.map(item => (
+                      mostOrderedItems.map(item => {
+                        const isFav = !!getFavoriteMatch(item);
+                        return (
+                          <button key={item.id} className="menu-item-card" onClick={() => handleSelectItem(item)}>
+                            <button
+                              className={`heart-btn${isFav ? ' heart-btn--active' : ''}`}
+                              onClick={(e) => handleToggleFavorite(item, e)}
+                              aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                            >{isFav ? '♥' : '♡'}</button>
+                            <div className="item-name">{item.name}</div>
+                            <div className="item-price">{currency(item.cost)}</div>
+                            {item.order_count && (
+                              <div className="item-order-count">ordered {item.order_count}×</div>
+                            )}
+                          </button>
+                        );
+                      })
+                    )
+                  ) : (
+                    visibleItems.map(item => {
+                      const isFav = !!getFavoriteMatch(item);
+                      return (
                         <button key={item.id} className="menu-item-card" onClick={() => handleSelectItem(item)}>
+                          <button
+                            className={`heart-btn${isFav ? ' heart-btn--active' : ''}`}
+                            onClick={(e) => handleToggleFavorite(item, e)}
+                            aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                          >{isFav ? '♥' : '♡'}</button>
                           <div className="item-name">{item.name}</div>
                           <div className="item-price">{currency(item.cost)}</div>
                         </button>
-                      ))
-                    )
-                  ) : (
-                    itemsToDisplay.map(item => (
-                      <button
-                        key={item.id || item.menu_item_id}
-                        className="menu-item-card"
-                        onClick={() => handleSelectItem(item)}
-                      >
-                        <div className="item-name">{item.name}</div>
-                        <div className="item-price">{currency(item.cost)}</div>
-                      </button>
-                    ))
-                  )}  
-                </div>
-            </div>
-          )}
-
-          {screen === SCREEN.CUSTOMIZE && currentItem && (
-            <div className="customer-content customize-screen">
-              <div className="customize-header">
-                <div className="customize-header-left">
-                  <button className="cart-back-btn" onClick={handleCancelCustomization}>Back</button>
-                  <h2>{editingCartItemId ? 'Edit Item:' : 'Customize:'} {currentItem.name}</h2>
-                </div>
-                <span className="customize-progress">Step {customizeStep} of 2</span>
-              </div>
-
-              {customizeStep === 1 ? (
-                <>
-                  <div className="customize-section">
-                    <h3>Sugar Level</h3>
-                    <div className="option-grid">
-                      {sugarOptions.map(opt => (
-                        <button key={opt.id} className={`option-btn ${selectedSugar?.id === opt.id ? 'selected' : ''}`} onClick={() => setSelectedSugar(opt)}>
-                          {opt.name}
-                          {opt.cost > 0 && <div className="option-cost">+{currency(opt.cost)}</div>}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="customize-section">
-                    <h3>Ice Level</h3>
-                    <div className="option-grid">
-                      {iceOptions.map(opt => (
-                        <button key={opt.id} className={`option-btn ${selectedIce?.id === opt.id ? 'selected' : ''}`} onClick={() => setSelectedIce(opt)}>
-                          {opt.name}
-                          {opt.cost > 0 && <div className="option-cost">+{currency(opt.cost)}</div>}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="customize-actions">
-                    <button className="btn-secondary" onClick={handleCancelCustomization}>Cancel</button>
-                    <button className="btn-primary" onClick={() => setCustomizeStep(2)}>Next: Toppings</button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="customize-section">
-                    <h3>Toppings</h3>
-                    <div className="option-grid">
-                      {toppingOptions.map(opt => {
-                        const isSelected = selectedToppings.some(t => t.id === opt.id);
-                        return (
-                          <button key={opt.id} className={`option-btn ${isSelected ? 'selected' : ''}`} onClick={() => toggleTopping(opt)}>
-                            {opt.name}
-                            {opt.cost > 0 && <div className="option-cost">+{currency(opt.cost)}</div>}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div className="comments-section">
-                    <label>Special Instructions</label>
-                    <input type="text" className="comments-input" value={comments} onChange={(e) => setComments(e.target.value)} placeholder="e.g., Extra shaken, half boba..." />
-                  </div>
-                  <div className="customize-actions">
-                    <button className="btn-secondary" onClick={() => setCustomizeStep(1)}>Back</button>
-                    <button className="btn-primary" onClick={saveCustomizedItem}>
-                      {editingCartItemId ? 'Save Changes' : 'Add to Cart'} - {currency(currentItem.cost + (selectedSugar?.cost || 0) + (selectedIce?.cost || 0) + selectedToppings.reduce((sum, t) => sum + t.cost, 0))}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {screen === SCREEN.CART && (
-            <div className="customer-content cart-screen">
-              <div className="cart-screen-top">
-                <button className="cart-back-btn" onClick={() => setScreen(SCREEN.HOME)}>Back</button>
-                <h2>Your Order</h2>
-              </div>
-              {cartCount === 0 ? (
-                <div className="empty-cart">
-                  <p>Your cart is empty.</p>
-                  <button className="btn-primary" onClick={() => setScreen(SCREEN.HOME)}>Back to Start</button>
-                </div>
-              ) : (
-                <div className={`cart-screen-body${isGuestCustomer ? ' cart-screen-body-no-rewards' : ''}`}>
-                  {!isGuestCustomer && (
-                  <div className={`rewards-summary rewards-tone-${rewardsTone}`}>
-                    <div className="rewards-line">
-                      <span>Rewards Status</span>
-                      <span className={`rewards-tier-badge rewards-tier-${rewardsTone}`}>
-                        {rewardsStatus.tier}
-                        {rewardsStatus.discountRate > 0 ? ` (${Math.round(rewardsStatus.discountRate * 100)}% off)` : ''}
-                      </span>
-                    </div>
-                    {rewardsStatus.note && <div className="rewards-note rewards-note-employee">{rewardsStatus.note}</div>}
-                    {rewardsStatus.tier === 'Employee' ? (
-                      <div className="tier-visual-row">
-                        <span className="tier-chip tier-chip-employee active">Employee Only</span>
-                      </div>
-                    ) : (
-                      <div className="tier-visual-row">
-                        <span className={`tier-chip ${['Gold', 'Platinum', 'Diamond'].includes(rewardsStatus.tier) ? 'active' : ''}`}>Gold</span>
-                        <span className={`tier-chip ${['Platinum', 'Diamond'].includes(rewardsStatus.tier) ? 'active' : ''}`}>Platinum</span>
-                        <span className={`tier-chip ${rewardsStatus.tier === 'Diamond' ? 'active' : ''}`}>Diamond</span>
-                      </div>
-                    )}
-                    <div className="rewards-progress">
-                      <div className="rewards-progress-fill" style={{ width: `${tierProgressPercent}%` }} />
-                    </div>
-                    <div className="rewards-line">
-                      <span>Points (last 12 months)</span>
-                      <span>{previousYearPoints}</span>
-                    </div>
-                    <div className="rewards-line">
-                      <span>Points from this order</span>
-                      <span>+{pointsFromCurrentOrder}</span>
-                    </div>
-                    {rewardsStatus.nextTierAt && (
-                      <div className="rewards-line">
-                        <span>Points to next tier (after this cart)</span>
-                        <span>{pointsToNextTier}</span>
-                      </div>
-                    )}
-                    {!rewardsStatus.nextTierAt && (
-                      <div className="rewards-line">
-                        <span>Progress</span>
-                        <span>Top tier reached</span>
-                      </div>
-                    )}
-                  </div>
+                      );
+                    })
                   )}
-                  <div className="cart-items">
-                    <h3 className="cart-items-title">Menu Items</h3>
-                    {cart.map((item, index) => (
-                      <div key={item.id} className="cart-item">
-                        <div className="cart-item-header">
-                          <span className="cart-item-number">{index + 1}.</span>
-                          <span className="cart-item-name">{item.name}</span>
-                          <span className="cart-item-price">{currency(item.price * (item.quantity || 1))}</span>
-                          <button className="remove-btn" onClick={() => removeFromCart(item.id)}>×</button>
-                        </div>
-                        <div className="cart-item-controls">
-                          <span className="cart-item-unit-price">Each: {currency(item.price)}</span>
-                          <div className="qty-controls">
-                            <button
-                              className="qty-btn"
-                              onClick={() => updateCartQuantity(item.id, (item.quantity || 1) - 1)}
-                              aria-label="Decrease quantity"
-                            >
-                              -
-                            </button>
-                            <span className="qty-value">{item.quantity || 1}</span>
-                            <button
-                              className="qty-btn"
-                              onClick={() => updateCartQuantity(item.id, (item.quantity || 1) + 1)}
-                              aria-label="Increase quantity"
-                            >
-                              +
-                            </button>
-                          </div>
-                          <button className="cart-edit-btn" onClick={() => startEditCartItem(item)}>Edit</button>
-                          {!isGuestCustomer && (
-                            <button 
-                              onClick={() => handleToggleFavorite(item)} 
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 10px', color: getFavoriteMatch(item) ? '#ff4b4b' : '#aaa', display: 'flex', alignItems: 'center' }}
-                              title={getFavoriteMatch(item) ? "Remove from Favorites" : "Save as Favorite"}
-                            >
-                              {getFavoriteMatch(item) ? (
-                                <svg viewBox="0 0 24 24" fill="currentColor" height="24" width="24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                              ) : (
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" height="24" width="24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                              )}
-                            </button>
-                          )}
-                        </div>
-                        <div className="cart-item-details">
-                          {buildDisplayLines(item).map((line, i) => (
-                            <div key={i} className="cart-item-detail">{line}</div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="cart-total">
-                    <div className="cart-total-line">
-                      <span>{rewardsStatus.discountRate > 0 ? 'Subtotal' : 'Total'}</span>
-                      <span>{currency(cartTotal)}</span>
-                    </div>
-                    {rewardsStatus.discountRate > 0 && (
-                      <>
-                        <div className="cart-total-line">
-                          <span>Discount ({Math.round(rewardsStatus.discountRate * 100)}%)</span>
-                          <span>-{currency(discountAmount)}</span>
-                        </div>
-                        <div className="cart-total-line cart-total-line-final">
-                          <span>Discounted Total</span>
-                          <span>{currency(discountedSubtotal)}</span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  <div className="cart-actions">
-                    <button className="btn-secondary" onClick={() => setScreen(SCREEN.HOME)}>Add More Items</button>
-                    <button className="btn-primary" onClick={() => setScreen(SCREEN.CHECKOUT)}>Proceed to Checkout</button>
-                  </div>
                 </div>
-              )}
+              </div>
+
+              {/* ── Right: cart panel ── */}
+              <div className="cart-side-panel">
+                <h2 className="cart-panel-title">Your Cart</h2>
+
+                {cart.length === 0 ? (
+                  <div className="cart-panel-empty">
+                    {weather && !weatherLoading && (
+                      <div className="cart-panel-weather">
+                        <div className="cart-panel-weather-header">📍 College Station</div>
+                        <div className="cart-panel-weather-temp">
+                          {Math.round(weather.temperature ?? weather.temp ?? 0)}°F
+                        </div>
+                        <div className="cart-panel-weather-desc">
+                          {weather.description ?? describeWeatherCode(weather.weather_code)}
+                        </div>
+                        {weeklyWeather.length > 0 && (
+                          <div className="cart-panel-weather-week">
+                            {weeklyWeather.map((day, i) => (
+                              <div key={i} className="cart-panel-weather-day">
+                                <span className="weather-day-label">{i === 0 ? 'Today' : formatWeekdayLabel(day.date)}</span>
+                                <span className="weather-day-range">
+                                  {Math.round(day.maxTemp ?? day.high ?? 0)}° / {Math.round(day.minTemp ?? day.low ?? 0)}°
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <div className="cart-panel-empty-icon">🛒</div>
+                    <p className="cart-panel-empty-msg">Your cart is empty</p>
+                    <p className="cart-panel-empty-sub">Tap any drink to get started</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="cart-panel-scroll-area">
+                    <div className={`rewards-summary rewards-tone-${rewardsTone}`}>
+                      <div className="rewards-line">
+                        <span>Rewards</span>
+                        <span className={`rewards-tier-badge rewards-tier-${rewardsTone}`}>
+                          {rewardsStatus.tier}
+                          {rewardsStatus.discountRate > 0 ? ` (${Math.round(rewardsStatus.discountRate * 100)}% off)` : ''}
+                        </span>
+                      </div>
+                      {rewardsStatus.note && <div className="rewards-note rewards-note-employee">{rewardsStatus.note}</div>}
+                      {rewardsStatus.tier === 'Employee' ? (
+                        <div className="tier-visual-row">
+                          <span className="tier-chip tier-chip-employee active">Employee Only</span>
+                        </div>
+                      ) : (
+                        <div className="tier-visual-row">
+                          <span className={`tier-chip ${['Gold', 'Platinum', 'Diamond'].includes(rewardsStatus.tier) ? 'active' : ''}`}>Gold</span>
+                          <span className={`tier-chip ${['Platinum', 'Diamond'].includes(rewardsStatus.tier) ? 'active' : ''}`}>Platinum</span>
+                          <span className={`tier-chip ${rewardsStatus.tier === 'Diamond' ? 'active' : ''}`}>Diamond</span>
+                        </div>
+                      )}
+                      <div className="rewards-progress">
+                        <div className="rewards-progress-fill" style={{ width: `${tierProgressPercent}%` }} />
+                      </div>
+                      <div className="rewards-line">
+                        <span>Points (12 mo)</span>
+                        <span>{previousYearPoints}</span>
+                      </div>
+                      <div className="rewards-line">
+                        <span>From this order</span>
+                        <span>+{pointsFromCurrentOrder}</span>
+                      </div>
+                      {rewardsStatus.nextTierAt && (
+                        <div className="rewards-line">
+                          <span>To next tier</span>
+                          <span>{pointsToNextTier}</span>
+                        </div>
+                      )}
+                      {!rewardsStatus.nextTierAt && (
+                        <div className="rewards-line">
+                          <span>Progress</span>
+                          <span>Top tier ✓</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="cart-panel-items">
+                      {cart.map((item, index) => (
+                        <div key={item.id} className="cart-item">
+                          <div className="cart-item-header">
+                            <span className="cart-item-number">{index + 1}.</span>
+                            <span className="cart-item-name">{item.name}</span>
+                            <span className="cart-item-price">{currency(item.price * (item.quantity || 1))}</span>
+                            <button className="remove-btn" onClick={() => removeFromCart(item.id)}>×</button>
+                          </div>
+                          <div className="cart-item-controls">
+                            <span className="cart-item-unit-price">Each: {currency(item.price)}</span>
+                            <div className="qty-controls">
+                              <button className="qty-btn" onClick={() => updateCartQuantity(item.id, (item.quantity || 1) - 1)} aria-label="Decrease quantity">-</button>
+                              <span className="qty-value">{item.quantity || 1}</span>
+                              <button className="qty-btn" onClick={() => updateCartQuantity(item.id, (item.quantity || 1) + 1)} aria-label="Increase quantity">+</button>
+                            </div>
+                            <button className="cart-edit-btn" onClick={() => startEditCartItem(item)}>Edit</button>
+                          </div>
+                          <div className="cart-item-details">
+                            {buildDisplayLines(item).map((line, i) => (
+                              <div key={i} className="cart-item-detail">{line}</div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    </div>{/* end cart-panel-scroll-area */}
+
+                    <div className="cart-panel-footer">
+                      <div className="cart-total">
+                        <div className="cart-total-line">
+                          <span>{rewardsStatus.discountRate > 0 ? 'Subtotal' : 'Total'}</span>
+                          <span>{currency(cartTotal)}</span>
+                        </div>
+                        {rewardsStatus.discountRate > 0 && (
+                          <>
+                            <div className="cart-total-line">
+                              <span>Discount ({Math.round(rewardsStatus.discountRate * 100)}%)</span>
+                              <span>-{currency(discountAmount)}</span>
+                            </div>
+                            <div className="cart-total-line cart-total-line-final">
+                              <span>Discounted Total</span>
+                              <span>{currency(discountedSubtotal)}</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      <button className="btn-primary cart-panel-checkout-btn" onClick={() => setScreen(SCREEN.CHECKOUT)}>
+                        Proceed to Checkout
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           )}
+
+
 
           {screen === SCREEN.CHECKOUT && (
             <div className="customer-content checkout-screen">
-              <div className="section-top-row">
-                <button className="cart-back-btn" onClick={() => setScreen(SCREEN.HOME)}>Back</button>
-              </div>
               <h2>Checkout</h2>
               <div className="checkout-summary">
                 <div className="summary-row">
@@ -1305,7 +1146,7 @@ export default function CustomerScreen() {
                 <button className="payment-btn" onClick={() => { alert('Please see cashier to pay with cash.'); completeOrder('CASH'); }}>💵 Pay with Cash</button>
               </div>
               <div className="cart-actions">
-                <button className="btn-secondary full-width" onClick={() => setScreen(SCREEN.CART)}>Back to Cart</button>
+                <button className="btn-secondary full-width" onClick={() => setScreen(SCREEN.MENU)}>Back to Menu</button>
               </div>
             </div>
           )}
@@ -1328,23 +1169,174 @@ export default function CustomerScreen() {
         </div>
       )}
 
-      {screen !== SCREEN.CART && screen !== SCREEN.CHECKOUT && cartCount > 0 && (
-        <button 
-          id={isMagnified ? 'magnified-cart-badge' : 'real-cart-badge'}
-          className="cart-badge" 
-          onClick={() => setScreen(SCREEN.CART)}
-          style={isMagnified ? { bottom: 'auto', right: 'auto', margin: 0 } : {}}
+
+      {ordersModalOpen && (
+        <div
+          id={isMagnified ? 'magnified-orders-modal' : 'real-orders-modal'}
+          className="orders-modal-overlay"
+          onClick={isMagnified ? undefined : () => setOrdersModalOpen(false)}
+          style={isMagnified ? { position: 'absolute' } : {}}
         >
-          <span className="cart-icon">🛒</span>
-          <span className="cart-count">{cartCount}</span>
-          <span>{currency(cartTotal)}</span>
-        </button>
+          <div className="orders-modal-card" onClick={e => e.stopPropagation()}>
+            <div className="orders-modal-header">
+              <h2 className="orders-modal-title">My Orders</h2>
+              <button
+                className="customize-modal-close"
+                onClick={isMagnified ? undefined : () => setOrdersModalOpen(false)}
+                aria-label="Close"
+              >✕</button>
+            </div>
+
+            <div className="orders-modal-body">
+              {customerOrders.length === 0 ? (
+                <div className="orders-empty">
+                  <div className="orders-empty-icon">🧋</div>
+                  <p className="orders-empty-msg">No orders yet</p>
+                  <p className="orders-empty-sub">Your completed orders will appear here.</p>
+                </div>
+              ) : (
+                customerOrders.map(order => {
+                  const date = new Date(order.order_date);
+                  const isRecent = Date.now() - date.getTime() < 30 * 60 * 1000;
+                  const status = isRecent ? 'In Progress' : 'Completed';
+                  const itemCount = Array.isArray(order.items)
+                    ? order.items.reduce((s, i) => s + (i.quantity || 1), 0)
+                    : null;
+                  return (
+                    <div key={order.order_id} className="order-history-card">
+                      <div className="order-history-top">
+                        <div className="order-history-id">Order #{order.order_id}</div>
+                        <span className={`order-status-chip order-status-${isRecent ? 'progress' : 'done'}`}>
+                          {status}
+                        </span>
+                      </div>
+
+                      <div className="order-history-meta">
+                        <span>📅 {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        <span>🕐 {date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
+                        {order.payment_type && (
+                          <span>{order.payment_type === 'CARD' ? '💳' : '💵'} {order.payment_type}</span>
+                        )}
+                        {itemCount !== null && <span>🧋 {itemCount} item{itemCount !== 1 ? 's' : ''}</span>}
+                      </div>
+
+                      {Array.isArray(order.items) && order.items.length > 0 && (
+                        <div className="order-history-items">
+                          {order.items.map(item => (
+                            <div key={item.order_item_id} className="order-history-item-row">
+                              <span className="order-history-item-qty">{item.quantity}×</span>
+                              <span className="order-history-item-name">{item.name}</span>
+                              <span className="order-history-item-price">{currency(Number(item.item_price) * item.quantity)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="order-history-total">
+                        <span>Total</span>
+                        <span>{currency(Number(order.total_cost))}</span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {customizeModalOpen && currentItem && (
+        <div
+          id={isMagnified ? 'magnified-customize-modal' : 'real-customize-modal'}
+          className="customize-modal-overlay"
+          onClick={isMagnified ? undefined : handleCancelCustomization}
+        >
+          <div className="customize-modal-card" onClick={e => e.stopPropagation()}>
+
+            <div className="customize-modal-image-placeholder">
+              <button className="customize-modal-close" onClick={isMagnified ? undefined : handleCancelCustomization} aria-label="Close">✕</button>
+              <span className="customize-modal-image-icon">🧋</span>
+            </div>
+
+            <div className="customize-modal-item-info">
+              <h2 className="customize-modal-item-name">{currentItem.name}</h2>
+              <p className="customize-modal-item-description">
+                Handcrafted fresh to order. Customize it your way below.
+              </p>
+              <div className="customize-modal-base-price">{currency(currentItem.cost)}</div>
+            </div>
+
+            <div className="customize-modal-body">
+              <div className="customize-section">
+                <h3>Sugar Level</h3>
+                <div className="option-grid">
+                  {sugarOptions.map(opt => (
+                    <button key={opt.id} className={`option-btn ${selectedSugar?.id === opt.id ? 'selected' : ''}`} onClick={() => setSelectedSugar(opt)}>
+                      {opt.name}
+                      {opt.cost > 0 && <div className="option-cost">+{currency(opt.cost)}</div>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="customize-section">
+                <h3>Ice Level</h3>
+                <div className="option-grid">
+                  {iceOptions.map(opt => (
+                    <button key={opt.id} className={`option-btn ${selectedIce?.id === opt.id ? 'selected' : ''}`} onClick={() => setSelectedIce(opt)}>
+                      {opt.name}
+                      {opt.cost > 0 && <div className="option-cost">+{currency(opt.cost)}</div>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="customize-section">
+                <h3>Toppings</h3>
+                <div className="option-grid">
+                  {toppingOptions.map(opt => {
+                    const isSelected = selectedToppings.some(t => t.id === opt.id);
+                    return (
+                      <button key={opt.id} className={`option-btn ${isSelected ? 'selected' : ''}`} onClick={() => toggleTopping(opt)}>
+                        {opt.name}
+                        {opt.cost > 0 && <div className="option-cost">+{currency(opt.cost)}</div>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="comments-section">
+                <label>Special Instructions</label>
+                <input
+                  type="text"
+                  className="comments-input"
+                  value={comments}
+                  onChange={e => setComments(e.target.value)}
+                  placeholder="e.g., Extra shaken, half boba..."
+                />
+              </div>
+            </div>
+
+            <div className="customize-modal-footer">
+              <button className="customize-modal-add-btn" onClick={saveCustomizedItem}>
+                {editingCartItemId ? 'Save Changes' : 'Add to Order'} —{' '}
+                {currency(
+                  currentItem.cost +
+                  (selectedSugar?.cost || 0) +
+                  (selectedIce?.cost || 0) +
+                  selectedToppings.reduce((sum, t) => sum + t.cost, 0)
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
 
   return (
-    <div className={`customer-page${textScale > 100 ? ' scaled-text' : ''}`}>
+    <div className="customer-page">
       {renderAppContent(false)}
 
       {magnifierEnabled && (

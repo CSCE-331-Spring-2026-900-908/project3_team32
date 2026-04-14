@@ -133,7 +133,6 @@ export default function CashierPOS() {
     loadData();
   }, []);
 
-  // ── TODAY'S ORDERS (exact same logic as working NewCashierScreen.jsx) ──
   useEffect(() => {
     async function loadTodayOrders() {
       try {
@@ -143,28 +142,15 @@ export default function CashierPOS() {
         if (!res.ok) return;
         const data = await res.json();
         const orders = data.orders || data || [];
-        setTodayOrders(
-          orders.map((order) => ({
-            id: order.order_id,
-            items: (order.items || []).map(
-              (i) => i.name || i.menu_item_name || `Item ${i.menu_item_id}`,
-            ),
-          }))
-        );
-        setCompletedOrders(
-          new Set(
-            orders
-              .filter((o) => o.status === 'Completed')
-              .map((o) => o.order_id)
-          )
-        );
+        setTodayOrders(orders.map(order => ({
+          id: order.order_id,
+          items: (order.items || []).map(i => i.name || i.menu_item_name || `Item ${i.menu_item_id}`),
+        })));
       } catch {
         // silently fail — dropdown will just be empty until an order is placed
       }
     }
     loadTodayOrders();
-    const interval = setInterval(loadTodayOrders, 5000);
-    return () => clearInterval(interval);
   }, [token]);
 
   const mostCommonItems = useMemo(() => menuItems.slice(0, 9), [menuItems]);
@@ -388,34 +374,13 @@ export default function CashierPOS() {
                             <input
                               type="checkbox"
                               checked={completedOrders.has(order.id)}
-                              onChange={async () => {
-                                const isCompleted = completedOrders.has(order.id);
-                                const newStatus = isCompleted ? "In Progress" : "Completed";
-                                try {
-                                  const res = await fetch(
-                                    `${API_BASE}/orders/${order.id}/status`,
-                                    {
-                                      method: "PATCH",
-                                      headers: {
-                                        "Content-Type": "application/json",
-                                        Authorization: `Bearer ${token}`,
-                                      },
-                                      body: JSON.stringify({
-                                        status: newStatus,
-                                      }),
-                                    }
-                                  );
-                                  if (res.ok) {
-                                    setCompletedOrders((prev) => {
-                                      const next = new Set(prev);
-                                      if (next.has(order.id)) next.delete(order.id);
-                                      else next.add(order.id);
-                                      return next;
-                                    });
-                                  }
-                                } catch (err) {
-                                  console.error("Failed to update order status", err);
-                                }
+                              onChange={() => {
+                                setCompletedOrders(prev => {
+                                  const next = new Set(prev);
+                                  if (next.has(order.id)) next.delete(order.id);
+                                  else next.add(order.id);
+                                  return next;
+                                });
                               }}
                             />
                           </label>
