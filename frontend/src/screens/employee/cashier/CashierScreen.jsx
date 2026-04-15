@@ -173,6 +173,7 @@ export default function CashierPOS() {
         const orderPayload = {
           employee_id: employeeId,
           payment_type: paymentMethod.toUpperCase(),
+          tip_amount: tipAmount,
           items: orderItems.map((item) => ({
             menu_item_id: item.menuItemId,
             quantity: 1,
@@ -180,7 +181,7 @@ export default function CashierPOS() {
             comments: item.comments || "",
           })),
         };
-        console.log("Submitting order:", orderPayload);
+        console.log("Submitting order with tip:", orderPayload);
         const headers = { "Content-Type": "application/json" };
         if (token) headers.Authorization = `Bearer ${token}`;
         const response = await fetch(`${API_BASE}/cashier/orders`, {

@@ -82,7 +82,7 @@
 }
 
 .category-grid {
-  grid-template-columns: repeat(3, 1fr); 
+  grid-template-columns: repeat(3, 1fr);
   gap: 28px;
   margin-bottom: 28px;
 }
@@ -401,12 +401,20 @@
   }
 }
 
-.primary-action {
-  background: #8b4513;
-  color: white;
+.primary-action,
+.secondary-action {
   padding: 18px 24px;
   font-weight: 700;
   font-size: 1.1rem;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.primary-action {
+  background: #8b4513;
+  color: white;
 }
 
 .primary-action:hover {
@@ -414,14 +422,15 @@
 }
 
 .secondary-action {
+  background: #f8f9fa;
   color: #495057;
-  padding: 16px 24px;
-  font-weight: 700;
-  font-size: 1.05rem;
+  border: 2px solid #dee2e6;
 }
 
 .secondary-action:hover {
   background: #e9ecef;
+  border-color: #8b4513;
+  color: #8b4513;
 }
 
 .panel-actions {
