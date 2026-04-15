@@ -862,7 +862,7 @@ app.post("/api/cashier/orders", async (req, res, next) => {
       return { ...item, itemPrice };
     });
 
-    const finalTotal = itemTotal + tipAmount;   // ← THIS IS THE KEY CHANGE
+    const finalTotal = itemTotal + tipAmount;
 
     const orderResult = await client.query(
       `INSERT INTO customer_order 
@@ -877,7 +877,7 @@ app.post("/api/cashier/orders", async (req, res, next) => {
 
     const order = orderResult.rows[0];
 
-    // insert items and modifications (unchanged)
+    // insert items and modifications
     for (const item of pricedItems) {
       const orderItemResult = await client.query(
         `INSERT INTO order_item (order_item_id, order_id, menu_item_id, quantity, item_price, comments)
