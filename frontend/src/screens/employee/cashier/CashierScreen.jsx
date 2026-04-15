@@ -66,7 +66,6 @@ export default function CashierPOS() {
   } = useCashierData({ token });
 
   // ── Derived values ─────────────────────────────────────────────────
-  const mostCommonItems = useMemo(() => menuItems.slice(0, 9), [menuItems]);
   const visibleItems = useMemo(() => {
     if (!selectedCategory) return menuItems;
     return menuItems.filter((item) => item.category === selectedCategory);
@@ -279,7 +278,6 @@ export default function CashierPOS() {
         {screen === SCREEN.HOME && (
           <HomeScreen
             categories={categories}
-            mostCommonItems={mostCommonItems}
             orderItems={orderItems}
             orderTotal={orderTotal}
             handleSelectItem={handleSelectItem}

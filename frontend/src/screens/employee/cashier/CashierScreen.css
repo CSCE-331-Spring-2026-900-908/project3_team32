@@ -1,18 +1,14 @@
-
-/* Main container for the cashier interface, sets full height and background gradient */
 .cashier-page {
   min-height: 100vh;
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   padding: 24px;
   color: #212529;
 }
-/* Centers the entire cashier layout and limits max width for readability */
 
 .cashier-shell {
   max-width: 1300px;
   margin: 0 auto;
 }
-/* Shared card-style layout used for headers, panels, and status sections */
 
 .cashier-header,
 .cashier-panel,
@@ -22,7 +18,6 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   border: 1px solid #dee2e6;
 }
-/* Header layout uses flexbox to align title and controls horizontally */
 
 .cashier-header {
   padding: 24px;
@@ -32,7 +27,6 @@
   gap: 16px;
   margin-bottom: 16px;
 }
-/* Status banner used to display system or order state (e.g., success/connection) */
 
 .cashier-header h1 {
   margin: 0 0 6px;
@@ -60,7 +54,6 @@
   background: #d1e7dd;
   color: #0f5132;
 }
-/* Grid layout splits main UI into menu section and order/checkout panel */
 
 .cashier-grid {
   display: grid;
@@ -89,24 +82,36 @@
 }
 
 .category-grid {
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(3, 1fr); 
+  gap: 28px;
   margin-bottom: 28px;
+}
+
+.category-button {
+  min-height: 190px;
+  padding: 32px 24px;
+  font-weight: 700;
+  font-size: 1.45rem;
+  line-height: 1.25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .common-grid,
 .option-grid,
 .checkout-grid {
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
 }
 
 .item-grid {
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
 .category-button,
 .menu-card,
 .option-button,
-.primary-action,
 .secondary-action {
   border: none;
   border-radius: 12px;
@@ -133,24 +138,20 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-.category-button {
-  min-height: 96px;
-  padding: 14px;
-  font-weight: 700;
-}
-
 .menu-card,
 .option-button {
-  padding: 18px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
+  gap: 12px;
   text-align: left;
+  min-height: 140px;
+  font-size: 1.05rem;
 }
 
 .menu-card.large {
-  min-height: 120px;
+  min-height: 170px;
 }
 
 .option-button.active {
@@ -346,7 +347,7 @@
 }
 
 .checkout-grid {
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 16px;
 }
 
@@ -354,16 +355,17 @@
   background: white;
   border: 2px solid #dee2e6;
   border-radius: 16px;
-  padding: 32px 24px;
+  padding: 40px 30px;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 1.25rem;
   color: #212529;
+  min-height: 180px;
 }
 
 .payment-method-btn:hover {
@@ -402,8 +404,9 @@
 .primary-action {
   background: #8b4513;
   color: white;
-  padding: 14px 18px;
+  padding: 18px 24px;
   font-weight: 700;
+  font-size: 1.1rem;
 }
 
 .primary-action:hover {
@@ -412,9 +415,9 @@
 
 .secondary-action {
   color: #495057;
-  padding: 14px 24px;
+  padding: 16px 24px;
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 1.05rem;
 }
 
 .secondary-action:hover {
@@ -625,7 +628,7 @@
   background: #f8f9fa;
   border: 4px solid #dee2e6;
   border-radius: 20px;
-  font-size: 3rem;
+  font-size: 3.2rem;
   font-weight: 800;
   color: #212529;
   cursor: pointer;
@@ -634,7 +637,8 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 15px;
+  gap: 20px;
+  min-height: 220px;
 }
 
 .tip-button:hover {
@@ -800,11 +804,11 @@
 }
 
 .cashier-exit-button {
-  padding: 10px 20px;
+  padding: 14px 24px;
   background: white;
   border: 2px solid #dee2e6;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 600;
   color: #495057;
   cursor: pointer;
@@ -817,7 +821,6 @@
   color: #212529;
 }
 
-/* ── Today's Orders dropdown ────────────────────────────────── */
 .today-orders-wrapper {
   position: relative;
 }
@@ -826,11 +829,11 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 18px;
+  padding: 14px 24px;
   background: white;
   border: 2px solid #dee2e6;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 600;
   color: #495057;
   cursor: pointer;

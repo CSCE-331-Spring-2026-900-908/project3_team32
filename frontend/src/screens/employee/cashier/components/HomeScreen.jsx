@@ -5,7 +5,6 @@ import { currency, buildDisplayLines } from "../utils";
 
 export default function HomeScreen({
   categories,
-  mostCommonItems,
   orderItems,
   orderTotal,
   handleSelectItem,
@@ -15,7 +14,7 @@ export default function HomeScreen({
 }) {
   return (
     <div className="cashier-grid">
-      {/* ── Left panel: category grid + most common items ── */}
+      {/* ── Left panel: category grid ONLY (Fresh Brew, Milky Series, etc.) ── */}
       <section className="cashier-panel">
         <h2>Menu Categories</h2>
         <div className="category-grid">
@@ -26,20 +25,6 @@ export default function HomeScreen({
               onClick={() => setScreen(SCREEN.ITEM_SELECT, group)}
             >
               {group}
-            </button>
-          ))}
-        </div>
-
-        <h2>Most Common Items</h2>
-        <div className="common-grid">
-          {mostCommonItems.map((item) => (
-            <button
-              key={item.id}
-              className="menu-card"
-              onClick={() => handleSelectItem(item, SCREEN.HOME)}
-            >
-              <strong>{item.name}</strong>
-              <span>{currency(item.cost)}</span>
             </button>
           ))}
         </div>
