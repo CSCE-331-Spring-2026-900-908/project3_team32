@@ -862,6 +862,70 @@ app.post("/api/cashier/orders", async (req, res, next) => {
       return { ...item, itemPrice };
     });
 
+    // Deduct inventory based on ordered menu items using menu_item_inventory mappings.
+    const orderedQuantityByMenuId = new Map();
+    for (const item of normalizedItems) {
+      orderedQuantityByMenuId.set(
+        item.menuItemId,
+        (orderedQuantityByMenuId.get(item.menuItemId) || 0) + item.quantity,
+      );
+    }
+
+    const inventoryUsageRows = await client.query(
+      `SELECT menu_item_id, inventory_id, quantity_used
+       FROM menu_item_inventory
+       WHERE menu_item_id = ANY($1::int[])`,
+      [menuIds],
+    );
+
+    const inventoryDeductions = new Map();
+    for (const row of inventoryUsageRows.rows) {
+      const menuItemId = Number(row.menu_item_id);
+      const inventoryId = Number(row.inventory_id);
+      const quantityPerItem = Number(row.quantity_used || 0);
+      const orderedQty = orderedQuantityByMenuId.get(menuItemId) || 0;
+      const requiredAmount = quantityPerItem * orderedQty;
+      if (!Number.isFinite(requiredAmount) || requiredAmount <= 0) continue;
+
+      inventoryDeductions.set(
+        inventoryId,
+        (inventoryDeductions.get(inventoryId) || 0) + requiredAmount,
+      );
+    }
+
+    if (inventoryDeductions.size > 0) {
+      const inventoryIds = [...inventoryDeductions.keys()];
+      const inventoryResult = await client.query(
+        `SELECT inventory_id, quantity_available
+         FROM inventory
+         WHERE inventory_id = ANY($1::int[])
+         FOR UPDATE`,
+        [inventoryIds],
+      );
+      const inventoryAvailableMap = new Map(
+        inventoryResult.rows.map((row) => [
+          Number(row.inventory_id),
+          Number(row.quantity_available || 0),
+        ]),
+      );
+
+      for (const [inventoryId, requiredAmount] of inventoryDeductions.entries()) {
+        const currentQty = inventoryAvailableMap.get(inventoryId);
+        if (!Number.isFinite(currentQty)) continue;
+
+        const deduction = Math.round(requiredAmount);
+        if (deduction <= 0) continue;
+
+        const nextQty = Math.max(0, currentQty - deduction);
+        await client.query(
+          `UPDATE inventory
+           SET quantity_available = $1
+           WHERE inventory_id = $2`,
+          [nextQty, inventoryId],
+        );
+      }
+    }
+
     const finalTotal = itemTotal + tipAmount;
 
     const orderResult = await client.query(

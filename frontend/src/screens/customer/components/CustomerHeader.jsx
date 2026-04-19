@@ -5,8 +5,6 @@ export default function CustomerHeader({
   user,
   logout,
   navigate,
-  showMenuBoard,
-  setShowMenuBoard,
   accessibilityOpen,
   setAccessibilityOpen,
   textScale,
@@ -31,14 +29,6 @@ export default function CustomerHeader({
       <div className="header-content">
         <h1>Team 32's Boba Bar</h1>
         <div className="header-controls-row">
-          <div className="header-left">
-            <button
-              className={`menu-board-btn${showMenuBoard ? " active" : ""}`}
-              onClick={() => setShowMenuBoard((v) => !v)}
-            >
-              Menu Board
-            </button>
-          </div>
           <div className="header-actions">
             <div
               className="accessibility-wrapper"

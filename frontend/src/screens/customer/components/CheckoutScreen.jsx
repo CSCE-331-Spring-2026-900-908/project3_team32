@@ -1,4 +1,4 @@
-import { FiArrowLeft, FiCreditCard, FiDollarSign } from "react-icons/fi";
+import { FiArrowLeft, FiCreditCard } from "react-icons/fi";
 import { SCREEN } from "../constants";
 import { currency } from "../utils";
 
@@ -42,15 +42,6 @@ export default function CheckoutScreen({
         <h3>Select Payment Method</h3>
         <button className="payment-btn" onClick={() => completeOrder("CARD")}>
           <FiCreditCard /> Pay with Card
-        </button>
-        <button
-          className="payment-btn"
-          onClick={() => {
-            alert("Please see cashier to pay with cash.");
-            completeOrder("CASH");
-          }}
-        >
-          <FiDollarSign /> Pay with Cash
         </button>
       </div>
     </div>
