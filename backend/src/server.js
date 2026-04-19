@@ -22,6 +22,69 @@ function isValidEmployeePin(pin) {
   return /^\d{4}$/.test(pin);
 }
 
+const SIZE_MODIFICATION_IDS = {
+  REGULAR: 21,
+  LARGE: 22,
+};
+
+const SIZE_SWAP_INVENTORY_IDS = {
+  MEDIUM_CUP: 40,
+  LARGE_CUP: 41,
+  MEDIUM_LID: 42,
+  LARGE_LID: 43,
+};
+
+// Inventory consumed by add-on modifications (per 1 ordered drink).
+const MODIFICATION_INVENTORY_USAGE = new Map([
+  [11, { inventoryId: 24, quantityUsed: 1 }], // Add Tapioca Pearls
+  [12, { inventoryId: 25, quantityUsed: 1 }], // Add Crystal Boba
+  [13, { inventoryId: 26, quantityUsed: 1 }], // Add Popping Boba (Strawberry)
+  [14, { inventoryId: 27, quantityUsed: 1 }], // Add Popping Boba (Mango)
+  [15, { inventoryId: 28, quantityUsed: 1 }], // Add Honey Jelly
+  [16, { inventoryId: 29, quantityUsed: 1 }], // Add Lychee Jelly
+  [17, { inventoryId: 30, quantityUsed: 1 }], // Add Coffee Jelly
+  [18, { inventoryId: 31, quantityUsed: 1 }], // Add Pudding
+  [19, { inventoryId: 32, quantityUsed: 1 }], // Add Ice Cream
+  [20, { inventoryId: 33, quantityUsed: 1 }], // Add Creama
+]);
+
+function addInventoryUsage(usageMap, inventoryId, quantity) {
+  if (!Number.isFinite(quantity) || quantity === 0) return;
+  usageMap.set(inventoryId, (usageMap.get(inventoryId) || 0) + quantity);
+}
+
+function applySizeInventorySwap(perUnitUsage, targetSize) {
+  const { MEDIUM_CUP, LARGE_CUP, MEDIUM_LID, LARGE_LID } =
+    SIZE_SWAP_INVENTORY_IDS;
+
+  if (targetSize === "large") {
+    const mediumCupQty = perUnitUsage.get(MEDIUM_CUP) || 0;
+    const mediumLidQty = perUnitUsage.get(MEDIUM_LID) || 0;
+    if (mediumCupQty > 0) {
+      addInventoryUsage(perUnitUsage, MEDIUM_CUP, -mediumCupQty);
+      addInventoryUsage(perUnitUsage, LARGE_CUP, mediumCupQty);
+    }
+    if (mediumLidQty > 0) {
+      addInventoryUsage(perUnitUsage, MEDIUM_LID, -mediumLidQty);
+      addInventoryUsage(perUnitUsage, LARGE_LID, mediumLidQty);
+    }
+    return;
+  }
+
+  if (targetSize === "regular") {
+    const largeCupQty = perUnitUsage.get(LARGE_CUP) || 0;
+    const largeLidQty = perUnitUsage.get(LARGE_LID) || 0;
+    if (largeCupQty > 0) {
+      addInventoryUsage(perUnitUsage, LARGE_CUP, -largeCupQty);
+      addInventoryUsage(perUnitUsage, MEDIUM_CUP, largeCupQty);
+    }
+    if (largeLidQty > 0) {
+      addInventoryUsage(perUnitUsage, LARGE_LID, -largeLidQty);
+      addInventoryUsage(perUnitUsage, MEDIUM_LID, largeLidQty);
+    }
+  }
+}
+
 async function ensureEmployeeAuthSchema() {
   await pool.query(
     "ALTER TABLE employee ADD COLUMN IF NOT EXISTS google_email VARCHAR(255)",
@@ -862,15 +925,7 @@ app.post("/api/cashier/orders", async (req, res, next) => {
       return { ...item, itemPrice };
     });
 
-    // Deduct inventory based on ordered menu items using menu_item_inventory mappings.
-    const orderedQuantityByMenuId = new Map();
-    for (const item of normalizedItems) {
-      orderedQuantityByMenuId.set(
-        item.menuItemId,
-        (orderedQuantityByMenuId.get(item.menuItemId) || 0) + item.quantity,
-      );
-    }
-
+    // Deduct inventory using menu-item base usage and selected modifications.
     const inventoryUsageRows = await client.query(
       `SELECT menu_item_id, inventory_id, quantity_used
        FROM menu_item_inventory
@@ -878,19 +933,53 @@ app.post("/api/cashier/orders", async (req, res, next) => {
       [menuIds],
     );
 
-    const inventoryDeductions = new Map();
+    const baseUsageByMenuId = new Map();
     for (const row of inventoryUsageRows.rows) {
       const menuItemId = Number(row.menu_item_id);
       const inventoryId = Number(row.inventory_id);
-      const quantityPerItem = Number(row.quantity_used || 0);
-      const orderedQty = orderedQuantityByMenuId.get(menuItemId) || 0;
-      const requiredAmount = quantityPerItem * orderedQty;
-      if (!Number.isFinite(requiredAmount) || requiredAmount <= 0) continue;
+      const quantityUsed = Number(row.quantity_used || 0);
+      if (!baseUsageByMenuId.has(menuItemId)) {
+        baseUsageByMenuId.set(menuItemId, []);
+      }
+      baseUsageByMenuId.get(menuItemId).push({ inventoryId, quantityUsed });
+    }
 
-      inventoryDeductions.set(
-        inventoryId,
-        (inventoryDeductions.get(inventoryId) || 0) + requiredAmount,
+    const inventoryDeductions = new Map();
+    for (const item of normalizedItems) {
+      const perUnitUsage = new Map();
+      const baseUsage = baseUsageByMenuId.get(item.menuItemId) || [];
+      for (const usage of baseUsage) {
+        addInventoryUsage(perUnitUsage, usage.inventoryId, usage.quantityUsed);
+      }
+
+      const hasLargeSize = item.modificationIds.includes(
+        SIZE_MODIFICATION_IDS.LARGE,
       );
+      const hasRegularSize = item.modificationIds.includes(
+        SIZE_MODIFICATION_IDS.REGULAR,
+      );
+      if (hasLargeSize && !hasRegularSize) {
+        applySizeInventorySwap(perUnitUsage, "large");
+      } else if (hasRegularSize && !hasLargeSize) {
+        applySizeInventorySwap(perUnitUsage, "regular");
+      }
+
+      for (const modificationId of item.modificationIds) {
+        const mappedUsage = MODIFICATION_INVENTORY_USAGE.get(modificationId);
+        if (mappedUsage) {
+          addInventoryUsage(
+            perUnitUsage,
+            mappedUsage.inventoryId,
+            mappedUsage.quantityUsed,
+          );
+        }
+      }
+
+      for (const [inventoryId, quantityPerItem] of perUnitUsage.entries()) {
+        const requiredAmount = quantityPerItem * item.quantity;
+        if (!Number.isFinite(requiredAmount) || requiredAmount <= 0) continue;
+        addInventoryUsage(inventoryDeductions, inventoryId, requiredAmount);
+      }
     }
 
     if (inventoryDeductions.size > 0) {
@@ -1261,35 +1350,129 @@ app.get("/api/reports/inventory", async (req, res, next) => {
 
   try {
     const result = await pool.query(
-      `WITH period_orders AS (
-          SELECT oi.menu_item_id, SUM(oi.quantity) AS items_sold
+      `WITH period_items AS (
+          SELECT oi.order_item_id, oi.menu_item_id, oi.quantity
           FROM customer_order co
           JOIN order_item oi ON co.order_id = oi.order_id
           WHERE DATE(co.order_date) BETWEEN $1 AND $2
-          GROUP BY oi.menu_item_id
        ),
-       inventory_usage AS (
-          SELECT i.inventory_id,
-                 i.resource_name,
-                 i.quantity_available AS current_qty,
-                 COALESCE(SUM(po.items_sold * mii.quantity_used), 0) AS qty_used
-          FROM inventory i
-          LEFT JOIN menu_item_inventory mii ON i.inventory_id = mii.inventory_id
-          LEFT JOIN period_orders po ON mii.menu_item_id = po.menu_item_id
-          GROUP BY i.inventory_id, i.resource_name, i.quantity_available
+       base_usage AS (
+          SELECT mii.inventory_id, SUM(pi.quantity * mii.quantity_used) AS qty_used
+          FROM period_items pi
+          JOIN menu_item_inventory mii ON mii.menu_item_id = pi.menu_item_id
+          GROUP BY mii.inventory_id
+       ),
+       topping_mod_usage AS (
+          SELECT mm.inventory_id, SUM(pi.quantity * mm.quantity_used) AS qty_used
+          FROM period_items pi
+          JOIN order_item_modification oim ON oim.order_item_id = pi.order_item_id
+          JOIN (
+            VALUES
+              (11, 24, 1.0::numeric),
+              (12, 25, 1.0::numeric),
+              (13, 26, 1.0::numeric),
+              (14, 27, 1.0::numeric),
+              (15, 28, 1.0::numeric),
+              (16, 29, 1.0::numeric),
+              (17, 30, 1.0::numeric),
+              (18, 31, 1.0::numeric),
+              (19, 32, 1.0::numeric),
+              (20, 33, 1.0::numeric)
+          ) AS mm(modification_type_id, inventory_id, quantity_used)
+            ON mm.modification_type_id = oim.modification_type_id
+          GROUP BY mm.inventory_id
+       ),
+       size_flags AS (
+          SELECT
+            pi.order_item_id,
+            pi.menu_item_id,
+            pi.quantity,
+            BOOL_OR(oim.modification_type_id = 21) AS has_regular,
+            BOOL_OR(oim.modification_type_id = 22) AS has_large
+          FROM period_items pi
+          LEFT JOIN order_item_modification oim ON oim.order_item_id = pi.order_item_id
+          GROUP BY pi.order_item_id, pi.menu_item_id, pi.quantity
+       ),
+       size_base AS (
+          SELECT
+            sf.order_item_id,
+            sf.quantity,
+            sf.has_regular,
+            sf.has_large,
+            COALESCE(MAX(CASE WHEN mii.inventory_id = 40 THEN mii.quantity_used END), 0) AS medium_cup_qty,
+            COALESCE(MAX(CASE WHEN mii.inventory_id = 41 THEN mii.quantity_used END), 0) AS large_cup_qty,
+            COALESCE(MAX(CASE WHEN mii.inventory_id = 42 THEN mii.quantity_used END), 0) AS medium_lid_qty,
+            COALESCE(MAX(CASE WHEN mii.inventory_id = 43 THEN mii.quantity_used END), 0) AS large_lid_qty
+          FROM size_flags sf
+          LEFT JOIN menu_item_inventory mii ON mii.menu_item_id = sf.menu_item_id
+          GROUP BY sf.order_item_id, sf.quantity, sf.has_regular, sf.has_large
+       ),
+       size_swap_usage AS (
+          SELECT inventory_id, SUM(qty_used) AS qty_used
+          FROM (
+            SELECT
+              40 AS inventory_id,
+              CASE
+                WHEN has_large AND NOT has_regular THEN -quantity * medium_cup_qty
+                WHEN has_regular AND NOT has_large THEN quantity * large_cup_qty
+                ELSE 0
+              END AS qty_used
+            FROM size_base
+            UNION ALL
+            SELECT
+              41 AS inventory_id,
+              CASE
+                WHEN has_large AND NOT has_regular THEN quantity * medium_cup_qty
+                WHEN has_regular AND NOT has_large THEN -quantity * large_cup_qty
+                ELSE 0
+              END AS qty_used
+            FROM size_base
+            UNION ALL
+            SELECT
+              42 AS inventory_id,
+              CASE
+                WHEN has_large AND NOT has_regular THEN -quantity * medium_lid_qty
+                WHEN has_regular AND NOT has_large THEN quantity * large_lid_qty
+                ELSE 0
+              END AS qty_used
+            FROM size_base
+            UNION ALL
+            SELECT
+              43 AS inventory_id,
+              CASE
+                WHEN has_large AND NOT has_regular THEN quantity * medium_lid_qty
+                WHEN has_regular AND NOT has_large THEN -quantity * large_lid_qty
+                ELSE 0
+              END AS qty_used
+            FROM size_base
+          ) size_delta
+          WHERE qty_used <> 0
+          GROUP BY inventory_id
+       ),
+       usage_totals AS (
+          SELECT inventory_id, SUM(qty_used) AS qty_used
+          FROM (
+            SELECT inventory_id, qty_used FROM base_usage
+            UNION ALL
+            SELECT inventory_id, qty_used FROM topping_mod_usage
+            UNION ALL
+            SELECT inventory_id, qty_used FROM size_swap_usage
+          ) usage_rows
+          GROUP BY inventory_id
        )
        SELECT resource_name,
-              (current_qty + qty_used) AS starting_qty,
-              qty_used,
-              current_qty AS remaining_qty,
+              (quantity_available + COALESCE(usage_totals.qty_used, 0)) AS starting_qty,
+              COALESCE(usage_totals.qty_used, 0) AS qty_used,
+              quantity_available AS remaining_qty,
               CASE
-                WHEN (current_qty + qty_used) > 0
-                THEN ROUND((qty_used * 100.0 / (current_qty + qty_used))::numeric, 1)
+                WHEN (quantity_available + COALESCE(usage_totals.qty_used, 0)) > 0
+                THEN ROUND((COALESCE(usage_totals.qty_used, 0) * 100.0 / (quantity_available + COALESCE(usage_totals.qty_used, 0)))::numeric, 1)
                 ELSE 0
               END AS usage_percent
-       FROM inventory_usage
-       WHERE qty_used > 0
-       ORDER BY qty_used DESC`,
+       FROM inventory
+       LEFT JOIN usage_totals ON usage_totals.inventory_id = inventory.inventory_id
+       WHERE COALESCE(usage_totals.qty_used, 0) > 0
+       ORDER BY COALESCE(usage_totals.qty_used, 0) DESC`,
       [startDate, endDate],
     );
     res.json({ usage: result.rows });
