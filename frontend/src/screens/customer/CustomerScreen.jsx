@@ -171,14 +171,44 @@ export default function CustomerScreen() {
       syncFixedElement("real-orders-modal", "magnified-orders-modal");
     }
 
-    function handleMouseMove(e) { mousePosRef.current = { x: e.clientX, y: e.clientY }; }
+    function handleMouseMove(e) { 
+      mousePosRef.current = { x: e.clientX, y: e.clientY }; 
+    }
+
+    function handleTouchMove(e) {
+      if (e.touches && e.touches.length > 0) {
+        mousePosRef.current = { 
+          x: e.touches[0].clientX, 
+          y: e.touches[0].clientY 
+        };
+      }
+    }
+
+    function handleTouchStart(e) {
+      if (e.touches && e.touches.length > 0) {
+        mousePosRef.current = {
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+        };
+      }
+    }
 
     window.addEventListener("mousemove", handleMouseMove, { passive: true });
+    window.addEventListener("touchmove", handleTouchMove, { passive: true });
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+
     let rafId = null;
-    function loop() { updateMagnifier(); rafId = requestAnimationFrame(loop); }
+    function loop() { 
+      updateMagnifier(); rafId = requestAnimationFrame(loop); 
+    }
     rafId = requestAnimationFrame(loop);
 
-    return () => { cancelAnimationFrame(rafId); window.removeEventListener("mousemove", handleMouseMove); };
+    return () => { 
+      cancelAnimationFrame(rafId); 
+      window.removeEventListener("mousemove", handleMouseMove); 
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchstart", handleTouchStart);
+    };
   }, [magnifierEnabled]);
 
   // ── Derived / memoized values ──────────────────────────────────────
