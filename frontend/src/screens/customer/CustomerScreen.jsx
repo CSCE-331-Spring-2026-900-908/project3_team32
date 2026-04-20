@@ -3,7 +3,6 @@ import { FiShoppingCart } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 import "./CustomerScreen.css";
-import MenuBoard from "../menu/MenuBoard";
 
 import {
   SCREEN,
@@ -32,7 +31,6 @@ export default function CustomerScreen() {
 
   // ── Screen / navigation state ──────────────────────────────────────
   const [screen, setScreen] = useState(SCREEN.MENU);
-  const [showMenuBoard, setShowMenuBoard] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
 
   // ── Cart state ─────────────────────────────────────────────────────
@@ -537,8 +535,6 @@ export default function CustomerScreen() {
         user={user}
         logout={logout}
         navigate={navigate}
-        showMenuBoard={showMenuBoard}
-        setShowMenuBoard={setShowMenuBoard}
         accessibilityOpen={accessibilityOpen}
         setAccessibilityOpen={setAccessibilityOpen}
         textScale={textScale}
@@ -556,14 +552,7 @@ export default function CustomerScreen() {
         isMagnified={isMagnified}
       />
 
-      <div style={{ display: showMenuBoard ? "block" : "none" }}>
-        <MenuBoard />
-      </div>
-
-      <div
-        className="customer-content-wrapper"
-        style={{ display: showMenuBoard ? "none" : undefined }}
-      >
+      <div className="customer-content-wrapper">
         {screen === SCREEN.MENU && (
           <MenuScreen
             categories={categories}
