@@ -1,9 +1,23 @@
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  position: fixed;
+  touch-action: manipulation;
+}
+
 .customer-page {
   height: 100vh;
+  width: 100vw;
   background: linear-gradient(180deg, #fef3e2 0%, #fce7c8 100%);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  overscroll-behavior: none;
+  position: relative;
 }
 
 .customer-header {
@@ -14,6 +28,21 @@
   position: relative;
   z-index: 9999;
   flex-shrink: 0;
+}
+
+.menu-left-col,
+.cart-panel-scroll-area,
+.customize-step-content,
+.orders-modal-body,
+.cart-screen,
+.checkout-screen,
+.customer-content-wrapper {
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.magnified-content {
+  overscroll-behavior: none;
 }
 
 /* Header: 2-row flex column.
