@@ -24,6 +24,7 @@ import CustomizeScreen from "./components/CustomizeScreen";
 import CartScreen from "./components/CartScreen";
 import CheckoutScreen from "./components/CheckoutScreen";
 import OrderConfirmation from "./components/OrderConfirmation";
+import Chatbot from "./chatbot/Chatbot";
 
 export default function CustomerScreen() {
   const navigate = useNavigate();
@@ -671,6 +672,13 @@ export default function CustomerScreen() {
           <div className="magnifier-badge">{magnifierZoom}×</div>
         </div>
       )}
+
+      <Chatbot
+        menuItems={menuItems}
+        toppingOptions={toppingOptions}
+        sugarOptions={sugarOptions}
+        iceOptions={iceOptions}
+      />
     </div>
   );
 }
