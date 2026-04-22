@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { FiAlertTriangle } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import MenuManagement from './MenuManagement.jsx';
@@ -80,7 +81,7 @@ export default function ManagerScreen() {
             <span className="manager-weather-value">
               {weatherLoading ? 'Loading...' : weather ? `${Math.round(weather.temperature)}°F` : 'N/A'}
             </span>
-            {weather?.isSevere && <span className="manager-weather-warning" aria-label="Bad weather warning">⚠</span>}
+            {weather?.isSevere && <FiAlertTriangle className="manager-weather-warning" aria-label="Bad weather warning" />}
           </div>
         </div>
 

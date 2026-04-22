@@ -39,6 +39,18 @@ function Portal() {
           </button>
         </div>
 
+        <button 
+          className="portal-card portal-card-wide menuboard-card"
+          onClick={() => navigate('/menu-board')}
+        >
+          <FiCoffee className="card-icon" />
+          <div className="card-text">
+            <h2>Menu Board</h2>
+            <p>View the current menu display</p>
+          </div>
+          <HiArrowRight className="card-arrow" />
+        </button>
+
         <footer className="portal-footer">
           <p>CSCE 331 • Team 32 • Project 3</p>
         </footer>

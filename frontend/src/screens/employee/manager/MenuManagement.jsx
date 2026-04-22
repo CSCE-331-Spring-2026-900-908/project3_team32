@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { apiRequest, unwrapList } from './managerApi.js';
 
-const CATEGORIES = ['Milk Tea', 'Fruit Tea', 'Fresh Brew', 'Matcha', 'Ice Blended', 'Specialty'];
-
 const cardStyle = {
   border: '1px solid #ddd',
   borderRadius: 6,
@@ -23,7 +21,20 @@ export default function MenuManagement() {
   const [selectedId, setSelectedId] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [mode, setMode] = useState('add');
-  const [form, setForm] = useState({ menu_item_id: '', name: '', cost: '', category: CATEGORIES[0] });
+  const [form, setForm] = useState({ menu_item_id: '', name: '', cost: '', category: '' });
+
+  // Derive unique categories from loaded items, preserving order of first appearance
+  const categories = useMemo(() => {
+    const seen = new Set();
+    const result = [];
+    for (const item of items) {
+      if (item.category && !seen.has(item.category)) {
+        seen.add(item.category);
+        result.push(item.category);
+      }
+    }
+    return result;
+  }, [items]);
 
   const selected = useMemo(
     () => items.find((item) => Number(item.menu_item_id) === Number(selectedId)) || null,
@@ -55,7 +66,7 @@ export default function MenuManagement() {
 
   function openAdd() {
     setMode('add');
-    setForm({ menu_item_id: '', name: '', cost: '', category: CATEGORIES[0] });
+    setForm({ menu_item_id: '', name: '', cost: '', category: categories[0] ?? '' });
     setShowForm(true);
   }
 
@@ -69,7 +80,7 @@ export default function MenuManagement() {
       menu_item_id: item.menu_item_id,
       name: item.name,
       cost: String(item.cost ?? ''),
-      category: item.category || CATEGORIES[0],
+      category: item.category || (categories[0] ?? ''),
     });
     setShowForm(true);
   }
@@ -162,9 +173,9 @@ export default function MenuManagement() {
                 value={form.category}
                 onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}
               >
-                {CATEGORIES.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
                   </option>
                 ))}
               </select>
