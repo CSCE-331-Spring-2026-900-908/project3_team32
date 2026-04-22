@@ -71,7 +71,8 @@ export default function CustomerHeader({
                   </div>
                   <div
                     id={isMagnified ? undefined : translateContainerId}
-                    className="google-translate-widget"
+                    className="google-translate-widget notranslate"
+                    translate="no"
                   />
                 </section>
 

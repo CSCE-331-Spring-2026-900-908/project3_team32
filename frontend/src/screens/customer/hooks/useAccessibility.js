@@ -1,8 +1,18 @@
 import { useState, useEffect, useRef } from "react";
-import { GOOGLE_TRANSLATE_SCRIPT_ID } from "../constants";
-import { toNativeLanguageName } from "../utils";
+import { GOOGLE_TRANSLATE_SCRIPT_ID, LANGUAGE_CODE_ALIASES, TOP_TRANSLATE_LANGUAGES } from "../constants";
 
 const TRANSLATE_CONTAINER_ID = "google_translate_element";
+const TOP_LANGUAGE_CODES = TOP_TRANSLATE_LANGUAGES.map((language) => language.code).join(",");
+const TOP_LANGUAGE_LABELS = new Map(
+  TOP_TRANSLATE_LANGUAGES.map((language) => [language.code.toLowerCase(), language.label]),
+);
+
+function normalizeLanguageCode(code) {
+  if (!code) return "en";
+  const [baseCode, ...rest] = code.split("-");
+  const aliasedBaseCode = LANGUAGE_CODE_ALIASES[baseCode] || baseCode;
+  return rest.length ? `${aliasedBaseCode}-${rest.join("-")}` : aliasedBaseCode;
+}
 
 export function useAccessibility() {
   const [accessibilityOpen, setAccessibilityOpen] = useState(false);
@@ -114,36 +124,58 @@ export function useAccessibility() {
   // Google Translate initialization
   useEffect(() => {
     let labelInterval = null;
+    const syncDelayMs = 500;
+
+    function syncTranslateDropdownOptions() {
+      const select = document.querySelector(
+        `#${TRANSLATE_CONTAINER_ID} select.goog-te-combo`,
+      );
+      if (!select) return;
+
+      const seenCodes = new Set();
+      Array.from(select.options).forEach((option) => {
+        const normalizedCode = normalizeLanguageCode(option.value).toLowerCase();
+        if (!TOP_LANGUAGE_LABELS.has(normalizedCode) || seenCodes.has(normalizedCode)) {
+          option.remove();
+          return;
+        }
+
+        const nativeLabel = TOP_LANGUAGE_LABELS.get(normalizedCode);
+        if (option.text !== nativeLabel) {
+          option.text = nativeLabel;
+        }
+        seenCodes.add(normalizedCode);
+      });
+    }
+
+    function startDropdownSync() {
+      syncTranslateDropdownOptions();
+      if (labelInterval) return;
+      labelInterval = window.setInterval(syncTranslateDropdownOptions, syncDelayMs);
+    }
 
     function initializeGoogleTranslate() {
       if (!window.google?.translate) return;
       const container = document.getElementById(TRANSLATE_CONTAINER_ID);
       if (!container) return;
-      if (container.childElementCount > 0) return;
+      if (container.childElementCount > 0) {
+        startDropdownSync();
+        return;
+      }
       try {
         new window.google.translate.TranslateElement(
-          { pageLanguage: "en", autoDisplay: false },
+          {
+            pageLanguage: "en",
+            autoDisplay: false,
+            includedLanguages: TOP_LANGUAGE_CODES,
+          },
           TRANSLATE_CONTAINER_ID,
         );
       } catch (error) {
         console.error("Google Translate init error:", error);
       }
 
-      let attempts = 0;
-      labelInterval = window.setInterval(() => {
-        attempts += 1;
-        const select = document.querySelector(`#${TRANSLATE_CONTAINER_ID} select.goog-te-combo`);
-        let updated = false;
-        if (select) {
-          Array.from(select.options).forEach((option) => {
-            const code = option.value;
-            if (!code) { option.text = "English"; return; }
-            const newText = toNativeLanguageName(code, option.text);
-            if (option.text !== newText) { option.text = newText; updated = true; }
-          });
-        }
-        if (updated || attempts >= 50) { window.clearInterval(labelInterval); labelInterval = null; }
-      }, 150);
+      startDropdownSync();
     }
 
     window.googleTranslateElementInit = initializeGoogleTranslate;
