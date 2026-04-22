@@ -45,10 +45,6 @@ html, body, #root {
   overscroll-behavior: none;
 }
 
-/* Header: 2-row flex column.
-   Row 1 — title, always centered, never shares space with buttons.
-   Row 2 — controls: [Menu Board ←   → Accessibility · User · Exit]
-   Zero chance of overlap at any font size, UI scale, or viewport width. */
 .header-content {
   width: 100%;
   box-sizing: border-box;
@@ -65,7 +61,6 @@ html, body, #root {
   pointer-events: none;
 }
 
-/* Controls row: Menu Board left ←→ actions right */
 .header-controls-row {
   display: flex;
   align-items: center;
@@ -124,7 +119,6 @@ html, body, #root {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  white-space: nowrap;
 }
 
 .exit-btn {
@@ -162,10 +156,8 @@ html, body, #root {
   font-size: 1.6rem;
   cursor: pointer;
   box-shadow: 0 8px 24px rgba(139, 69, 19, 0.4);
-  z-index: 600;
-  transition: transform 0.15s, box-shadow 0.15s;
-  transition: all 0.2s;
   z-index: 100;
+  transition: all 0.2s;
 }
 
 .cart-badge:hover {
@@ -215,7 +207,6 @@ html, body, #root {
   padding: 2rem;
 }
 
-/* ── Kiosk category picker ──────────────────────────────────────── */
 .kiosk-category-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -257,7 +248,6 @@ html, body, #root {
   line-height: 1.2;
 }
 
-/* ── Back button + row container ─────────────────────────────────── */
 .kiosk-back-row {
   display: flex;
   align-items: center;
@@ -295,7 +285,6 @@ html, body, #root {
   margin: 0 0 1.25rem 0;
 }
 
-/* ── Kiosk weather strip (bottom of category landing page) ──────── */
 .kiosk-weather-strip {
   display: flex;
   flex-direction: column;
@@ -316,10 +305,9 @@ html, body, #root {
 
 @keyframes weatherFadeIn {
   from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Skeleton placeholder ── */
 .kiosk-weather-skeleton {
   background: linear-gradient(135deg, #e8f0f5 0%, #dde8ef 50%, #e4eef4 100%);
   border-color: #d0dfe8;
@@ -357,7 +345,7 @@ html, body, #root {
 }
 
 @keyframes skeletonShimmer {
-  0%   { background-position: 200% 0; }
+  0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
 
@@ -454,7 +442,6 @@ html, body, #root {
   font-weight: 800;
 }
 
-/* ── Cart screen ──────────────────────────────────────────────── */
 .cart-screen {
   overflow-y: auto;
 }
@@ -482,7 +469,6 @@ html, body, #root {
   margin-bottom: 1.5rem;
 }
 
-/* ── Legacy tab styles (kept for possible reuse) ─────────────────── */
 .category-tabs {
   display: flex;
   gap: 1rem;
@@ -592,6 +578,16 @@ html, body, #root {
   padding: 0.5rem 1rem;
   border-radius: 20px;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 1.1rem 2rem;
+  background: white;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  flex-shrink: 0;
+  position: relative;
+  flex-wrap: wrap;
 }
 
 .customize-section h3 {
@@ -1371,6 +1367,10 @@ html, body, #root {
 
 .accessibility-panel.open {
   display: block;
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 .accessibility-toggle-btn img {
@@ -1382,15 +1382,7 @@ html, body, #root {
 
 .accessibility-toggle-btn:hover img,
 .accessibility-toggle-btn[aria-expanded="true"] img {
-  filter: brightness(0) saturate(100%) invert(26%) sepia(90%) saturate(614%)
-    hue-rotate(357deg) brightness(91%) contrast(87%);
-}
-
-.accessibility-panel.open {
-  visibility: visible;
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
+  filter: brightness(0) saturate(100%) invert(26%) sepia(90%) saturate(614%) hue-rotate(357deg) brightness(91%) contrast(87%);
 }
 
 .a11y-section {
@@ -1616,7 +1608,6 @@ body {
   font-size: calc(var(--a11y-font-size, 100%) / 100 * 1em);
 }
 
-/* Stepper control for Font Size */
 .a11y-font-stepper {
   display: flex;
   align-items: center;
@@ -1637,10 +1628,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition:
-    background 0.15s,
-    color 0.15s,
-    border-color 0.15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
   padding: 0;
 }
 
@@ -1667,8 +1655,6 @@ body {
   border-radius: 20px;
 }
 
-/* ── My Orders button ────────────────────────────────────── */
-
 .my-orders-btn {
   background: rgba(255, 255, 255, 0.2);
   color: white;
@@ -1686,8 +1672,6 @@ body {
   background: white;
   color: #8b4513;
 }
-
-/* ── Orders modal ─────────────────────────────────────────── */
 
 .orders-modal-overlay {
   position: fixed;
@@ -1784,8 +1768,6 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-/* ── Empty state ── */
-
 .orders-empty {
   display: flex;
   flex-direction: column;
@@ -1814,8 +1796,6 @@ body {
   font-size: 0.9rem;
   color: #aaa;
 }
-
-/* ── Individual order card ── */
 
 .order-history-card {
   background: #fef9f4;
@@ -1926,8 +1906,6 @@ body {
   color: #8b4513;
 }
 
-/* ── Menu + Cart side-panel layout ──────────────────────── */
-
 .customer-content-wrapper {
   flex: 1;
   display: flex;
@@ -1960,22 +1938,17 @@ body {
   flex-direction: column;
 }
 
-/* ── Cart side panel — built-in structural section ── */
-
 .cart-side-panel {
   width: 380px;
   flex-shrink: 0;
   background: #fef8f2;
   border-left: 2px solid #e5d4b8;
-  /* No overflow here — child areas manage their own scroll */
   display: flex;
   flex-direction: column;
-  /* Panel fills the full column height so footer sticks to bottom */
   height: 100%;
   overflow: hidden;
 }
 
-/* Scrollable middle: rewards + items */
 .cart-panel-scroll-area {
   flex: 1;
   overflow-y: auto;
@@ -1983,11 +1956,9 @@ body {
   flex-direction: column;
   gap: 0.75rem;
   padding: 1rem 1.25rem;
-  /* smooth overscroll on touch */
   -webkit-overflow-scrolling: touch;
 }
 
-/* Pinned bottom: totals + checkout button */
 .cart-panel-footer {
   flex-shrink: 0;
   border-top: 2px solid #e5d4b8;
@@ -2044,14 +2015,12 @@ body {
   border-radius: 12px;
   border: 2px solid #f0e8da;
   overflow: hidden;
-  /* Prevents items from stretching the panel width at large font sizes */
   min-width: 0;
 }
 
 .cart-panel-items .cart-item {
   padding: 0.75rem 0.9rem;
   border-bottom: 2px solid #f5f5f5;
-  /* Allow item rows to contract when font is large */
   min-width: 0;
 }
 
@@ -2059,9 +2028,6 @@ body {
   border-bottom: none;
 }
 
-/* ── Font-resilient cart item rows ── */
-
-/* Name row: number + name ellipsis + price + remove */
 .cart-panel-items .cart-item-header {
   display: flex;
   align-items: baseline;
@@ -2084,7 +2050,6 @@ body {
   font-size: 0.95rem;
 }
 
-/* Controls row: unit price + qty + edit — wrap when font is large */
 .cart-panel-items .cart-item-controls {
   display: flex;
   align-items: center;
@@ -2103,7 +2068,6 @@ body {
   white-space: nowrap;
 }
 
-/* Compact rewards summary inside panel */
 .cart-side-panel .rewards-summary {
   font-size: 0.88rem;
 }
@@ -2119,7 +2083,6 @@ body {
   padding: 0.2rem 0.55rem;
 }
 
-/* Cart total inside footer — compact */
 .cart-panel-footer .cart-total {
   border-radius: 12px;
   padding: 1rem;
@@ -2143,9 +2106,6 @@ body {
   border-radius: 12px;
 }
 
-/* ── Customize Modal ─────────────────────────────────────── */
-
-/* ── Step-by-step Customization Full Page ── */
 .customize-fullpage {
   flex: 1;
   min-height: 0;
@@ -2188,19 +2148,6 @@ body {
   background: #fdf5ec;
   padding: 0.3rem 0.85rem;
   border-radius: 10px;
-}
-
-.customize-progress {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1.5rem;
-  padding: 1.1rem 2rem;
-  background: white;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-  flex-shrink: 0;
-  position: relative;
-  flex-wrap: wrap;
 }
 
 .customize-progress-line {
@@ -2285,7 +2232,7 @@ body {
 
 @keyframes stepFadeIn {
   from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .customize-step-title {
@@ -2377,7 +2324,6 @@ body {
   box-shadow: 0 2px 6px rgba(139, 69, 19, 0.25);
 }
 
-/* ── Review step ── */
 .customize-review {
   background: white;
   border-radius: 18px;
@@ -2551,7 +2497,6 @@ body {
   color: #777;
 }
 
-/* ── Navigation bar at bottom ── */
 .customize-nav {
   display: flex;
   align-items: center;
@@ -2624,7 +2569,6 @@ body {
   transform: translateY(-1px);
 }
 
-/* ── Heart / Favorite button on menu cards ────────────────────────── */
 .menu-item-card {
   position: relative;
 }
@@ -2645,10 +2589,7 @@ body {
   align-items: center;
   justify-content: center;
   color: #ccc;
-  transition:
-    color 0.18s,
-    transform 0.15s,
-    background 0.18s;
+  transition: color 0.18s, transform 0.15s, background 0.18s;
   z-index: 2;
   padding: 0;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
@@ -2663,7 +2604,6 @@ body {
   color: #e53935;
 }
 
-/* ── Menu empty state (Favorites / Most Ordered with no data) ─────── */
 .menu-empty-state {
   grid-column: 1 / -1;
   display: flex;
@@ -2687,7 +2627,6 @@ body {
   line-height: 1.5;
 }
 
-/* ── Most Ordered count badge on card ────────────────────────────── */
 .item-order-count {
   font-size: 0.75rem;
   color: #a0856c;
@@ -2695,7 +2634,6 @@ body {
   font-style: italic;
 }
 
-/* ── Weather widget in cart empty panel ──────────────────────────── */
 .cart-panel-weather {
   width: 100%;
   background: linear-gradient(135deg, #e8f4fd, #d0e8f5);

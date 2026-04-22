@@ -2,7 +2,12 @@ import React, { useMemo, useRef, useEffect, useState } from "react";
 import { FiShoppingCart } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
-import "./CustomerScreen.css";
+import "./styles/CustomerBase.css";
+import "./styles/Menu.css";
+import "./styles/Cart.css";
+import "./styles/Customize.css";
+import "./styles/Accessibility.css";
+import "./styles/Orders.css";
 
 import {
   SCREEN,
