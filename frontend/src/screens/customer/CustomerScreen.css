@@ -251,6 +251,10 @@ html, body, #root {
   font-weight: 700;
   color: #8b4513;
   text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.2;
 }
 
 /* ── Back button + row container ─────────────────────────────────── */
@@ -684,6 +688,12 @@ html, body, #root {
   transition: all 0.2s;
   flex-shrink: 0;
   border: none;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.2;
+  text-align: center;
+  min-width: 0;
 }
 
 .btn-primary {
@@ -2332,6 +2342,11 @@ body {
   font-weight: 600;
   color: #333;
   letter-spacing: -0.01em;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.2;
+  text-align: center;
 }
 
 .customize-option-cost {
@@ -2558,6 +2573,12 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
   letter-spacing: -0.01em;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.2;
+  text-align: center;
+  min-width: 0;
 }
 
 .customize-nav-back {
