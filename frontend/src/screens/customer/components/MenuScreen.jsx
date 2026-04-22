@@ -21,7 +21,9 @@ export default function MenuScreen({
 }) {
   const isGuest = !!user?.guest;
   const popularTabName = isGuest ? "Most Popular" : "Most Ordered";
-  const mostOrderedData = isGuest ? mostOrderedItems : customerMostOrderedItems;
+  const mostOrderedData = isGuest
+    ? (mostOrderedItems || [])
+    : (customerMostOrderedItems?.length ? customerMostOrderedItems : (mostOrderedItems || []));
   const displayCategories = categories.map((cat) =>
     cat === "Most Ordered" ? popularTabName : cat
   );
@@ -223,13 +225,13 @@ export default function MenuScreen({
                   })
                 )
               ) : selectedCategory === "Most Ordered" ? (
-                (customerMostOrderedItems || mostOrderedItems).length === 0 ? (
+                mostOrderedData.length === 0 ? (
                   <div className="menu-empty-state">
                     <div className="menu-empty-icon"><FiBarChart2 /></div>
                     <p>No order data yet.</p>
                   </div>
                 ) : (
-                  (customerMostOrderedItems || mostOrderedItems).map((item) => (
+                  mostOrderedData.map((item) => (
                     <button key={item.id} className="menu-item-card" onClick={() => handleSelectItem(item)}>
                       <div className="item-name">{item.name}</div>
                       <div className="item-price">{currency(item.cost)}</div>
