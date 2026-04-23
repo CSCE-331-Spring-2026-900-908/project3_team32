@@ -151,6 +151,36 @@ export default function CustomerScreen() {
       mag.style.width = `${lensSize}px`;
       mag.style.height = `${lensSize}px`;
 
+      const fullWidth = Math.max(
+        window.innerWidth,
+        document.documentElement.scrollWidth,
+        document.body.scrollWidth
+      );
+      const fullHeight = Math.max(
+        window.innerHeight,
+        document.documentElement.scrollHeight,
+        document.body.scrollHeight
+      );
+
+      inner.style.width = `${fullWidth}px`;
+      inner.style.height = `${fullHeight}px`;
+      inner.style.minWidth = `${fullWidth}px`;
+      inner.style.minHeight = `${fullHeight}px`;
+      inner.style.maxHeight = "none";
+      inner.style.transformOrigin = "0 0";
+      inner.style.position = "absolute";
+      inner.style.overflow = "visible";
+      inner.style.boxSizing = "border-box";
+
+      const cloneMain = inner.querySelector(".customer-content-wrapper");
+      if (cloneMain) {
+        cloneMain.style.width = `${fullWidth}px`;
+        cloneMain.style.height = `${fullHeight}px`;
+        cloneMain.style.minHeight = `${fullHeight}px`;
+        cloneMain.style.maxHeight = "none";
+        cloneMain.style.overflow = "visible";
+      }
+
       const effectiveZoom = z / rootScale;
       inner.style.transform = `scale(${effectiveZoom})`;
       inner.style.left = `${-(x + scrollX) * effectiveZoom + half}px`;
@@ -160,7 +190,7 @@ export default function CustomerScreen() {
 
       const syncFixedElement = (realId, magId) => {
         const realEl = document.getElementById(realId);
-        const magEl = document.getElementById(magId);
+        const magEl = inner.querySelector(`#${magId}`);
         if (realEl && magEl) {
           const rect = realEl.getBoundingClientRect();
           magEl.style.top = `${rect.top + scrollY}px`;
@@ -173,6 +203,17 @@ export default function CustomerScreen() {
       syncFixedElement("real-cart-badge", "magnified-cart-badge");
       syncFixedElement("real-confirmation", "magnified-confirmation");
       syncFixedElement("real-orders-modal", "magnified-orders-modal");
+      const realWeather = findReal(".kiosk-weather-strip");
+      const magWeather = inner.querySelector(".kiosk-weather-strip");
+      if (realWeather && magWeather) {
+        const rect = realWeather.getBoundingClientRect();
+        magWeather.style.position = "absolute";
+        magWeather.style.marginTop = "0";
+        magWeather.style.marginBottom = "0";
+        magWeather.style.top = `${rect.top + scrollY}px`;
+        magWeather.style.left = `${rect.left + scrollX}px`;
+        magWeather.style.width = `${rect.width}px`;
+      }
     }
 
     function handleMouseMove(e) { 
@@ -201,6 +242,13 @@ export default function CustomerScreen() {
     window.addEventListener("touchmove", handleTouchMove, { passive: true });
     window.addEventListener("touchstart", handleTouchStart, { passive: true });
 
+    const scrollTargets = SCROLLABLE.map(findReal).filter(Boolean);
+    scrollTargets.forEach(el => el.addEventListener("scroll", syncScrollPositions, { 
+      passive: true 
+    }));
+    window.addEventListener("scroll", syncScrollPositions, { passive: true });
+    document.addEventListener("scroll", syncScrollPositions, { passive: true, capture: true });
+
     let rafId = null;
     function loop() { 
       updateMagnifier(); rafId = requestAnimationFrame(loop); 
@@ -212,6 +260,11 @@ export default function CustomerScreen() {
       window.removeEventListener("mousemove", handleMouseMove); 
       window.removeEventListener("touchmove", handleTouchMove);
       window.removeEventListener("touchstart", handleTouchStart);
+      scrollTargets.forEach(el => el.removeEventListener("scroll", syncScrollPositions));
+      window.removeEventListener("scroll", syncScrollPositions);
+      document.removeEventListener("scroll", syncScrollPositions, { 
+        capture: true 
+      });
     };
   }, [magnifierEnabled]);
 

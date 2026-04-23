@@ -1,5 +1,6 @@
 import React from "react";
 import { FiChevronDown } from "react-icons/fi";
+import { LiaUniversalAccessSolid } from "react-icons/lia";
 
 export default function CustomerHeader({
   user,
@@ -40,12 +41,9 @@ export default function CustomerHeader({
                 aria-expanded={accessibilityOpen}
                 aria-haspopup="true"
               >
-                <img
-                  src="https://uxwing.com/wp-content/themes/uxwing/download/web-app-development/accessibility-icon.png"
-                  alt="Accessibility"
-                />
+                <LiaUniversalAccessSolid className="a11y-icon" size={32}/> 
                 <span>Accessibility</span>
-                <FiChevronDown className={`a11y-caret${accessibilityOpen ? " open" : ""}`} />
+                <FiChevronDown className={`a11y-caret ${accessibilityOpen ? "open" : ""}`} />
               </button>
 
               <div className={`accessibility-panel ${accessibilityOpen ? "open" : ""}`} style={{ padding: "1.5rem" }}>
@@ -59,7 +57,7 @@ export default function CustomerHeader({
                     value={textScale}
                     onChange={(e) => setTextScale(Number(e.target.value))}
                     className="a11y-slider"
-                    style={{ background: `linear-gradient(to right, #8b4513 ${textSizePercent}%, #e5d4b8 ${textSizePercent}%)` }}
+                    style={{ background: `linear-gradient(to right, #8b4513 ${textSizePercent}%, #e5d4b8 ${textSizePercent}%)`, '--value': `${textSizePercent}%`}}
                   />
                 </section>
 
@@ -112,7 +110,7 @@ export default function CustomerHeader({
                         value={magnifierZoom}
                         onChange={(e) => setMagnifierZoom(Number(e.target.value))}
                         className="a11y-slider"
-                        style={{ background: `linear-gradient(to right, #8b4513 ${zoomPercent}%, #e5d4b8 ${zoomPercent}%)` }}
+                        style={{ background: `linear-gradient(to right, #8b4513 ${zoomPercent}%, #e5d4b8 ${zoomPercent}%)`, '--value': `${zoomPercent}%` }}
                       />
                     </div>
                   )}

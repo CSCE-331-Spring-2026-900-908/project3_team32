@@ -114,11 +114,16 @@ export function useAccessibility() {
   useEffect(() => {
     const root = document.documentElement;
     if (highContrastEnabled) {
-      root.style.filter = "grayscale(100%) contrast(250%) brightness(95%)";
+      root.classList.add("high-contrast");
+      root.style.filter = "grayscale(100%) contrast(100%) brightness(95%)";
     } else {
+      root.classList.remove("high-contrast");
       root.style.filter = "";
     }
-    return () => { root.style.filter = ""; };
+    return () => {
+      root.classList.remove("high-contrast");
+      root.style.filter = "";
+    };
   }, [highContrastEnabled]);
 
   // Google Translate initialization

@@ -43,6 +43,7 @@ html, body, #root {
   
   .magnified-content {
     overscroll-behavior: none;
+    pointer-events: none;
   }
   
   .header-content {
@@ -230,13 +231,13 @@ html, body, #root {
     background: #ffffff !important;
     color: #000000 !important;
   }
-  
+
   .high-contrast .customer-header {
     background: #ffffff !important;
     color: #000000 !important;
     border-bottom: 4px solid #000;
   }
-  
+
   .high-contrast button,
   .high-contrast .btn-primary,
   .high-contrast .btn-secondary,
@@ -245,7 +246,6 @@ html, body, #root {
   .high-contrast .kiosk-back-btn,
   .high-contrast .exit-btn,
   .high-contrast .my-orders-btn,
-  .high-contrast .accessibility-toggle-btn,
   .high-contrast .menu-board-btn,
   .high-contrast .shape-btn,
   .high-contrast .qty-btn,
@@ -253,16 +253,113 @@ html, body, #root {
   .high-contrast .cart-edit-btn,
   .high-contrast .remove-btn,
   .high-contrast .customize-nav-btn,
-  .high-contrast .cart-panel-checkout-btn {
+  .high-contrast .cart-panel-checkout-btn,
+  .high-contrast .category-tab,
+  .high-contrast .payment-btn,
+  .high-contrast .heart-btn,
+  .high-contrast .menu-item-card,
+  .high-contrast .customize-option-card,
+  .high-contrast .customize-nav-back,
+  .high-contrast .customize-nav-next,
+  .high-contrast .customize-nav-add {
     background: #ffffff !important;
     color: #000000 !important;
     border: 3px solid #000000 !important;
     box-shadow: none !important;
   }
-  
+
+  .high-contrast .accessibility-toggle-btn img {
+    filter: brightness(0) invert(1) !important;
+  }
+
   .high-contrast .btn-primary,
   .high-contrast .cart-total,
   .high-contrast .cart-badge {
+    background: #000000 !important;
+    color: #ffffff !important;
+  }
+
+  .high-contrast .accessibility-panel {
+    background: #ffffff !important;
+    border: 3px solid #000000 !important;
+  }
+
+  .high-contrast .accessibility-toggle-btn img,
+  .high-contrast .accessibility-toggle-btn:hover img,
+  .high-contrast .accessibility-toggle-btn[aria-expanded="true"] img {
+    filter: brightness(0) saturate(100%) invert(26%) sepia(90%) saturate(614%) hue-rotate(357deg) brightness(91%) contrast(87%) !important;
+  }
+
+  .high-contrast .accessibility-panel .google-translate-widget .goog-te-gadget .goog-te-combo,
+  .high-contrast .goog-te-combo {
+    border: 3px solid #000000 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .high-contrast .a11y-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    background: linear-gradient(to right, #000000 var(--value, 50%), transparent var(--value, 50%)) !important;
+    border: 3px solid #000000 !important;
+    height: 20px !important;
+    border-radius: 999px;
+  }
+
+  .high-contrast .a11y-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 60px !important;
+    height: 60px !important;
+    border-radius: 50%;
+    background: #000000 !important;
+    border: 4px solid #ffffff !important;
+    cursor: pointer;
+  }
+
+  .high-contrast .a11y-divider {
+    background: #000000 !important;
+    height: 3px !important;
+  }
+
+  .high-contrast .a11y-toggle {
+    border: 3px solid #000000 !important;
+  }
+
+  .high-contrast .a11y-toggle.off {
+    background: #ffffff !important;
+    color: #111111 !important;
+    border-color: #000000 !important;
+  }
+
+  .high-contrast .a11y-toggle.on {
+    background: #000000 !important;
+    color: #ffffff !important;
+  }
+
+  .high-contrast .a11y-step-btn {
+    border-color: #000000 !important;
+    color: #000000 !important;
+    background: #ffffff !important;
+  }
+
+  .high-contrast .a11y-step-btn:hover:not(:disabled) {
+    background: #000000 !important;
+    color: #ffffff !important;
+  }
+
+  .high-contrast .shape-btn {
+    border-color: #000000 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .high-contrast .customer-user-badge {
+    background: #ffffff !important;
+    border: 2px solid #000000 !important;
+  }
+
+  .high-contrast .customer-user-avatar-fallback {
     background: #000000 !important;
     color: #ffffff !important;
   }

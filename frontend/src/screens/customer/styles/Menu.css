@@ -379,3 +379,22 @@
     margin-top: 0.25rem;
     font-style: italic;
   }
+
+  .magnified-content .kiosk-weather-card {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 0.3rem !important;
+    background: rgba(255, 255, 255, 0.65) !important;
+    border-radius: 14px !important;
+    padding: 0.65rem 0.75rem !important;
+    min-width: 72px !important;
+    backdrop-filter: blur(6px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.6) !important;
+    transition: transform 0.15s, box-shadow 0.15s !important;
+  }
+ 
+  .magnified-content .kiosk-weather-card:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(100, 160, 200, 0.2) !important;
+  }

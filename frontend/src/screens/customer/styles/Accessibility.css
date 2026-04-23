@@ -55,7 +55,7 @@
     border-radius: 20px;
     box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25);
     border: 2px solid #e5d4b8;
-    z-index: 10000;
+    z-index: 9999;
     overflow: hidden;
     display: none;
   }
@@ -231,7 +231,7 @@
     transform: translate(-50%, -50%);
     pointer-events: none;
     background: #fef3e2;
-    z-index: 9998;
+    z-index: 10000 !important;
   }
   
   .magnified-content {
