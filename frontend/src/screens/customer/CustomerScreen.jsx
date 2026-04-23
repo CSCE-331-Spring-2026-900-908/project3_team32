@@ -142,7 +142,10 @@ export default function CustomerScreen() {
       const scrollX = window.scrollX || document.documentElement.scrollLeft;
       const scrollY = window.scrollY || document.documentElement.scrollTop;
       const z = magnifierZoomRef.current;
+      
       const rootScale = parseFloat(getComputedStyle(document.documentElement).fontSize) / 16;
+      const effectiveZoom = z / rootScale; 
+      
       const lensSize = 350;
       const half = lensSize / 2;
 
@@ -171,20 +174,17 @@ export default function CustomerScreen() {
       inner.style.position = "absolute";
       inner.style.overflow = "visible";
       inner.style.boxSizing = "border-box";
-
-      const cloneMain = inner.querySelector(".customer-content-wrapper");
-      if (cloneMain) {
-        cloneMain.style.width = `${fullWidth}px`;
-        cloneMain.style.height = `${fullHeight}px`;
-        cloneMain.style.minHeight = `${fullHeight}px`;
-        cloneMain.style.maxHeight = "none";
-        cloneMain.style.overflow = "visible";
-      }
-
-      const effectiveZoom = z / rootScale;
       inner.style.transform = `scale(${effectiveZoom})`;
-      inner.style.left = `${-(x + scrollX) * effectiveZoom + half}px`;
-      inner.style.top = `${-(y + scrollY) * effectiveZoom + half}px`;
+      inner.style.top = `${-y * effectiveZoom + half}px`;
+      inner.style.left = `${-x * effectiveZoom + half}px`;
+      const realMain = document.querySelector(".customer-content-wrapper");
+      const cloneMain = inner.querySelector(".customer-content-wrapper");
+      if (cloneMain && realMain) {
+        cloneMain.style.height = `${realMain.clientHeight}px`;
+        cloneMain.style.minHeight = `${realMain.clientHeight}px`;
+        cloneMain.style.width = `${realMain.clientWidth}px`;
+        cloneMain.scrollTop = realMain.scrollTop;
+      }
 
       syncScrollPositions();
 
@@ -203,6 +203,7 @@ export default function CustomerScreen() {
       syncFixedElement("real-cart-badge", "magnified-cart-badge");
       syncFixedElement("real-confirmation", "magnified-confirmation");
       syncFixedElement("real-orders-modal", "magnified-orders-modal");
+      
       const realWeather = findReal(".kiosk-weather-strip");
       const magWeather = inner.querySelector(".kiosk-weather-strip");
       if (realWeather && magWeather) {
@@ -213,6 +214,13 @@ export default function CustomerScreen() {
         magWeather.style.top = `${rect.top + scrollY}px`;
         magWeather.style.left = `${rect.left + scrollX}px`;
         magWeather.style.width = `${rect.width}px`;
+        const parent = magWeather.parentElement;
+        if (parent) {
+          const requiredPadding = `${rect.height + 80}px`;
+          if (parent.style.paddingBottom !== requiredPadding) {
+            parent.style.paddingBottom = requiredPadding;
+          }
+        }
       }
     }
 
