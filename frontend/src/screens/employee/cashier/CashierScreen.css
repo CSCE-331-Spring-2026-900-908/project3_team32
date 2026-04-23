@@ -720,9 +720,6 @@
   -webkit-appearance: none;
   margin: 0;
 }
-.custom-tip-input[type=number] {
-  -moz-appearance: textfield;
-}
 
 .custom-tip-actions {
   display: flex;
