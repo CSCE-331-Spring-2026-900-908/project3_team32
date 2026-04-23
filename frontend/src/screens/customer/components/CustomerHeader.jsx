@@ -144,24 +144,6 @@ export default function CustomerHeader({
                 </section>
               </div>
             </div>
-
-            {user && (
-              <div className="customer-user-badge">
-                {user.picture ? (
-                  <img
-                    src={user.picture}
-                    alt=""
-                    className="customer-user-avatar"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <div className="customer-user-avatar customer-user-avatar-fallback">
-                    {(user.name || user.email || "?")[0].toUpperCase()}
-                  </div>
-                )}
-                <span className="customer-user-name">{user.name || user.email}</span>
-              </div>
-            )}
             <button
               className="exit-btn"
               onClick={() => { logout(); navigate("/login/customer"); }}
