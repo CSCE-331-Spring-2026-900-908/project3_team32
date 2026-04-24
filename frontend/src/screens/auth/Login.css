@@ -6,8 +6,95 @@
   padding: 2rem;
 }
 
-.customer-login {
+.login.customer-login {
   background: linear-gradient(135deg, #fef3e2 0%, #fce7c8 100%);
+  height: 100vh;
+  min-height: 100vh;
+  overflow: hidden;
+  padding: clamp(0.5rem, 2vh, 2rem);
+}
+
+.customer-login .login-card {
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(1rem, 4vh, 3rem) clamp(1rem, 4vw, 3rem);
+  width: min(100%, 500px);
+}
+
+.customer-login .login-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-top: clamp(0.5rem, 2vh, 2rem);
+}
+
+.customer-login .login-icon {
+  font-size: clamp(2rem, 6vh, 4rem);
+  margin: clamp(0.5rem, 2vh, 2rem) auto clamp(0.5rem, 2vh, 1.5rem);
+  align-self: center;
+}
+
+.customer-login .login-card h1 {
+  font-size: clamp(1.5rem, 4vh, 2.25rem);
+  margin: 0 0 clamp(0.25rem, 1vh, 0.75rem);
+}
+
+.customer-login .login-subtitle {
+  font-size: clamp(0.85rem, 2vh, 1rem);
+  margin: 0 0 clamp(0.5rem, 2vh, 2.5rem);
+}
+
+.customer-login .customer-login-info {
+  margin-bottom: clamp(0.5rem, 2vh, 2rem);
+  gap: clamp(0.5rem, 1.5vh, 1rem);
+}
+
+.customer-login .info-card {
+  padding: clamp(0.5rem, 1.5vh, 1rem) clamp(0.75rem, 2vw, 1.25rem);
+}
+
+.customer-login .info-icon {
+  font-size: clamp(1.1rem, 2.5vh, 1.5rem);
+}
+
+.customer-login .customer-login-actions {
+  gap: clamp(0.4rem, 1vh, 0.75rem);
+}
+
+.customer-login .login-button {
+  padding: clamp(0.75rem, 2vh, 1.25rem);
+  font-size: clamp(0.9rem, 2vh, 1.1rem);
+}
+
+.customer-login .phone-input-box {
+  margin-bottom: clamp(0.5rem, 2vh, 1.5rem);
+  padding: clamp(0.25rem, 1vh, 0.5rem) !important;
+}
+
+.customer-login .phone-display {
+  height: clamp(35px, 5vh, 58px) !important;
+  font-size: clamp(1rem, 2.75vh, 1.32rem) !important;
+  min-height: 0;
+}
+
+.customer-login .pin-pad {
+  margin-top: 0;
+  flex: 0 0 auto !important;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  gap: clamp(0.25rem, 1vh, 0.5rem);
+  margin-bottom: clamp(0.55rem, 1.2vh, 1rem) !important;
+}
+
+.customer-login .phone-pinpad .pin-pad-btn {
+  height: 100%;
+  min-height: 46px;
+  max-height: 80px;
+  font-size: clamp(1rem, 2.5vh, 1.35rem);
 }
 
 .employee-login {
@@ -285,7 +372,6 @@
   min-height: 62px !important;
 }
 
-/* Force Google Identity button internals to fill the panel width */
 .employee-google-section .google-login-wrapper .nsm7Bb-HzV7m-LgbsSe {
   width: 100% !important;
   max-width: none !important;
@@ -601,6 +687,20 @@
 }
 
 .phone-pinpad .pin-pad-btn {
-  height: 70px;
-  font-size: 1.35rem;
+  min-height: 56px; 
+  max-height: 90px; 
+  font-size: clamp(1.1rem, 2.7vh, 1.45rem);
+}
+
+.phone-display {
+  height: 58px !important;
+  font-size: 1.32rem !important;
+  font-weight: 700;
+  text-align: center;
+  color: #8b4513;
+  letter-spacing: 0.02em;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
