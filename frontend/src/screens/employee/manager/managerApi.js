@@ -56,14 +56,20 @@ async function parseError(response) {
 export async function apiRequest(path, options = {}) {
   const base = getApiBase();
   const url = `${base}${path.startsWith('/') ? path : `/${path}`}`;
+  const token =
+    typeof window !== 'undefined' ? window.localStorage.getItem('auth_token') : null;
+
+  const defaultHeaders = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    defaultHeaders.Authorization = `Bearer ${token}`;
+  }
 
   let response;
   try {
     response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(options.headers || {}),
-      },
+      headers: { ...defaultHeaders, ...(options.headers || {}) },
       ...options,
     });
   } catch {

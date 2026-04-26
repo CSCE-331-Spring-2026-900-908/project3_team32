@@ -45,12 +45,13 @@ export default function EmployeeManager() {
   function openAdd() {
     setMode('add');
     setForm({ employee_id: '', name: '', position: '', hire_date: '', google_email: '', employee_pin: '' });
+    setError('');
     setShowForm(true);
   }
 
   function openEdit(employee = selected) {
     if (!employee) {
-      alert('Please select an employee to edit.');
+      setError('Please select an employee to edit.');
       return;
     }
     setMode('edit');
@@ -62,6 +63,7 @@ export default function EmployeeManager() {
       google_email: employee.google_email ?? '',
       employee_pin: employee.employee_pin ?? '',
     });
+    setError('');
     setShowForm(true);
   }
 
@@ -70,18 +72,18 @@ export default function EmployeeManager() {
 
     const employeeId = Number(form.employee_id);
     if (mode === 'add' && (Number.isNaN(employeeId) || employeeId <= 0)) {
-      alert('Employee ID must be a positive number.');
+      setError('Employee ID must be a positive number.');
       return;
     }
 
     if (!form.name.trim() || !form.position.trim() || !form.hire_date) {
-      alert('Please fill in all fields.');
+      setError('Please fill in all fields.');
       return;
     }
 
     const pin = String(form.employee_pin || '').trim();
     if (pin && !/^\d{4}$/.test(pin)) {
-      alert('Employee PIN must be exactly 4 digits.');
+      setError('Employee PIN must be exactly 4 digits.');
       return;
     }
 
@@ -105,29 +107,27 @@ export default function EmployeeManager() {
       } else {
         await apiRequest(`/employees/${form.employee_id}`, { method: 'PUT', body: JSON.stringify(body) });
       }
+      setError('');
       setShowForm(false);
       await loadEmployees();
     } catch (err) {
-      alert(err.message || 'Failed to save employee.');
+      setError(err.message || 'Failed to save employee.');
     }
   }
 
   async function deleteSelected() {
     if (!selected) {
-      alert('Please select an employee to delete.');
-      return;
-    }
-
-    if (!window.confirm(`Are you sure you want to delete '${selected.name}'?`)) {
+      setError('Please select an employee to delete.');
       return;
     }
 
     try {
       await apiRequest(`/employees/${selected.employee_id}`, { method: 'DELETE' });
+      setError('');
       setSelectedId(null);
       await loadEmployees();
     } catch (err) {
-      alert(err.message || 'Failed to delete employee.');
+      setError(err.message || 'Failed to delete employee.');
     }
   }
 

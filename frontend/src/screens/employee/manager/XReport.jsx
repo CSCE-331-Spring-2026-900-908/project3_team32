@@ -1,8 +1,8 @@
 ﻿import React, { useMemo, useState } from 'react';
 import { apiRequest, unwrapList } from './managerApi.js';
 
-const OPEN_HOUR = 8;
-const CLOSE_HOUR = 21;
+const OPEN_HOUR = 0;
+const CLOSE_HOUR = 23;
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
@@ -63,6 +63,7 @@ export default function XReport() {
   const [date, setDate] = useState(todayIso());
   const [rows, setRows] = useState(buildDefaultRows());
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState('hourly');
 
@@ -71,12 +72,14 @@ export default function XReport() {
 
   async function loadReport() {
     if (!date) {
-      alert('Please select a date.');
+      setError('Please select a date.');
+      setMessage('');
       return;
     }
 
     setLoading(true);
     setError('');
+    setMessage('');
 
     try {
       const reportRows = await fetchXReport(date);
@@ -88,7 +91,7 @@ export default function XReport() {
 
       const anyOrders = normalized.some((row) => row.transactions > 0);
       if (!anyOrders) {
-        alert(`No orders found for ${date}.`);
+        setMessage(`No orders found for ${date}.`);
       }
     } catch (err) {
       setError(err.message || 'Failed to load X-Report.');
@@ -125,6 +128,7 @@ export default function XReport() {
       </div>
 
       {error ? <div style={{ color: '#b42318' }}>{error}</div> : null}
+      {message ? <div style={{ color: '#666' }}>{message}</div> : null}
       {loading ? <div>Loading X-Report...</div> : null}
 
       {tab === 'hourly' ? (

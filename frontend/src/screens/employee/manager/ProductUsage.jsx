@@ -38,6 +38,7 @@ export default function ProductUsage() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   const [tab, setTab] = useState('table');
 
   const totals = useMemo(() => {
@@ -51,18 +52,20 @@ export default function ProductUsage() {
 
   async function load() {
     if (!startDate || !endDate) {
-      alert('Please select start and end dates.');
+      setError('Please select start and end dates.');
+      setMessage('');
       return;
     }
 
     setLoading(true);
     setError('');
+    setMessage('');
 
     try {
       const reportRows = await getUsageReport(startDate, endDate);
       setRows(reportRows);
       if (reportRows.length === 0) {
-        alert('No inventory usage found for the selected period.');
+        setMessage('No inventory usage found for the selected period.');
       }
     } catch (err) {
       setError(err.message || 'Failed to load product usage.');
@@ -103,6 +106,7 @@ export default function ProductUsage() {
       </div>
 
       {error ? <div style={{ color: '#b42318' }}>{error}</div> : null}
+      {message ? <div style={{ color: '#666' }}>{message}</div> : null}
       {loading ? <div>Loading product usage...</div> : null}
 
       {tab === 'table' ? (

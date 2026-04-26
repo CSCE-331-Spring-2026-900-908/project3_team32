@@ -27,11 +27,11 @@ async function loadZReport(date) {
   throw lastError || new Error('Unable to load Z-Report');
 }
 
-async function generateZReport(date, managerSignature) {
+async function generateZReport(date) {
   const attempts = [
-    () => apiRequest('/reports/z-report', { method: 'POST', body: JSON.stringify({ date, managerSignature }) }),
-    () => apiRequest('/reports/z', { method: 'POST', body: JSON.stringify({ date, managerSignature }) }),
-    () => apiRequest(`/reports/z-report?date=${encodeURIComponent(date)}`, { method: 'POST', body: JSON.stringify({ managerSignature }) }),
+    () => apiRequest('/reports/z-report', { method: 'POST', body: JSON.stringify({ date }) }),
+    () => apiRequest('/reports/z', { method: 'POST', body: JSON.stringify({ date }) }),
+    () => apiRequest(`/reports/z-report?date=${encodeURIComponent(date)}`, { method: 'POST', body: JSON.stringify({}) }),
   ];
 
   let lastError = null;
@@ -50,10 +50,11 @@ export default function ZReport() {
   const [date, setDate] = useState(todayIso());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   const [summary, setSummary] = useState('');
   const [payments, setPayments] = useState([]);
 
-  function displayReport(payload, managerSignature = null, generatedDate = null) {
+  function displayReport(payload) {
     const breakdown = unwrapList(payload?.payments ?? payload?.paymentBreakdown ?? payload, 'payments').map((row) => ({
       method: row.method ?? row.payment_method ?? row.paymentType ?? 'Not Specified',
       count: Number(row.count ?? row.cnt ?? 0),
@@ -69,10 +70,6 @@ export default function ZReport() {
       (row) => ` - ${(row.name ?? row.employee_name ?? 'Unknown')} : ${Number(row.orders ?? row.count ?? 0)} orders`,
     );
 
-    // Use signature and date from payload if not provided as parameters
-    const signature = managerSignature || payload?.managerSignature || null;
-    const reportDate = generatedDate || payload?.generatedDate || null;
-
     const reportText = [
       `Z-Report for ${date}`,
       '',
@@ -82,10 +79,6 @@ export default function ZReport() {
       '',
       'Employee Summary:',
       ...(employeeLines.length ? employeeLines : [' - No employee data']),
-      '',
-      signature 
-        ? `Manager Signature: ${signature}\nDate: ${reportDate || new Date().toISOString().slice(0, 10)}`
-        : 'Manager Signature: ____________________________\nDate: ____________________________',
     ].join('\n');
 
     setSummary(reportText);
@@ -94,28 +87,25 @@ export default function ZReport() {
 
   async function loadExistingReport() {
     if (!date) {
-      alert('Please select a date.');
+      setError('Please select a date.');
+      setMessage('');
       return;
     }
 
     setLoading(true);
     setError('');
+    setMessage('');
 
     try {
       const payload = await loadZReport(date);
       displayReport(payload);
-      alert(`Successfully loaded Z-Report for ${date}`);
+      setMessage(`Loaded Z-Report for ${date}.`);
     } catch (err) {
       const msg = err.message || 'Failed to load Z-Report.';
-      
-      // Show clean error message without technical details
       if (msg.includes('404') || msg.toLowerCase().includes('not found')) {
-        const cleanMsg = `No Z-Report found for ${date}`;
-        setError(cleanMsg);
-        alert(cleanMsg);
+        setError(`No Z-Report found for ${date}.`);
       } else {
         setError(`Error loading Z-Report: ${msg}`);
-        alert(`Error loading Z-Report: ${msg}`);
       }
     } finally {
       setLoading(false);
@@ -124,38 +114,25 @@ export default function ZReport() {
 
   async function generateNewReport() {
     if (!date) {
-      alert('Please select a date.');
-      return;
-    }
-
-    const managerName = prompt('Enter Manager Name for Signature:');
-    if (!managerName || managerName.trim() === '') {
-      alert('Manager signature is required to generate Z-Report.');
-      return;
-    }
-
-    if (!window.confirm(`Generate Z-Report for ${date}?\nThis closes the day and can only be done once.`)) {
+      setError('Please select a date.');
+      setMessage('');
       return;
     }
 
     setLoading(true);
     setError('');
+    setMessage('');
 
     try {
-      const payload = await generateZReport(date, managerName);
-      displayReport(payload, managerName, payload?.generatedDate);
-      alert(`Z-Report successfully generated for ${date}`);
+      const payload = await generateZReport(date);
+      displayReport(payload);
+      setMessage(`Z-Report generated for ${date}.`);
     } catch (err) {
       const msg = err.message || 'Failed to generate Z-Report.';
-      
-      // Show clean error message without technical details
       if (msg.includes('409') || msg.toLowerCase().includes('already exists')) {
-        const cleanMsg = `Z-Report already exists for ${date}`;
-        setError(cleanMsg);
-        alert(cleanMsg);
+        setError(`Z-Report already exists for ${date}.`);
       } else {
         setError(`Error generating Z-Report: ${msg}`);
-        alert(`Error generating Z-Report: ${msg}`);
       }
     } finally {
       setLoading(false);
@@ -180,6 +157,7 @@ export default function ZReport() {
       </div>
 
       {error ? <div className="manager-error">{error}</div> : null}
+      {message ? <div style={{ color: '#0f5132' }}>{message}</div> : null}
       {loading ? <div>Processing...</div> : null}
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>

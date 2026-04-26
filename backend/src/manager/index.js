@@ -1,8 +1,20 @@
 import { Router } from "express";
 import pool from "../config/database.js";
+import { requireAuth } from "../lib/auth.js";
 import { parseDateInput, normalizeEmployeePin, isValidEmployeePin } from "../lib/validators.js";
 
 const router = Router();
+router.use(requireAuth(["Manager", "Shift Lead"]));
+
+const REPORT_TIME_ZONE =
+  process.env.REPORT_TIME_ZONE &&
+  /^[A-Za-z_\/+-]+$/.test(process.env.REPORT_TIME_ZONE)
+    ? process.env.REPORT_TIME_ZONE
+    : "America/Chicago";
+
+function localTimestampSql(columnSql) {
+  return `(${columnSql} AT TIME ZONE 'UTC' AT TIME ZONE '${REPORT_TIME_ZONE}')`;
+}
 
 // ── Menu CRUD ──────────────────────────────────────────────────────────────────
 
@@ -262,7 +274,7 @@ router.get("/reports/items-sold", async (req, res, next) => {
        FROM customer_order o
        JOIN order_item oi ON o.order_id = oi.order_id
        JOIN menu_item m ON oi.menu_item_id = m.menu_item_id
-       WHERE DATE(o.order_date) = $1
+       WHERE DATE(${localTimestampSql("o.order_date")}) = $1
        GROUP BY oi.menu_item_id, m.name
        ORDER BY qty_sold DESC, item_name ASC`,
       [date],
@@ -285,7 +297,7 @@ router.get("/reports/employees", async (req, res, next) => {
               COALESCE(SUM(o.total_cost), 0) AS revenue
        FROM customer_order o
        JOIN employee e ON o.employee_id = e.employee_id
-       WHERE DATE(o.order_date) = $1
+       WHERE DATE(${localTimestampSql("o.order_date")}) = $1
        GROUP BY e.employee_id, e.name
        ORDER BY sales_count DESC`,
       [date],
@@ -305,7 +317,7 @@ router.get("/reports/total-profit", async (req, res, next) => {
     const result = await pool.query(
       `SELECT COALESCE(SUM(total_cost), 0) AS total_profit
        FROM customer_order
-       WHERE DATE(order_date) = $1`,
+       WHERE DATE(${localTimestampSql("order_date")}) = $1`,
       [date],
     );
     res.json({ totalProfit: Number(result.rows[0]?.total_profit || 0) });
@@ -328,7 +340,7 @@ router.get("/reports/daily", async (req, res, next) => {
          FROM customer_order o
          JOIN order_item oi ON o.order_id = oi.order_id
          JOIN menu_item m ON oi.menu_item_id = m.menu_item_id
-         WHERE DATE(o.order_date) = $1
+         WHERE DATE(${localTimestampSql("o.order_date")}) = $1
          GROUP BY oi.menu_item_id, m.name
          ORDER BY qty_sold DESC, item_name ASC`,
         [date],
@@ -339,7 +351,7 @@ router.get("/reports/daily", async (req, res, next) => {
                 COALESCE(SUM(o.total_cost), 0) AS revenue
          FROM customer_order o
          JOIN employee e ON o.employee_id = e.employee_id
-         WHERE DATE(o.order_date) = $1
+         WHERE DATE(${localTimestampSql("o.order_date")}) = $1
          GROUP BY e.employee_id, e.name
          ORDER BY sales_count DESC`,
         [date],
@@ -347,7 +359,7 @@ router.get("/reports/daily", async (req, res, next) => {
       pool.query(
         `SELECT COALESCE(SUM(total_cost), 0) AS total_profit
          FROM customer_order
-         WHERE DATE(order_date) = $1`,
+         WHERE DATE(${localTimestampSql("order_date")}) = $1`,
         [date],
       ),
     ]);
@@ -380,7 +392,7 @@ router.get("/reports/sales", async (req, res, next) => {
           FROM customer_order co
           JOIN order_item oi ON co.order_id = oi.order_id
           JOIN menu_item m ON oi.menu_item_id = m.menu_item_id
-          WHERE DATE(co.order_date) BETWEEN $1 AND $2
+          WHERE DATE(${localTimestampSql("co.order_date")}) BETWEEN $1 AND $2
           GROUP BY m.menu_item_id, m.name, m.category
        ),
        total_revenue AS (
@@ -416,7 +428,7 @@ router.get("/reports/inventory", async (req, res, next) => {
           SELECT oi.order_item_id, oi.menu_item_id, oi.quantity
           FROM customer_order co
           JOIN order_item oi ON co.order_id = oi.order_id
-          WHERE DATE(co.order_date) BETWEEN $1 AND $2
+          WHERE DATE(${localTimestampSql("co.order_date")}) BETWEEN $1 AND $2
        ),
        base_usage AS (
           SELECT mii.inventory_id, SUM(pi.quantity * mii.quantity_used) AS qty_used
@@ -551,38 +563,38 @@ router.get("/reports/x-report", async (req, res, next) => {
   try {
     const result = await pool.query(
       `WITH hours AS (
-          SELECT generate_series(8, 21) AS hr
+          SELECT generate_series(0, 23) AS hr
        ),
        hourly_transactions AS (
-          SELECT EXTRACT(HOUR FROM o.order_date)::int AS hr,
+          SELECT EXTRACT(HOUR FROM ${localTimestampSql("o.order_date")})::int AS hr,
                  COUNT(*) AS transactions,
                  COALESCE(SUM(o.total_cost), 0) AS total_sales
           FROM customer_order o
-          WHERE DATE(o.order_date) = $1
-          GROUP BY EXTRACT(HOUR FROM o.order_date)::int
+          WHERE DATE(${localTimestampSql("o.order_date")}) = $1
+          GROUP BY EXTRACT(HOUR FROM ${localTimestampSql("o.order_date")})::int
        ),
        hourly_items AS (
-          SELECT EXTRACT(HOUR FROM o.order_date)::int AS hr,
+          SELECT EXTRACT(HOUR FROM ${localTimestampSql("o.order_date")})::int AS hr,
                  COALESCE(SUM(oi.quantity), 0) AS items_sold
           FROM customer_order o
           JOIN order_item oi ON o.order_id = oi.order_id
-          WHERE DATE(o.order_date) = $1
-          GROUP BY EXTRACT(HOUR FROM o.order_date)::int
+          WHERE DATE(${localTimestampSql("o.order_date")}) = $1
+          GROUP BY EXTRACT(HOUR FROM ${localTimestampSql("o.order_date")})::int
        ),
        top_employee AS (
           SELECT x.hr,
                  CONCAT(e.name, ' (', x.cnt, ')') AS top_employee
           FROM (
-            SELECT EXTRACT(HOUR FROM o.order_date)::int AS hr,
+            SELECT EXTRACT(HOUR FROM ${localTimestampSql("o.order_date")})::int AS hr,
                    o.employee_id,
                    COUNT(*) AS cnt,
                    ROW_NUMBER() OVER (
-                     PARTITION BY EXTRACT(HOUR FROM o.order_date)::int
+                     PARTITION BY EXTRACT(HOUR FROM ${localTimestampSql("o.order_date")})::int
                      ORDER BY COUNT(*) DESC, o.employee_id ASC
                    ) AS rn
             FROM customer_order o
-            WHERE DATE(o.order_date) = $1
-            GROUP BY EXTRACT(HOUR FROM o.order_date)::int, o.employee_id
+            WHERE DATE(${localTimestampSql("o.order_date")}) = $1
+            GROUP BY EXTRACT(HOUR FROM ${localTimestampSql("o.order_date")})::int, o.employee_id
           ) x
           JOIN employee e ON e.employee_id = x.employee_id
           WHERE x.rn = 1
@@ -591,17 +603,17 @@ router.get("/reports/x-report", async (req, res, next) => {
           SELECT x.hr,
                  CONCAT(m.name, ' (', x.qty, ')') AS top_item
           FROM (
-            SELECT EXTRACT(HOUR FROM o.order_date)::int AS hr,
+            SELECT EXTRACT(HOUR FROM ${localTimestampSql("o.order_date")})::int AS hr,
                    oi.menu_item_id,
                    SUM(oi.quantity) AS qty,
                    ROW_NUMBER() OVER (
-                     PARTITION BY EXTRACT(HOUR FROM o.order_date)::int
+                     PARTITION BY EXTRACT(HOUR FROM ${localTimestampSql("o.order_date")})::int
                      ORDER BY SUM(oi.quantity) DESC, oi.menu_item_id ASC
                    ) AS rn
             FROM customer_order o
             JOIN order_item oi ON o.order_id = oi.order_id
-            WHERE DATE(o.order_date) = $1
-            GROUP BY EXTRACT(HOUR FROM o.order_date)::int, oi.menu_item_id
+            WHERE DATE(${localTimestampSql("o.order_date")}) = $1
+            GROUP BY EXTRACT(HOUR FROM ${localTimestampSql("o.order_date")})::int, oi.menu_item_id
           ) x
           JOIN menu_item m ON m.menu_item_id = x.menu_item_id
           WHERE x.rn = 1
@@ -659,7 +671,7 @@ router.get("/reports/z-report", async (req, res, next) => {
               COALESCE(SUM(total_cost),0)::float8 AS total_sales,
               COALESCE(SUM(CASE WHEN UPPER(payment_type)='CASH' THEN total_cost ELSE 0 END),0)::float8 AS total_cash
        FROM customer_order
-       WHERE DATE(order_date) = $1`,
+       WHERE DATE(${localTimestampSql("order_date")}) = $1`,
       [date],
     );
 
@@ -669,12 +681,12 @@ router.get("/reports/z-report", async (req, res, next) => {
                  COUNT(*)::int AS count,
                  SUM(total_cost)::float8 AS total
           FROM customer_order
-          WHERE DATE(order_date) = $1
+          WHERE DATE(${localTimestampSql("order_date")}) = $1
           GROUP BY payment_type
        ),
        grand AS (
           SELECT COALESCE(SUM(total_cost), 0)::float8 AS g
-          FROM customer_order WHERE DATE(order_date) = $1
+          FROM customer_order WHERE DATE(${localTimestampSql("order_date")}) = $1
        )
        SELECT pt.method,
               pt.count,
@@ -689,7 +701,7 @@ router.get("/reports/z-report", async (req, res, next) => {
               COUNT(*)::int AS orders
        FROM customer_order o
        LEFT JOIN employee e ON o.employee_id = e.employee_id
-       WHERE DATE(o.order_date) = $1
+       WHERE DATE(${localTimestampSql("o.order_date")}) = $1
        GROUP BY e.name
        ORDER BY COUNT(*) DESC`,
       [date],
@@ -721,9 +733,6 @@ router.post("/reports/z-report", async (req, res, next) => {
 
   if (!date)
     return res.status(400).json({ error: "date is required (YYYY-MM-DD)" });
-  if (!managerSignature || managerSignature.trim() === "") {
-    return res.status(400).json({ error: "Manager signature is required to generate Z-Report" });
-  }
 
   const client = await pool.connect();
   try {
@@ -753,7 +762,7 @@ router.post("/reports/z-report", async (req, res, next) => {
               COALESCE(SUM(total_cost),0)::float8 AS total_sales,
               COALESCE(SUM(CASE WHEN UPPER(payment_type)='CASH' THEN total_cost ELSE 0 END),0)::float8 AS total_cash
        FROM customer_order
-       WHERE DATE(order_date) = $1`,
+       WHERE DATE(${localTimestampSql("order_date")}) = $1`,
       [date],
     );
 
@@ -763,12 +772,12 @@ router.post("/reports/z-report", async (req, res, next) => {
                  COUNT(*)::int AS count,
                  SUM(total_cost)::float8 AS total
           FROM customer_order
-          WHERE DATE(order_date) = $1
+          WHERE DATE(${localTimestampSql("order_date")}) = $1
           GROUP BY payment_type
        ),
        grand AS (
           SELECT COALESCE(SUM(total_cost), 0)::float8 AS g
-          FROM customer_order WHERE DATE(order_date) = $1
+          FROM customer_order WHERE DATE(${localTimestampSql("order_date")}) = $1
        )
        SELECT pt.method,
               pt.count,
@@ -783,7 +792,7 @@ router.post("/reports/z-report", async (req, res, next) => {
               COUNT(*)::int AS orders
        FROM customer_order o
        LEFT JOIN employee e ON o.employee_id = e.employee_id
-       WHERE DATE(o.order_date) = $1
+       WHERE DATE(${localTimestampSql("o.order_date")}) = $1
        GROUP BY e.name
        ORDER BY COUNT(*) DESC`,
       [date],

@@ -38,6 +38,7 @@ export default function SalesReport() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
   const topTen = useMemo(() => rows.slice(0, 10), [rows]);
   const maxRevenue = useMemo(() => Math.max(1, ...topTen.map((row) => row.revenue)), [topTen]);
@@ -48,18 +49,20 @@ export default function SalesReport() {
 
   async function load() {
     if (!startDate || !endDate) {
-      alert('Please select both start and end dates.');
+      setError('Please select both start and end dates.');
+      setMessage('');
       return;
     }
 
     setLoading(true);
     setError('');
+    setMessage('');
 
     try {
       const report = await getSalesReport(startDate, endDate);
       setRows(report.rows);
       if (report.rows.length === 0) {
-        alert('No sales found for the selected period.');
+        setMessage('No sales found for the selected period.');
       }
     } catch (err) {
       setError(err.message || 'Failed to load sales report.');
@@ -85,6 +88,7 @@ export default function SalesReport() {
       </div>
 
       {error ? <div style={{ color: '#b42318' }}>{error}</div> : null}
+      {message ? <div style={{ color: '#666' }}>{message}</div> : null}
       {loading ? <div>Loading sales report...</div> : null}
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>

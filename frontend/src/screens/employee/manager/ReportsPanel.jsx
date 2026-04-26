@@ -68,9 +68,9 @@ export default function ReportsPanel() {
 
   const noOrders = useMemo(() => items.length === 0 && employees.length === 0, [items, employees]);
 
-  async function runReport(showNoOrdersPopup = true) {
+  async function runReport() {
     if (!date) {
-      alert('Please select a date.');
+      setError('Please select a date.');
       return;
     }
 
@@ -82,10 +82,6 @@ export default function ReportsPanel() {
       setItems(report.items);
       setEmployees(report.employees);
       setTotalProfit(report.totalProfit);
-
-      if (showNoOrdersPopup && report.items.length === 0 && report.employees.length === 0) {
-        alert(`No orders found for ${date}.`);
-      }
     } catch (err) {
       setError(err.message || 'Failed to load daily report.');
     } finally {
@@ -109,8 +105,8 @@ export default function ReportsPanel() {
           Date (YYYY-MM-DD):
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ marginLeft: 6 }} />
         </label>
-        <button onClick={() => runReport(true)} className="manager-btn manager-btn-primary">Run Report</button>
-        <button onClick={() => runReport(true)} className="manager-btn manager-btn-secondary">Refresh</button>
+        <button onClick={runReport} className="manager-btn manager-btn-primary">Run Report</button>
+        <button onClick={runReport} className="manager-btn manager-btn-secondary">Refresh</button>
         <button onClick={clearReport} className="manager-btn manager-btn-secondary">Clear</button>
         <strong>Total Profit: {money(totalProfit)}</strong>
       </div>

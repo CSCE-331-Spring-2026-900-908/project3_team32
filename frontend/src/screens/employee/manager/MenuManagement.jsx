@@ -67,12 +67,13 @@ export default function MenuManagement() {
   function openAdd() {
     setMode('add');
     setForm({ menu_item_id: '', name: '', cost: '', category: categories[0] ?? '' });
+    setError('');
     setShowForm(true);
   }
 
   function openEdit(item = selected) {
     if (!item) {
-      alert('Please select a menu item to edit.');
+      setError('Please select a menu item to edit.');
       return;
     }
     setMode('edit');
@@ -82,6 +83,7 @@ export default function MenuManagement() {
       cost: String(item.cost ?? ''),
       category: item.category || (categories[0] ?? ''),
     });
+    setError('');
     setShowForm(true);
   }
 
@@ -91,7 +93,7 @@ export default function MenuManagement() {
     const name = form.name.trim();
     const cost = Number(form.cost);
     if (!name || Number.isNaN(cost) || cost < 0) {
-      alert('Please enter a valid name and non-negative price.');
+      setError('Please enter a valid name and non-negative price.');
       return;
     }
 
@@ -103,29 +105,27 @@ export default function MenuManagement() {
       } else {
         await apiRequest(`/menu/items/${form.menu_item_id}`, { method: 'PUT', body: JSON.stringify(body) });
       }
+      setError('');
       setShowForm(false);
       await loadMenuItems();
     } catch (err) {
-      alert(err.message || 'Failed to save menu item.');
+      setError(err.message || 'Failed to save menu item.');
     }
   }
 
   async function deleteSelected() {
     if (!selected) {
-      alert('Please select a menu item to delete.');
-      return;
-    }
-
-    if (!window.confirm(`Are you sure you want to delete '${selected.name}'?`)) {
+      setError('Please select a menu item to delete.');
       return;
     }
 
     try {
       await apiRequest(`/menu/items/${selected.menu_item_id}`, { method: 'DELETE' });
+      setError('');
       setSelectedId(null);
       await loadMenuItems();
     } catch (err) {
-      alert(err.message || 'Failed to delete menu item. It may still be referenced by orders.');
+      setError(err.message || 'Failed to delete menu item. It may still be referenced by orders.');
     }
   }
 

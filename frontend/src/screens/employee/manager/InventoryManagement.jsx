@@ -40,12 +40,13 @@ export default function InventoryManagement() {
   function openAdd() {
     setMode('add');
     setForm({ inventory_id: '', resource_name: '', quantity_available: '' });
+    setError('');
     setShowForm(true);
   }
 
   function openEdit(item = selected) {
     if (!item) {
-      alert('Please select an inventory item to edit.');
+      setError('Please select an inventory item to edit.');
       return;
     }
     setMode('edit');
@@ -54,6 +55,7 @@ export default function InventoryManagement() {
       resource_name: item.resource_name,
       quantity_available: String(item.quantity_available),
     });
+    setError('');
     setShowForm(true);
   }
 
@@ -64,7 +66,7 @@ export default function InventoryManagement() {
     const quantity_available = Number(form.quantity_available);
 
     if (!resource_name || Number.isNaN(quantity_available) || quantity_available < 0) {
-      alert('Please enter a valid resource name and non-negative quantity.');
+      setError('Please enter a valid resource name and non-negative quantity.');
       return;
     }
 
@@ -76,28 +78,27 @@ export default function InventoryManagement() {
       } else {
         await apiRequest(`/inventory/${form.inventory_id}`, { method: 'PUT', body: JSON.stringify(body) });
       }
+      setError('');
       setShowForm(false);
       await loadInventory();
     } catch (err) {
-      alert(err.message || 'Failed to save inventory item.');
+      setError(err.message || 'Failed to save inventory item.');
     }
   }
 
   async function deleteSelected() {
     if (!selected) {
-      alert('Please select an inventory item to delete.');
-      return;
-    }
-    if (!window.confirm(`Are you sure you want to delete '${selected.resource_name}'?`)) {
+      setError('Please select an inventory item to delete.');
       return;
     }
 
     try {
       await apiRequest(`/inventory/${selected.inventory_id}`, { method: 'DELETE' });
+      setError('');
       setSelectedId(null);
       await loadInventory();
     } catch (err) {
-      alert(err.message || 'Failed to delete inventory item.');
+      setError(err.message || 'Failed to delete inventory item.');
     }
   }
 
