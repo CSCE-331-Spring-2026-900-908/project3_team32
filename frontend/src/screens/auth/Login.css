@@ -7,7 +7,7 @@
 }
 
 .login.customer-login {
-  background: linear-gradient(135deg, #fef3e2 0%, #fce7c8 100%);
+  background: linear-gradient(135deg, #dad2af 0%, #aa846d 100%);
   height: 100vh;
   min-height: 100vh;
   overflow: hidden;
@@ -20,6 +20,8 @@
   flex-direction: column;
   padding: clamp(1rem, 4vh, 3rem) clamp(1rem, 4vw, 3rem);
   width: min(100%, 500px);
+  border-color: #aa846d;
+  box-shadow: 0 8px 24px rgba(123, 69, 53, 0.18);
 }
 
 .customer-login .login-content {
@@ -35,6 +37,7 @@
   font-size: clamp(2rem, 6vh, 4rem);
   margin: clamp(0.5rem, 2vh, 2rem) auto clamp(0.5rem, 2vh, 1.5rem);
   align-self: center;
+  color: #7b4535;
 }
 
 .customer-login .login-card h1 {
@@ -54,9 +57,17 @@
 
 .customer-login .info-card {
   padding: clamp(0.5rem, 1.5vh, 1rem) clamp(0.75rem, 2vw, 1.25rem);
+  background: #dad2af;
+  border-color: #aa846d;
+}
+
+.customer-login .info-card:hover {
+  transform: translateX(4px);
+  border-color: #7b4535;
 }
 
 .customer-login .info-icon {
+  color: #7b4535;
   font-size: clamp(1.1rem, 2.5vh, 1.5rem);
 }
 
@@ -67,6 +78,28 @@
 .customer-login .login-button {
   padding: clamp(0.75rem, 2vh, 1.25rem);
   font-size: clamp(0.9rem, 2vh, 1.1rem);
+  background: #652613;
+  color: #ffffff;
+}
+
+.customer-login .login-button:hover {
+  background: #4f1d0f;
+}
+
+.customer-login .guest-login-btn {
+  background: #652613;
+  color: #ffffff;
+  border-color: #652613;
+}
+
+.customer-login .guest-login-btn:hover {
+  background: #4f1d0f;
+  color: #ffffff;
+  border-color: #4f1d0f;
+}
+
+.customer-login .guest-login-note {
+  color: #829786;
 }
 
 .customer-login .phone-input-box {
