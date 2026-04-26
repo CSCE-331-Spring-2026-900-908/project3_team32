@@ -49,6 +49,7 @@ export default function CustomizeScreen({
                   >
                     <span className="customize-option-name">{opt.name}</span>
                     {opt.cost > 0 && <span className="customize-option-cost">+{currency(opt.cost)}</span>}
+                    {selectedSugar?.id === opt.id && <span className="customize-option-check"><FiCheck /></span>}
                   </button>
                 ))}
               </div>
@@ -65,6 +66,7 @@ export default function CustomizeScreen({
                   >
                     <span className="customize-option-name">{opt.name}</span>
                     {opt.cost > 0 && <span className="customize-option-cost">+{currency(opt.cost)}</span>}
+                    {selectedIce?.id === opt.id && <span className="customize-option-check"><FiCheck /></span>}
                   </button>
                 ))}
               </div>

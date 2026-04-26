@@ -46,8 +46,8 @@ export default function CustomerScreen() {
   const [currentItem, setCurrentItem] = useState(null);
   const [editingCartItemId, setEditingCartItemId] = useState(null);
   const [customizeStep, setCustomizeStep] = useState(1);
-  const [selectedSugar, setSelectedSugar] = useState({ name: "100% Sugar" });
-  const [selectedIce, setSelectedIce] = useState({ name: "Regular Ice" });
+  const [selectedSugar, setSelectedSugar] = useState(null);
+  const [selectedIce, setSelectedIce] = useState(null);
   const [selectedToppings, setSelectedToppings] = useState([]);
   const [comments, setComments] = useState("");
 
@@ -282,6 +282,38 @@ export default function CustomerScreen() {
     return menuItems.filter((item) => item.category === selectedCategory);
   }, [selectedCategory, menuItems]);
 
+  const defaultSugarOption = useMemo(() => {
+    if (!sugarOptions.length) return null;
+    return (
+      sugarOptions.find((o) => /50\s*%/.test((o.name || "").toLowerCase())) ||
+      sugarOptions.find((o) => (o.name || "").toLowerCase().includes("50")) ||
+      sugarOptions.find((o) => (o.name || "").toLowerCase().includes("half")) ||
+      sugarOptions[0]
+    );
+  }, [sugarOptions]);
+
+  const defaultIceOption = useMemo(() => {
+    if (!iceOptions.length) return null;
+    return (
+      iceOptions.find((o) => (o.name || "").toLowerCase().includes("regular")) ||
+      iceOptions[0]
+    );
+  }, [iceOptions]);
+
+  useEffect(() => {
+    if (screen !== SCREEN.CUSTOMIZE || !currentItem || editingCartItemId) return;
+    if (!selectedSugar && defaultSugarOption) setSelectedSugar(defaultSugarOption);
+    if (!selectedIce && defaultIceOption) setSelectedIce(defaultIceOption);
+  }, [
+    screen,
+    currentItem,
+    editingCartItemId,
+    selectedSugar,
+    selectedIce,
+    defaultSugarOption,
+    defaultIceOption,
+  ]);
+
   const cartTotal = useMemo(
     () => cart.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0),
     [cart],
@@ -421,8 +453,8 @@ export default function CustomerScreen() {
 
   // ── Customize flow handlers ────────────────────────────────────────
   function clearCustomization() {
-    setSelectedSugar(null);
-    setSelectedIce(null);
+    setSelectedSugar(defaultSugarOption);
+    setSelectedIce(defaultIceOption);
     setSelectedToppings([]);
     setComments("");
     setCustomizeStep(1);
@@ -450,11 +482,11 @@ export default function CustomerScreen() {
     const sugar =
       sugarOptions.find((opt) => selectedIds.has(opt.id)) ||
       sugarOptions.find((opt) => opt.name === item.sugarLevel) ||
-      null;
+      defaultSugarOption;
     const ice =
       iceOptions.find((opt) => selectedIds.has(opt.id)) ||
       iceOptions.find((opt) => opt.name === item.iceLevel) ||
-      null;
+      defaultIceOption;
     const toppings = toppingOptions.filter((opt) => selectedIds.has(opt.id));
     const fallbackToppings = (item.toppingNames || []).length
       ? toppingOptions.filter((opt) => (item.toppingNames || []).includes(opt.name))
@@ -481,11 +513,12 @@ export default function CustomerScreen() {
     if (!currentItem) return;
     const effectiveSugar =
       selectedSugar ||
-      sugarOptions.find((o) => o.name.includes("100")) ||
+      defaultSugarOption ||
       sugarOptions[sugarOptions.length - 1] ||
       null;
     const effectiveIce =
       selectedIce ||
+      defaultIceOption ||
       iceOptions.find((o) => o.name.toLowerCase().includes("regular")) ||
       iceOptions[0] ||
       null;
@@ -503,8 +536,8 @@ export default function CustomerScreen() {
       menuItemId: currentItem.id,
       name: currentItem.name,
       price: totalPrice,
-      sugarLevel: effectiveSugar?.name || "100%",
-      iceLevel: effectiveIce?.name || "100%",
+      sugarLevel: effectiveSugar?.name || "50% Sugar",
+      iceLevel: effectiveIce?.name || "Regular Ice",
       toppingNames: selectedToppings.map((t) => t.name),
       comments: comments.trim(),
       modificationIds,

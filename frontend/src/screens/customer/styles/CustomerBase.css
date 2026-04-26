@@ -268,6 +268,35 @@ html, body, #root {
     box-shadow: none !important;
   }
 
+  .high-contrast .customize-option-card.selected {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 5px solid #000000 !important;
+    outline: 3px dashed #000000 !important;
+    outline-offset: -6px;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  .high-contrast .customize-option-card.selected .customize-option-name,
+  .high-contrast .customize-option-card.selected .customize-option-cost {
+    color: #000000 !important;
+    background: transparent !important;
+  }
+
+  .high-contrast .customize-option-card .customize-option-check {
+    background: #000000 !important;
+    color: #ffffff !important;
+    border: 2px solid #ffffff !important;
+    box-shadow: none !important;
+  }
+
+  .high-contrast .customize-option-card.selected .customize-option-check {
+    background: #000000 !important;
+    color: #ffffff !important;
+    border: 2px solid #ffffff !important;
+  }
+
   .high-contrast .accessibility-toggle-btn img {
     filter: brightness(0) invert(1) !important;
   }
