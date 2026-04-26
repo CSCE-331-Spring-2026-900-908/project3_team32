@@ -814,3 +814,76 @@
   font-weight: 800;
   border-radius: 12px;
 }
+
+/* Customer palette overrides */
+.customer-page .cart-screen,
+.customer-page .checkout-screen,
+.customer-page .checkout-summary,
+.customer-page .cart-items,
+.customer-page .cart-item,
+.customer-page .rewards-summary,
+.customer-page .payment-btn {
+  background: #f3efe2;
+  border-color: #aa846d;
+}
+
+.customer-page .cart-screen h2,
+.customer-page .cart-items-title,
+.customer-page .cart-item-number,
+.customer-page .cart-item-price,
+.customer-page .summary-row.total {
+  color: #7b4535;
+}
+
+.customer-page .cart-modification-chip {
+  background: #eee7d5;
+  border-color: #d9ccb2;
+  color: #652613;
+}
+
+.customer-page .cart-comments {
+  background: #eee7d5;
+  border-left-color: #aa846d;
+  color: #652613;
+}
+
+.customer-page .btn-primary,
+.customer-page .cart-panel-checkout-btn {
+  background: #652613;
+  border-color: #652613;
+  color: #ffffff;
+}
+
+.customer-page .btn-primary:hover,
+.customer-page .cart-panel-checkout-btn:hover {
+  background: #4f1d0f;
+  border-color: #4f1d0f;
+}
+
+.customer-page .btn-secondary,
+.customer-page .cart-back-btn,
+.customer-page .cart-edit-btn,
+.customer-page .qty-btn {
+  background: #dad2af;
+  border-color: #aa846d;
+  color: #7b4535;
+}
+
+.customer-page .btn-secondary:hover,
+.customer-page .cart-back-btn:hover,
+.customer-page .cart-edit-btn:hover,
+.customer-page .qty-btn:hover,
+.customer-page .payment-btn:hover {
+  background: #cfc5a0;
+  border-color: #7b4535;
+  color: #7b4535;
+}
+
+.customer-page .cart-total {
+  background: #652613;
+}
+
+.customer-page .rewards-progress-fill,
+.customer-page .confirmation-checkmark {
+  background: #829786;
+}

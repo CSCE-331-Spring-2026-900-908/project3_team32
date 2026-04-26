@@ -23,7 +23,7 @@ html, body, #root {
   .customer-header {
     background: #8b4513;
     color: white;
-    padding: 0.75rem 2rem;
+    padding: 0.45rem 1.25rem;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     position: relative;
     z-index: 9999;
@@ -50,15 +50,18 @@ html, body, #root {
     width: 100%;
     box-sizing: border-box;
     display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.6rem;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.9rem;
   }
   
   .customer-header h1 {
     margin: 0;
-    font-size: 2rem;
-    text-align: center;
+    font-size: 1.35rem;
+    line-height: 1.1;
+    text-align: left;
+    white-space: nowrap;
     pointer-events: none;
   }
   
@@ -66,7 +69,9 @@ html, body, #root {
     display: flex;
     align-items: center;
     justify-content: flex-end;
+    margin-left: auto;
     gap: 0.75rem;
+    min-width: 0;
   }
   
   .header-left {
@@ -80,9 +85,35 @@ html, body, #root {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 0.5rem 0.75rem;
     min-width: 0;
+  }
+
+  @media (max-width: 980px) {
+    .header-content {
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.45rem;
+    }
+
+    .customer-header h1 {
+      width: 100%;
+      text-align: center;
+      white-space: normal;
+      font-size: 1.2rem;
+    }
+
+    .header-controls-row {
+      width: 100%;
+      justify-content: center;
+      margin-left: 0;
+    }
+
+    .header-actions {
+      flex-wrap: wrap;
+      justify-content: center;
+    }
   }
   
   .customer-user-badge {
@@ -268,6 +299,35 @@ html, body, #root {
     box-shadow: none !important;
   }
 
+  .high-contrast .customize-option-card.selected {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 5px solid #000000 !important;
+    outline: 3px dashed #000000 !important;
+    outline-offset: -6px;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  .high-contrast .customize-option-card.selected .customize-option-name,
+  .high-contrast .customize-option-card.selected .customize-option-cost {
+    color: #000000 !important;
+    background: transparent !important;
+  }
+
+  .high-contrast .customize-option-card .customize-option-check {
+    background: #000000 !important;
+    color: #ffffff !important;
+    border: 2px solid #ffffff !important;
+    box-shadow: none !important;
+  }
+
+  .high-contrast .customize-option-card.selected .customize-option-check {
+    background: #000000 !important;
+    color: #ffffff !important;
+    border: 2px solid #ffffff !important;
+  }
+
   .high-contrast .accessibility-toggle-btn img {
     filter: brightness(0) invert(1) !important;
   }
@@ -362,4 +422,40 @@ html, body, #root {
   .high-contrast .customer-user-avatar-fallback {
     background: #000000 !important;
     color: #ffffff !important;
+  }
+
+  /* Customer palette overrides */
+  .customer-page {
+    background: linear-gradient(180deg, #e7d8ba 0%, #cfa97d 100%);
+  }
+
+  .customer-page .customer-header {
+    background: #652613;
+  }
+
+  .customer-page .exit-btn,
+  .customer-page .my-orders-btn,
+  .customer-page .menu-board-btn {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: #ffffff;
+    color: #ffffff;
+  }
+
+  .customer-page .exit-btn:hover,
+  .customer-page .my-orders-btn:hover,
+  .customer-page .menu-board-btn:hover {
+    background: #4f1d0f;
+    border-color: #4f1d0f;
+    color: #ffffff;
+  }
+
+  .customer-page .menu-board-btn.active {
+    background: #dad2af;
+    border-color: #aa846d;
+    color: #7b4535;
+  }
+
+  .customer-page .cart-badge {
+    background: #652613;
+    box-shadow: 0 8px 24px rgba(101, 38, 19, 0.35);
   }

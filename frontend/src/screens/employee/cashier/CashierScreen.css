@@ -1,5 +1,10 @@
 .cashier-page {
+  height: 100vh;
   min-height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   padding: 24px;
   color: #212529;

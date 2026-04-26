@@ -138,7 +138,7 @@ export default function MenuScreen({
                       cost: Number(d.cost) || 0,
                       category: d.category || "Other",
                     };
-                    const hasCust = d.sugarLevel || d.iceLevel || (d.toppingNames && d.toppingNames.length > 0);
+                    const hasCust = d.sizeName || d.sugarLevel || d.iceLevel || (d.toppingNames && d.toppingNames.length > 0);
                     const displayPrice = d.price != null ? Number(d.price) : menuItem.cost;
                     return (
                       <div
@@ -174,6 +174,7 @@ export default function MenuScreen({
               
                         {hasCust && (
                           <div className="fav-customizations" style={{ marginBottom: '15px' }}>
+                            {d.sizeName && <span className="fav-tag">{d.sizeName}</span>}
                             {d.sugarLevel && <span className="fav-tag">{d.sugarLevel}</span>}
                             {d.iceLevel && <span className="fav-tag">{d.iceLevel}</span>}
                             {(d.toppingNames || []).map((t, i) => (
@@ -194,6 +195,7 @@ export default function MenuScreen({
                                   menuItemId: menuItem.id,
                                   name: menuItem.name,
                                   price: displayPrice,
+                                  sizeName: d.sizeName || "Regular",
                                   sugarLevel: d.sugarLevel || "100%",
                                   iceLevel: d.iceLevel || "Regular",
                                   toppingNames: d.toppingNames || [],

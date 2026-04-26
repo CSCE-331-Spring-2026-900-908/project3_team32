@@ -340,3 +340,35 @@
   body {
     top: 0 !important;
   }
+
+  .accessibility-panel,
+  .accessibility-dropdown,
+  .accessibility-menu,
+  .accessibility-panel-content {
+    max-width: 500px !important;
+    max-height: 500px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    position: absolute !important;
+    right: 0 !important;
+    left: auto !important;
+    margin-top: 8px !important;
+    scrollbar-width: thin;
+    scrollbar-color: #8b4513 #f5e8d3;
+    border-radius: 12px !important;
+  }
+
+  .accessibility-panel::-webkit-scrollbar,
+  .accessibility-dropdown::-webkit-scrollbar,
+  .accessibility-menu::-webkit-scrollbar,
+  .accessibility-panel-content::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .accessibility-panel::-webkit-scrollbar-thumb,
+  .accessibility-dropdown::-webkit-scrollbar-thumb,
+  .accessibility-menu::-webkit-scrollbar-thumb,
+  .accessibility-panel-content::-webkit-scrollbar-thumb {
+    background: #8b4513;
+    border-radius: 20px;
+  }

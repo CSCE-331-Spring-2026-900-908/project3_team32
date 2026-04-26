@@ -41,6 +41,57 @@ router.post("/auth/google/customer", async (req, res, next) => {
   }
 });
 
+// ── Phone number login (new) ──────────────────────────────────────────────────
+
+router.post("/auth/phone/customer", async (req, res, next) => {
+  try {
+    let { phone } = req.body;
+    if (!phone || typeof phone !== "string") {
+      return res.status(400).json({ error: "Phone number is required" });
+    }
+    const cleanPhone = phone.replace(/\D/g, "");
+    if (cleanPhone.length !== 10) {
+      return res.status(400).json({ error: "Phone number must be exactly 10 digits" });
+    }
+    let result = await pool.query(
+      "SELECT customer_id, name, email, phone FROM customer WHERE phone = $1",
+      [cleanPhone]
+    );
+    let customer;
+    if (result.rows.length === 0) {
+      result = await pool.query(
+        `INSERT INTO customer (name, email, phone, google_id)
+         VALUES ($1, $2, $3, $4)
+         RETURNING customer_id, name, email, phone`,
+        [`Customer-${cleanPhone.slice(-4)}`, null, cleanPhone, `phone-${cleanPhone}`]
+      );
+      customer = result.rows[0];
+    } else {
+      customer = result.rows[0];
+    }
+    const token = signToken({
+      type: "customer",
+      customer_id: customer.customer_id,
+      name: customer.name,
+      email: customer.email,
+      phone: cleanPhone
+    });
+    res.json({
+      token,
+      user: {
+        id: customer.customer_id,
+        name: customer.name,
+        email: customer.email,
+        phone: cleanPhone,
+        type: "customer"
+      }
+    });
+  } catch (err) {
+    console.error("Phone login error:", err);
+    next(err);
+  }
+});
+
 router.post("/auth/guest/customer", async (req, res) => {
   const guestSessionId = `guest-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
   const token = signToken({
@@ -101,21 +152,21 @@ router.get("/customer/orders", requireAuth(), async (req, res, next) => {
 });
 
 router.get("/customer/most-ordered", requireAuth(), async (req, res, next) => {
-  const email = req.user?.email;
-  if (!email) return res.status(401).json({ error: "User email not found." });
-
+  const customerId = req.user?.customer_id;
+  if (!customerId) {
+    return res.status(401).json({ error: "Customer account required" });
+  }
   try {
     const result = await pool.query(
       `SELECT m.menu_item_id, m.name, m.cost, m.category, SUM(oi.quantity) as order_count
        FROM customer_order co
-       JOIN customer c ON co.customer_id = c.customer_id
        JOIN order_item oi ON co.order_id = oi.order_id
        JOIN menu_item m ON oi.menu_item_id = m.menu_item_id
-       WHERE c.email = $1
+       WHERE co.customer_id = $1
        GROUP BY m.menu_item_id, m.name, m.cost, m.category
        ORDER BY order_count DESC
        LIMIT 12`,
-      [email],
+      [customerId]
     );
     res.json(result.rows);
   } catch (error) {
@@ -125,16 +176,17 @@ router.get("/customer/most-ordered", requireAuth(), async (req, res, next) => {
 });
 
 router.get("/customer/saved-favorites", requireAuth(), async (req, res, next) => {
-  const email = req.user?.email;
-  if (!email) return res.status(401).json({ error: "User email not found." });
+  const customerId = req.user?.customer_id;
+  if (!customerId) {
+    return res.status(401).json({ error: "Customer account required" });
+  }
   try {
     const result = await pool.query(
       `SELECT f.favorite_id, f.item_data
        FROM customer_favorite f
-       JOIN customer c ON f.customer_id = c.customer_id
-       WHERE c.email = $1
+       WHERE f.customer_id = $1
        ORDER BY f.favorite_id DESC`,
-      [email],
+      [customerId]
     );
     const parsed = result.rows.map((row) => {
       let safeData = row.item_data;
@@ -143,7 +195,10 @@ router.get("/customer/saved-favorites", requireAuth(), async (req, res, next) =>
           safeData = JSON.parse(row.item_data);
         } catch (e) {}
       }
-      return { favorite_id: row.favorite_id, item_data: safeData };
+      return {
+        favorite_id: row.favorite_id,
+        item_data: safeData,
+      };
     });
     res.json(parsed);
   } catch (error) {
@@ -153,27 +208,15 @@ router.get("/customer/saved-favorites", requireAuth(), async (req, res, next) =>
 });
 
 router.post("/customer/saved-favorites", requireAuth(), async (req, res, next) => {
-  const email = req.body.customer_email;
-  const name = req.body.customer_name || email.split("@")[0];
-  const googleId = req.body.google_id || email;
-  const itemDataStr = JSON.stringify(req.body.item_data);
-
+  const customerId = req.user?.customer_id;
+  if (!customerId) {
+    return res.status(401).json({ error: "Customer account required" });
+  }
+  const itemDataStr = JSON.stringify(req.body.item_data || {});
   try {
-    let custRes = await pool.query(
-      `SELECT customer_id FROM customer WHERE email = $1 LIMIT 1`,
-      [email],
-    );
-    let custId = custRes.rows[0]?.customer_id;
-    if (!custId) {
-      const insertRes = await pool.query(
-        `INSERT INTO customer (email, name, google_id) VALUES ($1, $2, $3) RETURNING customer_id`,
-        [email, name, googleId],
-      );
-      custId = insertRes.rows[0].customer_id;
-    }
     const favRes = await pool.query(
       `INSERT INTO customer_favorite (customer_id, item_data) VALUES ($1, $2) RETURNING favorite_id`,
-      [custId, itemDataStr],
+      [customerId, itemDataStr]
     );
     res.json({ favorite_id: favRes.rows[0].favorite_id });
   } catch (err) {
