@@ -412,3 +412,209 @@
     font-weight: 700;
     padding: 0.85rem 2.5rem;
   }
+
+  /* Single-screen customization layout + palette */
+  .customize-fullpage-single {
+    background: linear-gradient(170deg, #e7d8ba 0%, #cfa97d 100%);
+  }
+
+  .customize-fullpage-single .customize-top-bar {
+    background: #f3efe2;
+    padding: 0.55rem 1rem;
+    gap: 0.7rem;
+  }
+
+  .customize-fullpage-single .customize-item-price {
+    color: #652613;
+    background: #eee7d5;
+  }
+
+  .customize-fullpage-single .customize-single-content {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(260px, 0.7fr);
+    gap: 1rem;
+    padding: 1rem 1.25rem 1.1rem;
+    overflow: hidden;
+  }
+
+  .customize-fullpage-single .customize-single-left {
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 0.2rem;
+  }
+
+  .customize-fullpage-single .customize-sections-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+    align-content: start;
+  }
+
+  .customize-fullpage-single .customize-section-card {
+    background: #f3efe2;
+    border: 2px solid #aa846d;
+    border-radius: 14px;
+    padding: 0.9rem;
+  }
+
+  .customize-fullpage-single .customize-section-card-wide {
+    grid-column: 1 / -1;
+  }
+
+  .customize-fullpage-single .customize-step-title-left {
+    text-align: left;
+    margin: 0 0 0.55rem;
+    color: #7b4535;
+  }
+
+  .customize-fullpage-single .customize-step-subtitle-left {
+    text-align: left;
+    margin: 0 0 0.65rem;
+  }
+
+  .customize-fullpage-single .customize-option-grid-compact {
+    grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+    gap: 0.6rem;
+    margin-top: 0;
+  }
+
+  .customize-fullpage-single .customize-option-card {
+    background: #f3efe2;
+    border-color: #aa846d;
+    padding: 0.95rem 0.8rem;
+    min-height: 82px;
+    justify-content: center;
+  }
+
+  .customize-fullpage-single .customize-option-card:hover {
+    background: #eee7d5;
+    border-color: #652613;
+  }
+
+  .customize-fullpage-single .customize-option-card.selected {
+    border-color: #652613;
+    background: #eee7d5;
+    box-shadow: 0 3px 10px rgba(101, 38, 19, 0.14), inset 0 0 0 1px rgba(101, 38, 19, 0.1);
+  }
+
+  .customize-fullpage-single .customize-option-check {
+    background: #652613;
+  }
+
+  .customize-fullpage-single .customize-single-right {
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  .customize-fullpage-single .customize-side-total-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #652613;
+    color: #ffffff;
+    border-radius: 12px;
+    padding: 0.75rem 0.9rem;
+    border: 2px solid #652613;
+  }
+
+  .customize-fullpage-single .customize-side-total-label {
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+  }
+
+  .customize-fullpage-single .customize-side-total-value {
+    font-weight: 800;
+    font-size: 1.25rem;
+  }
+
+  .customize-fullpage-single .customize-review-compact {
+    margin-top: 0;
+    flex: 0 0 auto;
+    min-height: auto;
+    display: block;
+    overflow: visible;
+    background: #f3efe2;
+  }
+
+  .customize-fullpage-single .customize-review-header {
+    background: linear-gradient(135deg, #652613 0%, #7b4535 100%);
+  }
+
+  .customize-fullpage-single .customize-review-total-price {
+    color: #652613;
+  }
+
+  .customize-fullpage-single .customize-review-topping-chip {
+    background: #eee7d5;
+    border-color: #d9ccb2;
+  }
+
+  .customize-fullpage-single .customize-review-compact .customize-review-body,
+  .customize-fullpage-single .customize-review-compact .customize-review-comments,
+  .customize-fullpage-single .customize-review-compact .customize-review-breakdown,
+  .customize-fullpage-single .customize-review-compact .customize-review-total {
+    background: #f3efe2;
+  }
+
+  .customize-fullpage-single .customize-review-compact .customize-review-body {
+    overflow: visible;
+  }
+
+  .customize-fullpage-single .customize-review-compact .customize-review-breakdown {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .customize-fullpage-single .customize-review-compact .customize-review-total {
+    position: static;
+  }
+
+  .customize-fullpage-single .customize-single-add {
+    width: 100%;
+    flex-shrink: 0;
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.12);
+    background: #652613;
+    color: #ffffff;
+  }
+
+  .customize-fullpage-single .customize-single-add:hover {
+    background: #4f1d0f;
+    color: #ffffff;
+  }
+
+  @media (max-width: 1280px) {
+    .customize-fullpage-single .customize-single-content {
+      grid-template-columns: 1fr;
+      overflow-y: auto;
+    }
+
+    .customize-fullpage-single .customize-single-left,
+    .customize-fullpage-single .customize-single-right {
+      overflow: visible;
+    }
+  }
+
+  @media (max-width: 860px) {
+    .customize-fullpage-single .customize-single-content {
+      padding: 0.85rem;
+    }
+
+    .customize-fullpage-single .customize-sections-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .customize-fullpage-single .customize-option-grid-compact {
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+  }

@@ -363,3 +363,39 @@ html, body, #root {
     background: #000000 !important;
     color: #ffffff !important;
   }
+
+  /* Customer palette overrides */
+  .customer-page {
+    background: linear-gradient(180deg, #e7d8ba 0%, #cfa97d 100%);
+  }
+
+  .customer-page .customer-header {
+    background: #7b4535;
+  }
+
+  .customer-page .exit-btn,
+  .customer-page .my-orders-btn,
+  .customer-page .menu-board-btn {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: #ffffff;
+    color: #ffffff;
+  }
+
+  .customer-page .exit-btn:hover,
+  .customer-page .my-orders-btn:hover,
+  .customer-page .menu-board-btn:hover {
+    background: #4f1d0f;
+    border-color: #4f1d0f;
+    color: #ffffff;
+  }
+
+  .customer-page .menu-board-btn.active {
+    background: #dad2af;
+    border-color: #aa846d;
+    color: #7b4535;
+  }
+
+  .customer-page .cart-badge {
+    background: #652613;
+    box-shadow: 0 8px 24px rgba(101, 38, 19, 0.35);
+  }

@@ -525,3 +525,53 @@
     max-width: 560px;
   }
 }
+
+/* Customer palette + contrast-safe button text */
+.customer-login {
+  background: linear-gradient(135deg, #dad2af 0%, #aa846d 100%);
+}
+
+.customer-login .login-card {
+  border-color: #aa846d;
+  box-shadow: 0 8px 24px rgba(123, 69, 53, 0.18);
+}
+
+.customer-login .login-icon,
+.customer-login .info-icon {
+  color: #7b4535;
+}
+
+.customer-login .info-card {
+  background: #dad2af;
+  border-color: #aa846d;
+}
+
+.customer-login .info-card:hover {
+  border-color: #7b4535;
+}
+
+.customer-login .login-button {
+  background: #652613;
+  color: #ffffff;
+}
+
+.customer-login .login-button:hover {
+  background: #4f1d0f;
+}
+
+/* Ensure guest button text stays clearly visible */
+.customer-login .guest-login-btn {
+  background: #652613;
+  color: #ffffff;
+  border-color: #652613;
+}
+
+.customer-login .guest-login-btn:hover {
+  background: #4f1d0f;
+  color: #ffffff;
+  border-color: #4f1d0f;
+}
+
+.customer-login .guest-login-note {
+  color: #829786;
+}

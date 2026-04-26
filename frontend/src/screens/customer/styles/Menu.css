@@ -398,3 +398,34 @@
     transform: translateY(-2px) !important;
     box-shadow: 0 4px 12px rgba(100, 160, 200, 0.2) !important;
   }
+
+  /* Customer palette overrides */
+  .customer-page .kiosk-category-card,
+  .customer-page .menu-item-card {
+    border-color: #aa846d;
+    background: #f3efe2;
+  }
+
+  .customer-page .kiosk-category-card:hover,
+  .customer-page .menu-item-card:hover {
+    background: #eee7d5;
+    border-color: #652613;
+  }
+
+  .customer-page .kiosk-category-name,
+  .customer-page .kiosk-category-title,
+  .customer-page .item-price {
+    color: #7b4535;
+  }
+
+  .customer-page .kiosk-back-btn {
+    background: #652613;
+    border-color: #652613;
+    color: #ffffff;
+  }
+
+  .customer-page .kiosk-back-btn:hover {
+    background: #4f1d0f;
+    border-color: #4f1d0f;
+    color: #ffffff;
+  }
