@@ -46,6 +46,7 @@ export default function CustomerScreen() {
   const [currentItem, setCurrentItem] = useState(null);
   const [editingCartItemId, setEditingCartItemId] = useState(null);
   const [customizeStep, setCustomizeStep] = useState(1);
+  const [selectedSize, setSelectedSize] = useState(null);
   const [selectedSugar, setSelectedSugar] = useState(null);
   const [selectedIce, setSelectedIce] = useState(null);
   const [selectedToppings, setSelectedToppings] = useState([]);
@@ -62,6 +63,7 @@ export default function CustomerScreen() {
   const {
     menuItems,
     categories,
+    sizeOptions,
     sugarOptions,
     iceOptions,
     toppingOptions,
@@ -292,6 +294,14 @@ export default function CustomerScreen() {
     );
   }, [sugarOptions]);
 
+  const defaultSizeOption = useMemo(() => {
+    if (!sizeOptions.length) return null;
+    return (
+      sizeOptions.find((o) => (o.name || "").toLowerCase().includes("regular")) ||
+      sizeOptions[0]
+    );
+  }, [sizeOptions]);
+
   const defaultIceOption = useMemo(() => {
     if (!iceOptions.length) return null;
     return (
@@ -302,14 +312,17 @@ export default function CustomerScreen() {
 
   useEffect(() => {
     if (screen !== SCREEN.CUSTOMIZE || !currentItem || editingCartItemId) return;
+    if (!selectedSize && defaultSizeOption) setSelectedSize(defaultSizeOption);
     if (!selectedSugar && defaultSugarOption) setSelectedSugar(defaultSugarOption);
     if (!selectedIce && defaultIceOption) setSelectedIce(defaultIceOption);
   }, [
     screen,
     currentItem,
     editingCartItemId,
+    selectedSize,
     selectedSugar,
     selectedIce,
+    defaultSizeOption,
     defaultSugarOption,
     defaultIceOption,
   ]);
@@ -395,11 +408,13 @@ export default function CustomerScreen() {
       if (!cartItem) return true;
       const favSugar = (d.sugarLevel || "").toLowerCase();
       const favIce = (d.iceLevel || "").toLowerCase();
+      const favSize = (d.sizeName || "").toLowerCase();
       const favToppings = (d.toppingNames || []).slice().sort().join(",").toLowerCase();
       const cartSugar = (cartItem.sugarLevel || "").toLowerCase();
       const cartIce = (cartItem.iceLevel || "").toLowerCase();
+      const cartSize = (cartItem.sizeName || "").toLowerCase();
       const cartToppings = (cartItem.toppingNames || []).slice().sort().join(",").toLowerCase();
-      return favSugar === cartSugar && favIce === cartIce && favToppings === cartToppings;
+      return favSugar === cartSugar && favIce === cartIce && favSize === cartSize && favToppings === cartToppings;
     });
   }
 
@@ -427,6 +442,7 @@ export default function CustomerScreen() {
           category: menuItem.category || "",
           sugarLevel: cartItem?.sugarLevel || "",
           iceLevel: cartItem?.iceLevel || "",
+          sizeName: cartItem?.sizeName || "",
           toppingNames: cartItem?.toppingNames || [],
           comments: cartItem?.comments || "",
           modificationIds: cartItem?.modificationIds || [],
@@ -453,6 +469,7 @@ export default function CustomerScreen() {
 
   // ── Customize flow handlers ────────────────────────────────────────
   function clearCustomization() {
+    setSelectedSize(defaultSizeOption);
     setSelectedSugar(defaultSugarOption);
     setSelectedIce(defaultIceOption);
     setSelectedToppings([]);
@@ -479,6 +496,10 @@ export default function CustomerScreen() {
     const menuItem = menuItems.find((menu) => menu.id === item.menuItemId);
     if (!menuItem) return;
     const selectedIds = new Set(item.modificationIds || []);
+    const size =
+      sizeOptions.find((opt) => selectedIds.has(opt.id)) ||
+      sizeOptions.find((opt) => opt.name === item.sizeName) ||
+      defaultSizeOption;
     const sugar =
       sugarOptions.find((opt) => selectedIds.has(opt.id)) ||
       sugarOptions.find((opt) => opt.name === item.sugarLevel) ||
@@ -494,6 +515,7 @@ export default function CustomerScreen() {
     setEditingCartItemId(item.id);
     setCurrentItem(menuItem);
     setCustomizeStep(1);
+    setSelectedSize(size);
     setSelectedSugar(sugar);
     setSelectedIce(ice);
     setSelectedToppings(toppings.length ? toppings : fallbackToppings);
@@ -511,6 +533,12 @@ export default function CustomerScreen() {
 
   function saveCustomizedItem() {
     if (!currentItem) return;
+    const effectiveSize =
+      selectedSize ||
+      defaultSizeOption ||
+      sizeOptions.find((o) => (o.name || "").toLowerCase().includes("regular")) ||
+      sizeOptions[0] ||
+      null;
     const effectiveSugar =
       selectedSugar ||
       defaultSugarOption ||
@@ -524,10 +552,12 @@ export default function CustomerScreen() {
       null;
     const totalPrice =
       currentItem.cost +
+      (effectiveSize?.cost || 0) +
       (effectiveSugar?.cost || 0) +
       (effectiveIce?.cost || 0) +
       selectedToppings.reduce((sum, t) => sum + t.cost, 0);
     const modificationIds = [
+      effectiveSize?.id,
       effectiveSugar?.id,
       effectiveIce?.id,
       ...selectedToppings.map((t) => t.id),
@@ -536,6 +566,7 @@ export default function CustomerScreen() {
       menuItemId: currentItem.id,
       name: currentItem.name,
       price: totalPrice,
+      sizeName: effectiveSize?.name || "Regular",
       sugarLevel: effectiveSugar?.name || "50% Sugar",
       iceLevel: effectiveIce?.name || "Regular Ice",
       toppingNames: selectedToppings.map((t) => t.name),
@@ -682,6 +713,8 @@ export default function CustomerScreen() {
             setSelectedSugar={setSelectedSugar}
             selectedIce={selectedIce}
             setSelectedIce={setSelectedIce}
+            selectedSize={selectedSize}
+            setSelectedSize={setSelectedSize}
             selectedToppings={selectedToppings}
             toggleTopping={toggleTopping}
             comments={comments}
@@ -689,6 +722,7 @@ export default function CustomerScreen() {
             handleCancelCustomization={handleCancelCustomization}
             saveCustomizedItem={saveCustomizedItem}
             editingCartItemId={editingCartItemId}
+            sizeOptions={sizeOptions}
             sugarOptions={sugarOptions}
             iceOptions={iceOptions}
             toppingOptions={toppingOptions}

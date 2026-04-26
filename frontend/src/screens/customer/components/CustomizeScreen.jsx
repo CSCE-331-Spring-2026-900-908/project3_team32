@@ -4,6 +4,8 @@ import { currency } from "../utils";
 
 export default function CustomizeScreen({
   currentItem,
+  selectedSize,
+  setSelectedSize,
   selectedSugar,
   setSelectedSugar,
   selectedIce,
@@ -15,12 +17,14 @@ export default function CustomizeScreen({
   handleCancelCustomization,
   saveCustomizedItem,
   editingCartItemId,
+  sizeOptions,
   sugarOptions,
   iceOptions,
   toppingOptions,
 }) {
   const livePrice =
     currentItem.cost +
+    (selectedSize?.cost || 0) +
     (selectedSugar?.cost || 0) +
     (selectedIce?.cost || 0) +
     selectedToppings.reduce((sum, t) => sum + t.cost, 0);
@@ -38,6 +42,23 @@ export default function CustomizeScreen({
       <div className="customize-single-content">
         <div className="customize-single-left">
           <div className="customize-sections-grid">
+            <section className="customize-section-card customize-section-card-wide">
+              <h2 className="customize-step-title customize-step-title-left">Size</h2>
+              <div className="customize-option-grid customize-option-grid-compact customize-size-grid">
+                {sizeOptions.map((opt) => (
+                  <button
+                    key={opt.id}
+                    className={`customize-option-card customize-size-option${selectedSize?.id === opt.id ? " selected" : ""}`}
+                    onClick={() => setSelectedSize(opt)}
+                  >
+                    <span className="customize-option-name">{opt.name}</span>
+                    {opt.cost > 0 && <span className="customize-option-cost">+{currency(opt.cost)}</span>}
+                    {selectedSize?.id === opt.id && <span className="customize-option-check"><FiCheck /></span>}
+                  </button>
+                ))}
+              </div>
+            </section>
+
             <section className="customize-section-card">
               <h2 className="customize-step-title customize-step-title-left">Sugar</h2>
               <div className="customize-option-grid customize-option-grid-compact">
@@ -123,6 +144,15 @@ export default function CustomizeScreen({
 
             <div className="customize-review-body">
               <div className="customize-review-row">
+                <span className="customize-review-label">Size</span>
+                <span className="customize-review-value">
+                  {selectedSize?.name || "Regular"}
+                  {selectedSize?.cost > 0 && (
+                    <span className="customize-review-value-cost">+{currency(selectedSize.cost)}</span>
+                  )}
+                </span>
+              </div>
+              <div className="customize-review-row">
                 <span className="customize-review-label">
                   <span className="customize-review-label-icon"><FiDroplet /></span> Sugar
                 </span>
@@ -171,6 +201,11 @@ export default function CustomizeScreen({
               <div className="customize-review-breakdown-row">
                 <span>Base</span><span>{currency(currentItem.cost)}</span>
               </div>
+              {selectedSize?.cost > 0 && (
+                <div className="customize-review-breakdown-row">
+                  <span>{selectedSize.name}</span><span>+{currency(selectedSize.cost)}</span>
+                </div>
+              )}
               {selectedSugar?.cost > 0 && (
                 <div className="customize-review-breakdown-row">
                   <span>{selectedSugar.name}</span><span>+{currency(selectedSugar.cost)}</span>

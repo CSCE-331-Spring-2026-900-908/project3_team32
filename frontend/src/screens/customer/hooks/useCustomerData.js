@@ -11,6 +11,7 @@ export function useCustomerData({ token, user }) {
   const [sugarOptions, setSugarOptions] = useState([]);
   const [iceOptions, setIceOptions] = useState([]);
   const [toppingOptions, setToppingOptions] = useState([]);
+  const [sizeOptions, setSizeOptions] = useState([]);
   const [customerOrders, setCustomerOrders] = useState([]);
   const [mostOrderedItems, setMostOrderedItems] = useState([]);
   const [customerMostOrderedItems, setCustomerMostOrderedItems] = useState([]);
@@ -50,6 +51,7 @@ export function useCustomerData({ token, user }) {
 
         const modRes = await fetch(`${API_BASE}/cashier/modifications`);
         const modData = await modRes.json();
+        setSizeOptions((modData.sizes || []).map((m) => ({ id: m.modification_type_id, name: m.name, cost: Number(m.cost) })));
         setSugarOptions((modData.sugar || []).map((m) => ({ id: m.modification_type_id, name: m.name, cost: Number(m.cost) })));
         setIceOptions((modData.ice || []).map((m) => ({ id: m.modification_type_id, name: m.name, cost: Number(m.cost) })));
         setToppingOptions((modData.toppings || []).map((m) => ({ id: m.modification_type_id, name: m.name, cost: Number(m.cost) })));
@@ -215,6 +217,7 @@ export function useCustomerData({ token, user }) {
     loading,
     menuItems,
     categories,
+    sizeOptions,
     sugarOptions,
     iceOptions,
     toppingOptions,

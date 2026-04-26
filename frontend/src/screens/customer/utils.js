@@ -54,6 +54,7 @@ export function getRewardsStatus(points, isEmployee) {
 
 export function buildDisplayLines(item) {
   const lines = [];
+  if (item.sizeName && item.sizeName.toLowerCase() !== "regular") lines.push(`Size: ${item.sizeName}`);
   if (item.sugarLevel && item.sugarLevel !== "Regular") lines.push(`Sugar: ${item.sugarLevel}`);
   if (item.iceLevel && item.iceLevel !== "Regular") lines.push(`Ice: ${item.iceLevel}`);
   if (item.toppingNames?.length) lines.push(`Toppings: ${item.toppingNames.join(", ")}`);

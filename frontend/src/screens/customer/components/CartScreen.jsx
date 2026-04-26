@@ -22,6 +22,15 @@ export default function CartScreen({
   pointsToNextTier,
   tierProgressPercent,
 }) {
+  const nextTierName =
+    rewardsStatus.tier === "Member"
+      ? "Gold"
+      : rewardsStatus.tier === "Gold"
+        ? "Platinum"
+        : rewardsStatus.tier === "Platinum"
+          ? "Diamond"
+          : null;
+
   return (
     <div className="customer-content cart-screen">
       <div className="kiosk-back-row">
@@ -56,9 +65,9 @@ export default function CartScreen({
                 </div>
               ) : (
                 <div className="tier-visual-row">
-                  <span className={`tier-chip ${["Gold", "Platinum", "Diamond"].includes(rewardsStatus.tier) ? "active" : ""}`}>Gold</span>
-                  <span className={`tier-chip ${["Platinum", "Diamond"].includes(rewardsStatus.tier) ? "active" : ""}`}>Platinum</span>
-                  <span className={`tier-chip ${rewardsStatus.tier === "Diamond" ? "active" : ""}`}>Diamond</span>
+                  <span className={`tier-chip${nextTierName ? "" : " active"}`}>
+                    {nextTierName ? `Next Tier: ${nextTierName}` : "Top Tier Reached"}
+                  </span>
                 </div>
               )}
               <div className="rewards-progress">

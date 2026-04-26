@@ -487,6 +487,31 @@
     padding: 0.9rem;
   }
 
+  .customize-fullpage-single .customize-size-card {
+    padding-bottom: 0.75rem;
+    align-self: start;
+  }
+
+  .customize-fullpage-single .customize-size-grid {
+    grid-template-columns: repeat(2, minmax(150px, 220px));
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .customize-fullpage-single .customize-size-option {
+    min-height: 56px;
+    padding: 0.6rem 0.7rem;
+    gap: 0.2rem;
+  }
+
+  .customize-fullpage-single .customize-size-option .customize-option-name {
+    font-size: 0.95rem;
+  }
+
+  .customize-fullpage-single .customize-size-option .customize-option-cost {
+    font-size: 0.74rem;
+  }
+
   .customize-fullpage-single .comments-input {
     width: 100%;
     box-sizing: border-box;
@@ -532,6 +557,12 @@
     grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
     gap: 0.6rem;
     margin-top: 0;
+  }
+
+  .customize-fullpage-single .customize-option-grid-compact.customize-size-grid {
+    grid-template-columns: repeat(2, minmax(150px, 220px));
+    justify-content: center;
+    gap: 0.5rem;
   }
 
   .customize-fullpage-single .customize-option-card {
