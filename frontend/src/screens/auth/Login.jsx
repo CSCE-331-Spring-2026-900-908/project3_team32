@@ -90,7 +90,7 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/auth/guest/customer`, {
+      const res = await fetch(`${API_BASE}/auth/guest/customer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -207,7 +207,7 @@ export default function Login() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${API_BASE}/api/auth/dev/login`, {
+      const res = await fetch(`${API_BASE}/auth/dev/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role }),

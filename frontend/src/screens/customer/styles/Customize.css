@@ -422,11 +422,28 @@
     background: #f3efe2;
     padding: 0.55rem 1rem;
     gap: 0.7rem;
+    border-bottom-color: #d9ccb2;
+  }
+
+  .customize-fullpage-single .customize-top-bar .kiosk-back-btn {
+    background: #652613;
+    border-color: #652613;
+    color: #ffffff;
+  }
+
+  .customize-fullpage-single .customize-top-bar .kiosk-back-btn:hover {
+    background: #4f1d0f;
+    border-color: #4f1d0f;
+    color: #ffffff;
+  }
+
+  .customize-fullpage-single .customize-item-name {
+    color: #7b4535;
   }
 
   .customize-fullpage-single .customize-item-price {
     color: #652613;
-    background: #eee7d5;
+    background: #f3efe2;
   }
 
   .customize-fullpage-single .customize-single-content {
@@ -443,6 +460,7 @@
     min-height: 0;
     overflow-y: auto;
     padding-right: 0.2rem;
+    padding-bottom: 6rem;
   }
 
   .customize-fullpage-single .customize-sections-grid {
@@ -457,6 +475,32 @@
     border: 2px solid #aa846d;
     border-radius: 14px;
     padding: 0.9rem;
+  }
+
+  .customize-fullpage-single .comments-input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 2px solid #aa846d;
+    border-radius: 12px;
+    background: #fcf8ee;
+    color: #3d2419;
+    padding: 0.72rem 0.85rem;
+    font-size: 0.98rem;
+    font-weight: 600;
+    line-height: 1.3;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  }
+
+  .customize-fullpage-single .comments-input::placeholder {
+    color: #8f7863;
+    font-weight: 500;
+  }
+
+  .customize-fullpage-single .comments-input:focus {
+    border-color: #652613;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(101, 38, 19, 0.14);
   }
 
   .customize-fullpage-single .customize-section-card-wide {
@@ -511,6 +555,7 @@
     flex-direction: column;
     gap: 0.75rem;
     min-width: 0;
+    padding-bottom: 5rem;
   }
 
   .customize-fullpage-single .customize-side-total-top {
