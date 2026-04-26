@@ -287,9 +287,9 @@ export default function CustomerScreen() {
   const defaultSugarOption = useMemo(() => {
     if (!sugarOptions.length) return null;
     return (
-      sugarOptions.find((o) => /50\s*%/.test((o.name || "").toLowerCase())) ||
-      sugarOptions.find((o) => (o.name || "").toLowerCase().includes("50")) ||
-      sugarOptions.find((o) => (o.name || "").toLowerCase().includes("half")) ||
+      sugarOptions.find((o) => /100\s*%/.test((o.name || "").toLowerCase())) ||
+      sugarOptions.find((o) => (o.name || "").toLowerCase().includes("100")) ||
+      sugarOptions.find((o) => (o.name || "").toLowerCase().includes("regular")) ||
       sugarOptions[0]
     );
   }, [sugarOptions]);
@@ -567,7 +567,7 @@ export default function CustomerScreen() {
       name: currentItem.name,
       price: totalPrice,
       sizeName: effectiveSize?.name || "Regular",
-      sugarLevel: effectiveSugar?.name || "50% Sugar",
+      sugarLevel: effectiveSugar?.name || "100% Sugar",
       iceLevel: effectiveIce?.name || "Regular Ice",
       toppingNames: selectedToppings.map((t) => t.name),
       comments: comments.trim(),
