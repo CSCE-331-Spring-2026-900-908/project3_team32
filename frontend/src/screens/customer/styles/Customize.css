@@ -606,14 +606,12 @@
   }
 
   .customize-fullpage-single .customize-single-right {
-    min-height: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
+    height: 100%;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
     min-width: 0;
-    padding-bottom: 5rem;
   }
 
   .customize-fullpage-single .customize-side-total-top {
@@ -640,10 +638,9 @@
 
   .customize-fullpage-single .customize-review-compact {
     margin-top: 0;
-    flex: 0 0 auto;
-    min-height: auto;
+    flex: 1; 
     display: block;
-    overflow: visible;
+    overflow-y: auto; 
     background: #f3efe2;
   }
 
@@ -683,8 +680,8 @@
   .customize-fullpage-single .customize-single-add {
     width: 100%;
     flex-shrink: 0;
-    position: sticky;
-    bottom: 0;
+    position: relative; 
+    margin-top: auto; 
     z-index: 2;
     box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.12);
     background: #652613;
@@ -720,4 +717,21 @@
     .customize-fullpage-single .customize-option-grid-compact {
       grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     }
+  }
+
+
+  .customize-fullpage-single .customize-review-compact {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .customize-fullpage-single .customize-single-add {
+    /* Keep all your existing visual styles (background, color, box-shadow, width, etc.) */
+    width: 100%;
+    flex-shrink: 0;
+    z-index: 2;
+  
+    /* Change these layout properties: */
+    position: relative; /* Change from sticky to relative */
+    margin-top: auto;   /* Push the button to the very bottom */
   }
