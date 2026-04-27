@@ -1,0 +1,81 @@
+.tt-page {
+  padding: 1.5em 2em;
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.tt-title {
+  font-size: 2em;
+  font-weight: 900;
+  margin: 0;
+  color: #2f2f2f;
+  flex-shrink: 0;
+}
+
+.tt-title-num { color: #e8102a; }
+
+.tt-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1em;
+  flex: 1;
+  min-height: 0;
+}
+
+.tt-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4em;
+  text-align: center;
+  background: #fff;
+  border-radius: 8px;
+  padding: 0.75em 0.5em;
+  min-height: 0;
+}
+
+.tt-img-wrap {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tt-cup {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.tt-cup-fallback {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 3em;
+}
+
+.tt-rank {
+  font-size: 0.85em;
+  font-weight: 900;
+  color: #e8102a;
+  flex-shrink: 0;
+}
+
+.tt-name {
+  font-size: 0.9em;
+  font-weight: 600;
+  color: #2f2f2f;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+.tt-price {
+  font-size: 0.85em;
+  color: #666;
+  flex-shrink: 0;
+}

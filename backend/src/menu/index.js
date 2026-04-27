@@ -14,6 +14,34 @@ router.get("/menu/items", async (req, res, next) => {
   }
 });
 
+let topItemsCache = null;
+let topItemsCacheTime = 0;
+const TOP_ITEMS_TTL = 10 * 60 * 1000; // 10 minutes
+
+router.get("/menu/top-items", async (req, res, next) => {
+  try {
+    const now = Date.now();
+    if (topItemsCache && now - topItemsCacheTime < TOP_ITEMS_TTL) {
+      return res.json({ topItems: topItemsCache });
+    }
+
+    const result = await pool.query(
+      `SELECT m.menu_item_id, m.name, m.cost, SUM(oi.quantity) AS total_ordered
+       FROM order_item oi
+       JOIN menu_item m ON m.menu_item_id = oi.menu_item_id
+       GROUP BY m.menu_item_id, m.name, m.cost
+       ORDER BY total_ordered DESC
+       LIMIT 10`
+    );
+
+    topItemsCache = result.rows;
+    topItemsCacheTime = now;
+    res.json({ topItems: result.rows });
+  } catch (error) {
+    next(error);
+  }
+});
+
 function describeOpenMeteoWeatherCode(weatherCode) {
   const codeMap = {
     0: "Clear sky",

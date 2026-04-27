@@ -1,0 +1,90 @@
+.mb-board {
+  font-family: Arial, Helvetica, sans-serif;
+  color: #2f2f2f;
+  height: 100vh;
+  background: #f3f3f3;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-size: clamp(11px, min(1.1vw, 1.4vh), 16px);
+}
+
+.mb-carousel {
+  display: flex;
+  align-items: center;
+  gap: 0.75em;
+  flex: 1;
+  min-height: 0;
+  padding: 0 0.5em;
+}
+
+.mb-track-wrapper {
+  flex: 1;
+  overflow: hidden;
+  height: 100%;
+}
+
+.mb-track {
+  display: flex;
+  transition: transform 0.4s ease;
+  height: 100%;
+}
+
+.mb-slide {
+  min-width: 100%;
+  box-sizing: border-box;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.mb-arrow {
+  background: none;
+  border: none;
+  font-size: 3.75em;
+  color: #6f6f6f;
+  cursor: pointer;
+  padding: 0 0.5em;
+  line-height: 1;
+  transition: color 0.2s;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.mb-arrow:hover:not(:disabled) { color: #2f2f2f; }
+.mb-arrow:disabled { color: #ccc; cursor: default; }
+
+.mb-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.625em;
+  padding: 0.75em 0;
+  flex-shrink: 0;
+}
+
+.mb-dot {
+  width: 0.625em;
+  height: 0.625em;
+  border-radius: 50%;
+  border: none;
+  background: #ccc;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s;
+}
+
+.mb-dot.active { background: #6f6f6f; }
+
+.mb-wip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #888;
+  gap: 0.75em;
+}
+
+.mb-wip-icon { font-size: 3.75em; }
+.mb-wip h2 { margin: 0; font-size: 1.75em; font-weight: 800; }
+.mb-wip p { margin: 0; font-size: 1em; }

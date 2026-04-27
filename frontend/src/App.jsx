@@ -9,7 +9,8 @@ import EmployeeDashboard from './screens/employee/EmployeeDashboard';
 import CashierScreen from './screens/employee/cashier/CashierScreen';
 import ManagerScreen from './screens/employee/manager/ManagerScreen';
 import CustomerScreen from './screens/customer/CustomerScreen';
-import MenuBoard from "./screens/menu/MenuBoard";
+import MenuBoardSlider from "./screens/menu/MenuBoardSlider";
+import MenuBoard from './screens/menu/MenuBoard.jsx';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
@@ -22,7 +23,8 @@ function App() {
             {/* Public routes */}
             <Route path="/" element={<Portal />} />
             <Route path="/login/:role" element={<Login />} />
-            <Route path="/menu-board" element={<MenuBoard />} />
+            <Route path="/menu-board" element={<MenuBoardSlider />} />
+            <Route path="/menu-board/full" element={<MenuBoard />} />
 
             {/* Customer — requires customer JWT */}
             <Route
