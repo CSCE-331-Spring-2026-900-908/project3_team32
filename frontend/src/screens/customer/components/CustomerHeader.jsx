@@ -48,10 +48,10 @@ export default function CustomerHeader({
 
               <div className={`accessibility-panel ${accessibilityOpen ? "open" : ""}`} style={{ padding: "1.5rem" }}>
                 <section className="a11y-section">
-                  <div className="a11y-section-header">
-                    <span className="a11y-section-title">UI Size</span>
-                    <span className="a11y-section-value">{textScale}%</span>
-                  </div>
+                <div className="a11y-section-header">
+                  <span className="a11y-section-title">UI Size</span>
+                  <span className="a11y-section-value notranslate" translate="no">{textScale}%</span>
+                </div>
                   <input
                     type="range" min="85" max="140" step="5"
                     value={textScale}
@@ -103,7 +103,7 @@ export default function CustomerHeader({
                   {magnifierEnabled && (
                     <div className="magnifier-controls">
                       <label className="a11y-control-label">
-                        Zoom &nbsp;<strong>{magnifierZoom}×</strong>
+                        Zoom &nbsp;<strong className="notranslate" translate="no">{magnifierZoom}×</strong>
                       </label>
                       <input
                         type="range" min="1.5" max="4" step="0.5"
@@ -130,7 +130,7 @@ export default function CustomerHeader({
                       >
                         −
                       </button>
-                      <span className="a11y-step-value">{fontSize}%</span>
+                      <span className="a11y-step-value notranslate" translate="no">{fontSize}%</span>
                       <button
                         className="a11y-step-btn"
                         onClick={() => setFontSize((v) => Math.min(200, v + 10))}
