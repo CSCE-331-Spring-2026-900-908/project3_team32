@@ -593,6 +593,18 @@
     background: #652613;
   }
 
+  .customize-ice-locked {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .customize-ice-locked-note {
+    font-size: 0.8rem;
+    color: #8b6347;
+    margin: 0;
+  }
+
   .customize-fullpage-single .customize-single-right {
     min-height: 0;
     overflow-y: auto;

@@ -10,6 +10,7 @@ export default function CustomizeScreen({
   setSelectedSugar,
   selectedIce,
   setSelectedIce,
+  isIceLocked = false,
   selectedToppings,
   toggleTopping,
   comments,
@@ -78,19 +79,29 @@ export default function CustomizeScreen({
 
             <section className="customize-section-card">
               <h2 className="customize-step-title customize-step-title-left">Ice</h2>
-              <div className="customize-option-grid customize-option-grid-compact">
-                {iceOptions.map((opt) => (
-                  <button
-                    key={opt.id}
-                    className={`customize-option-card${selectedIce?.id === opt.id ? " selected" : ""}`}
-                    onClick={() => setSelectedIce(opt)}
-                  >
-                    <span className="customize-option-name">{opt.name}</span>
-                    {opt.cost > 0 && <span className="customize-option-cost">+{currency(opt.cost)}</span>}
-                    {selectedIce?.id === opt.id && <span className="customize-option-check"><FiCheck /></span>}
-                  </button>
-                ))}
-              </div>
+              {isIceLocked ? (
+                <div className="customize-ice-locked">
+                  <div className="customize-option-card selected" style={{ cursor: "default", opacity: 0.75 }}>
+                    <span className="customize-option-name">{selectedIce?.name || "No Ice"}</span>
+                    <span className="customize-option-check"><FiCheck /></span>
+                  </div>
+                  <p className="customize-ice-locked-note">Hot drinks are served without ice.</p>
+                </div>
+              ) : (
+                <div className="customize-option-grid customize-option-grid-compact">
+                  {iceOptions.map((opt) => (
+                    <button
+                      key={opt.id}
+                      className={`customize-option-card${selectedIce?.id === opt.id ? " selected" : ""}`}
+                      onClick={() => setSelectedIce(opt)}
+                    >
+                      <span className="customize-option-name">{opt.name}</span>
+                      {opt.cost > 0 && <span className="customize-option-cost">+{currency(opt.cost)}</span>}
+                      {selectedIce?.id === opt.id && <span className="customize-option-check"><FiCheck /></span>}
+                    </button>
+                  ))}
+                </div>
+              )}
             </section>
 
             <section className="customize-section-card customize-section-card-wide">

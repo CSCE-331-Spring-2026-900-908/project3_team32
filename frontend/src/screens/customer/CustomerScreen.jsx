@@ -310,6 +310,17 @@ export default function CustomerScreen() {
     );
   }, [iceOptions]);
 
+  const noIceOption = useMemo(() => {
+    if (!iceOptions.length) return null;
+    return (
+      iceOptions.find((o) => /no.?ice/i.test(o.name)) ||
+      iceOptions.find((o) => /\b0\s*%/.test(o.name)) ||
+      iceOptions[iceOptions.length - 1]
+    );
+  }, [iceOptions]);
+
+  const isHotCoffeeItem = (item) => item?.name === "Hot House Brewed Coffee";
+
   useEffect(() => {
     if (screen !== SCREEN.CUSTOMIZE || !currentItem || editingCartItemId) return;
     if (!selectedSize && defaultSizeOption) setSelectedSize(defaultSizeOption);
@@ -468,10 +479,10 @@ export default function CustomerScreen() {
   }
 
   // ── Customize flow handlers ────────────────────────────────────────
-  function clearCustomization() {
+  function clearCustomization(item) {
     setSelectedSize(defaultSizeOption);
     setSelectedSugar(defaultSugarOption);
-    setSelectedIce(defaultIceOption);
+    setSelectedIce(isHotCoffeeItem(item) ? noIceOption : defaultIceOption);
     setSelectedToppings([]);
     setComments("");
     setCustomizeStep(1);
@@ -480,7 +491,7 @@ export default function CustomerScreen() {
   function handleSelectItem(item) {
     setEditingCartItemId(null);
     setCurrentItem(item);
-    clearCustomization();
+    clearCustomization(item);
     setCustomizeStep(1);
     setScreen(SCREEN.CUSTOMIZE);
   }
@@ -504,10 +515,11 @@ export default function CustomerScreen() {
       sugarOptions.find((opt) => selectedIds.has(opt.id)) ||
       sugarOptions.find((opt) => opt.name === item.sugarLevel) ||
       defaultSugarOption;
-    const ice =
-      iceOptions.find((opt) => selectedIds.has(opt.id)) ||
-      iceOptions.find((opt) => opt.name === item.iceLevel) ||
-      defaultIceOption;
+    const ice = isHotCoffeeItem(menuItem)
+      ? noIceOption
+      : (iceOptions.find((opt) => selectedIds.has(opt.id)) ||
+         iceOptions.find((opt) => opt.name === item.iceLevel) ||
+         defaultIceOption);
     const toppings = toppingOptions.filter((opt) => selectedIds.has(opt.id));
     const fallbackToppings = (item.toppingNames || []).length
       ? toppingOptions.filter((opt) => (item.toppingNames || []).includes(opt.name))
@@ -726,6 +738,7 @@ export default function CustomerScreen() {
             sugarOptions={sugarOptions}
             iceOptions={iceOptions}
             toppingOptions={toppingOptions}
+            isIceLocked={isHotCoffeeItem(currentItem)}
           />
         )}
 
