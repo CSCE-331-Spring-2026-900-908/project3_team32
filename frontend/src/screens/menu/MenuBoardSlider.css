@@ -7,7 +7,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  font-size: clamp(11px, min(1.1vw, 1.4vh), 16px);
+  font-size: clamp(14px, min(1.5vw, 1.9vh), 20px)
 }
 
 .mb-carousel {
