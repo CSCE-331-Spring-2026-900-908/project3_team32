@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { FiChevronDown } from "react-icons/fi";
 import { LiaUniversalAccessSolid } from "react-icons/lia";
 
@@ -103,7 +103,7 @@ export default function CustomerHeader({
                   {magnifierEnabled && (
                     <div className="magnifier-controls">
                       <label className="a11y-control-label">
-                        Zoom &nbsp;<strong className="notranslate" translate="no">{magnifierZoom}×</strong>
+                        Zoom &nbsp;<strong className="notranslate" translate="no">{magnifierZoom}Ã—</strong>
                       </label>
                       <input
                         type="range" min="1.5" max="4" step="0.5"
@@ -114,33 +114,6 @@ export default function CustomerHeader({
                       />
                     </div>
                   )}
-                </section>
-
-                <div className="a11y-divider" />
-
-                <section className="a11y-section">
-                  <div className="a11y-section-header" style={{ marginBottom: 0 }}>
-                    <span className="a11y-section-title">Font Size</span>
-                    <div className="a11y-font-stepper">
-                      <button
-                        className="a11y-step-btn"
-                        onClick={() => setFontSize((v) => Math.max(50, v - 10))}
-                        disabled={fontSize <= 50}
-                        aria-label="Decrease font size"
-                      >
-                        −
-                      </button>
-                      <span className="a11y-step-value notranslate" translate="no">{fontSize}%</span>
-                      <button
-                        className="a11y-step-btn"
-                        onClick={() => setFontSize((v) => Math.min(200, v + 10))}
-                        disabled={fontSize >= 200}
-                        aria-label="Increase font size"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
                 </section>
               </div>
             </div>
@@ -156,3 +129,4 @@ export default function CustomerHeader({
     </header>
   );
 }
+
