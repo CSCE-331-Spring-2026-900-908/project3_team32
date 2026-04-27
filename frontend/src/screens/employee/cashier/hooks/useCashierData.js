@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { API_BASE } from "../constants";
 
-const CATEGORY_ORDER = ["Milk Tea", "Fruit Tea", "Fresh Brew", "Matcha", "Ice Blended", "Specialty"];
+const CATEGORY_ORDER = ["Milk Tea", "Fruit Tea", "Fresh Brew", "Matcha", "Ice Blended", "Specialty", "Seasonal"];
 
 export function useCashierData({ token }) {
   const [loading, setLoading] = useState(true);

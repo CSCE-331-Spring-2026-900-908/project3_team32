@@ -20,7 +20,7 @@ export default function MenuScreen({
   weatherLoading,
 }) {
   const isGuest = !!user?.guest;
-  const popularTabName = isGuest ? "Most Popular" : "Most Ordered";
+  const popularTabName = isGuest ? "Featured" : "Most Ordered";
   const mostOrderedData = isGuest
     ? (mostOrderedItems || [])
     : (customerMostOrderedItems?.length ? customerMostOrderedItems : (mostOrderedItems || []));
