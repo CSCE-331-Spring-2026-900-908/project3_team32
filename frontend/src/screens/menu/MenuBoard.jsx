@@ -133,14 +133,34 @@ function MenuBoard() {
                   </div>
                 ))}
               </div>
+
+              <div className="mb-bottom-bar">
+                <div className="mb-bottom-group">
+                  <h4>ICE LEVEL</h4>
+                  <p>No Ice • Less Ice • Regular • Extra Ice</p>
+                </div>
+                <div className="mb-bottom-group">
+                  <h4>SUGAR LEVEL</h4>
+                  <p>0% • 25% • 50% • 75% • 100% • 125%</p>
+                </div>
+                <div className="mb-bottom-group">
+                  <h4>TOPPING</h4>
+                  <p>
+                    Tapioca Pearls • Crystal Boba • Popping Boba (Strawberry) • Popping
+                    Boba (Mango) • Honey Jelly • Lychee Jelly • Coffee Jelly • Pudding •
+                    Ice Cream • Creama
+                  </p>
+                </div>
+              </div>
             </div>
 
-            {/* Page 1 — WIP */}
+            {/* Page 1 — image test */}
             <div className="mb-slide">
               <div className="mb-wip">
-                <div className="mb-wip-icon">🚧</div>
-                <h2>Coming Soon</h2>
-                <p>This page is a work in progress.</p>
+                <img
+                  src="https://res.cloudinary.com/deoexnkir/image/upload/e_background_removal/v1777288676/Classic-Pearl-Milk-Tea_pdy5fj.png"
+                  className="boba"
+                />
               </div>
             </div>
 
@@ -175,26 +195,6 @@ function MenuBoard() {
         ))}
       </div>
 
-      <div className="mb-bottom-bar">
-        <div className="mb-bottom-group">
-          <h4>ICE LEVEL</h4>
-          <p>No Ice • Less Ice • Regular • Extra Ice</p>
-        </div>
-
-        <div className="mb-bottom-group">
-          <h4>SUGAR LEVEL</h4>
-          <p>0% • 25% • 50% • 75% • 100% • 125%</p>
-        </div>
-
-        <div className="mb-bottom-group">
-          <h4>TOPPING</h4>
-          <p>
-            Tapioca Pearls • Crystal Boba • Popping Boba (Strawberry) • Popping
-            Boba (Mango) • Honey Jelly • Lychee Jelly • Coffee Jelly • Pudding •
-            Ice Cream • Creama
-          </p>
-        </div>
-      </div>
     </div>
   );
 }
