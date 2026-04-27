@@ -99,6 +99,8 @@ function MenuBoard() {
 
   return (
     <div className="mb-board">
+      <div className="mb-fit-frame">
+        <div className="mb-fit-content">
       <div className="mb-carousel">
         <button
           className="mb-arrow mb-arrow-left"
@@ -193,6 +195,8 @@ function MenuBoard() {
             Boba (Mango) • Honey Jelly • Lychee Jelly • Coffee Jelly • Pudding •
             Ice Cream • Creama
           </p>
+        </div>
+      </div>
         </div>
       </div>
     </div>
