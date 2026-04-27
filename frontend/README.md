@@ -1,6 +1,7 @@
 # Frontend Structure
 
 ## Overview
+
 React + Vite frontend application for the Sharetea POS system with multiple interface views.
 
 ## Directory Structure
@@ -100,29 +101,35 @@ frontend/
 ## Architecture Principles
 
 ### 1. Screen-Based Organization
+
 - Each interface (portal, auth, employee, customer, menu) is a self-contained screen
 - Screens have their own pages, components, hooks, and utilities
 - Promotes modularity and easier maintenance
 
 ### 2. Separation of Concerns
+
 - **screens/**: Interface-specific code
 - **api/**: All backend communication logic
 - **shared/**: Reusable code across screens
 - **context/**: Global state management
 
 ### 3. Component Structure
+
 Each screen follows this pattern:
+
 - **pages/**: Route-level components (containers)
 - **components/**: UI components specific to that screen
 - **hooks/**: Custom React hooks for that screen
 - **utils/**: Helper functions for that screen
 
 ### 4. API Layer
+
 - **api/services/**: Backend API calls (PostgreSQL database)
 - **api/external/**: External API integrations (OAuth, Translation, Weather, Chatbot)
 - Centralized API client with interceptors for auth and error handling
 
 ### 5. Shared Resources
+
 - **shared/components/**: Reusable UI components (buttons, modals, inputs)
 - **shared/hooks/**: Common hooks (authentication, local storage, debounce)
 - **shared/utils/**: Helper functions (date formatting, validation, calculations)
@@ -151,30 +158,37 @@ Portal
 ## Setup
 
 1. **Install dependencies:**
+
    ```bash
    cd frontend
    npm install
    ```
 
 2. **Configure environment variables:**
+
    ```bash
    # Create .env file (optional for development)
-   VITE_API_URL=http://localhost:5000/api
+   VITE_API_URL=http://localhost:5001/api
    ```
 
 3. **Run development server:**
+
    ```bash
    npm run dev
    ```
+
    Opens at `http://localhost:3000`
 
 4. **Build for production:**
+
    ```bash
    npm run build
    ```
+
    Creates optimized build in `dist/` folder
 
 5. **Preview production build:**
+
    ```bash
    npm run preview
    ```
@@ -234,43 +248,42 @@ Portal
 ## Development Guidelines
 
 ### Component Structure
+
 ```jsx
-import React from 'react';
-import './ComponentName.css';
+import React from "react";
+import "./ComponentName.css";
 
 function ComponentName({ prop1, prop2 }) {
   // Hooks
   // Event handlers
   // Helper functions
-  
-  return (
-    <div className="component-name">
-      {/* JSX */}
-    </div>
-  );
+
+  return <div className="component-name">{/* JSX */}</div>;
 }
 
 export default ComponentName;
 ```
 
 ### Custom Hook Structure
+
 ```javascript
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 export function useCustomHook(param) {
   const [state, setState] = useState(null);
-  
+
   useEffect(() => {
     // Effect logic
   }, [param]);
-  
+
   return { state, setState };
 }
 ```
 
 ### API Service Structure
+
 ```javascript
-import axios from 'axios';
+import axios from "axios";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -279,7 +292,7 @@ export const serviceNameService = {
     const response = await axios.get(`${API_BASE_URL}/endpoint`);
     return response.data;
   },
-  
+
   getById: async (id) => {
     const response = await axios.get(`${API_BASE_URL}/endpoint/${id}`);
     return response.data;
@@ -290,6 +303,7 @@ export const serviceNameService = {
 ## Deployment
 
 The app is configured for deployment on Render:
+
 - Build command: `npm install && npm run build`
 - Start command: `npm start`
 - The Express server in `server.js` serves the built React app
@@ -297,6 +311,7 @@ The app is configured for deployment on Render:
 ## Accessibility Requirements
 
 The customer interface must comply with WCAG 2.1 standards:
+
 - Keyboard navigation support
 - Screen reader compatibility
 - Sufficient color contrast
@@ -308,6 +323,7 @@ The customer interface must comply with WCAG 2.1 standards:
 ## External APIs Integration
 
 Required external APIs (team of 5):
+
 1. **OAuth** - Google/GitHub authentication
 2. **Translation** - Multi-language support
 3. **Weather** - Weather data display
@@ -324,12 +340,14 @@ Required external APIs (team of 5):
 ## Troubleshooting
 
 **Port already in use:**
+
 ```bash
 # Kill process on port 3000
 lsof -ti:3000 | xargs kill -9
 ```
 
 **Build fails:**
+
 ```bash
 # Clear cache and reinstall
 rm -rf node_modules package-lock.json
@@ -337,6 +355,7 @@ npm install
 ```
 
 **API connection issues:**
-- Check backend is running on port 5000
+
+- Check backend is running on port 5001
 - Verify VITE_API_URL in .env
 - Check CORS settings in backend
