@@ -824,6 +824,8 @@ export default function CustomerScreen() {
         toppingOptions={toppingOptions}
         sugarOptions={sugarOptions}
         iceOptions={iceOptions}
+        sizeOptions={sizeOptions}
+        mostOrderedItems={mostOrderedItems}
       />
     </div>
   );

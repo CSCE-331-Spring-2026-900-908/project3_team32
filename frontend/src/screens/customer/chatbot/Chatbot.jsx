@@ -4,9 +4,9 @@ import { useChatbot } from "./useChatbot";
 import { QUICK_SUGGESTIONS } from "./chatbotUtils";
 import "./Chatbot.css";
 
-export default function Chatbot({ menuItems, toppingOptions, sugarOptions, iceOptions }) {
+export default function Chatbot({ menuItems, toppingOptions, sugarOptions, iceOptions, sizeOptions, mostOrderedItems }) {
   const { isOpen, setIsOpen, messages, inputValue, setInputValue, isLoading, sendMessage, clearChat } =
-    useChatbot({ menuItems, toppingOptions, sugarOptions, iceOptions });
+    useChatbot({ menuItems, toppingOptions, sugarOptions, iceOptions, sizeOptions, mostOrderedItems });
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
