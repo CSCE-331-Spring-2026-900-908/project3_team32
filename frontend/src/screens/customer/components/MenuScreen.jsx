@@ -235,6 +235,13 @@ export default function MenuScreen({
                 ) : (
                   mostOrderedData.map((item) => (
                     <button key={item.id} className="menu-item-card" onClick={() => handleSelectItem(item)}>
+                      <img
+                        src={`/Images/drinks/${item.id}.png`}
+                        alt={item.name}
+                        className="menu-item-img"
+                        onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
+                      />
+                      <div className="menu-item-img-placeholder">🧋</div>
                       <div className="item-name">{item.name}</div>
                       <div className="item-price">{currency(item.cost)}</div>
                     </button>
@@ -243,6 +250,13 @@ export default function MenuScreen({
               ) : (
                 visibleItems.map((item) => (
                   <button key={item.id} className="menu-item-card" onClick={() => handleSelectItem(item)}>
+                    <img
+                      src={`/Images/drinks/${item.id}.png`}
+                      alt={item.name}
+                      className="menu-item-img"
+                      onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
+                    />
+                    <div className="menu-item-img-placeholder">🧋</div>
                     <div className="item-name">{item.name}</div>
                     <div className="item-price">{currency(item.cost)}</div>
                   </button>
