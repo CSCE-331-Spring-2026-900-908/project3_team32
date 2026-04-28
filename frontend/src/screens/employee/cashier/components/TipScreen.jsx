@@ -13,6 +13,12 @@ export default function TipScreen({
 }) {
   return (
     <div className="tip-overlay">
+      <button className="tip-overlay-btn tip-overlay-back-btn" onClick={() => setScreen(SCREEN.TIP_REQUEST)}>
+        Back
+      </button>
+      <button className="tip-overlay-btn tip-overlay-cancel-btn" onClick={() => setScreen(SCREEN.CHECKOUT)}>
+        Cancel Payment
+      </button>
       <div className="tip-modal">
         <h2>Select Tip Amount</h2>
 
@@ -69,9 +75,6 @@ export default function TipScreen({
           </div>
         )}
 
-        <button className="tip-cancel-btn" onClick={() => setScreen(SCREEN.CHECKOUT)}>
-          Cancel Payment
-        </button>
       </div>
     </div>
   );

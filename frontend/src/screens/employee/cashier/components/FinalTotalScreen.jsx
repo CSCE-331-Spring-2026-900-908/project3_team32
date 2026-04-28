@@ -3,11 +3,18 @@ import { FiArrowLeft, FiCreditCard } from "react-icons/fi";
 import { SCREEN } from "../constants";
 import { currency } from "../utils";
 
-export default function FinalTotalScreen({ orderTotal, tipAmount, pendingPaymentMethod, setScreen, completeOrder }) {
+export default function FinalTotalScreen({
+  orderTotal,
+  tipAmount,
+  pendingPaymentMethod,
+  setScreen,
+  completeOrder,
+  backScreen = SCREEN.TIP_REQUEST,
+}) {
   return (
     <section className="cashier-panel checkout-panel">
       <div className="checkout-header">
-        <button className="cancel-checkout-btn" onClick={() => setScreen(SCREEN.TIP)}><FiArrowLeft /> Back</button>
+        <button className="cancel-checkout-btn" onClick={() => setScreen(backScreen)}><FiArrowLeft /> Back</button>
         <h2>Final Total</h2>
       </div>
 

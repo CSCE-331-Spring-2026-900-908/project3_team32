@@ -12,6 +12,7 @@ import ItemSelectScreen from "./components/ItemSelectScreen";
 import SelectionStep from "./components/SelectionStep";
 import ToppingsStep from "./components/ToppingsStep";
 import CheckoutScreen from "./components/CheckoutScreen";
+import TipRequestScreen from "./components/TipRequestScreen";
 import TipScreen from "./components/TipScreen";
 import FinalTotalScreen from "./components/FinalTotalScreen";
 import ConfirmationScreen from "./components/ConfirmationScreen";
@@ -45,6 +46,7 @@ export default function CashierPOS() {
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState(null);
   const [showCustomTip, setShowCustomTip] = useState(false);
   const [customTipValue, setCustomTipValue] = useState("");
+  const [finalTotalBackScreen, setFinalTotalBackScreen] = useState(SCREEN.TIP_REQUEST);
 
   // ── Completed order state ──────────────────────────────────────────
   const [completedOrderId, setCompletedOrderId] = useState(null);
@@ -146,15 +148,22 @@ export default function CashierPOS() {
 
   // ── Payment handlers ───────────────────────────────────────────────
   function handlePaymentSelection(method) {
-    if (method === "Card" || method === "Gift Card") {
-      setPendingPaymentMethod(method);
-      setShowCustomTip(false);
-      setCustomTipValue("");
-      setScreenState(SCREEN.TIP);
-    } else {
-      setTipAmount(0);
-      completeOrder(method);
-    }
+    setPendingPaymentMethod(method);
+    setShowCustomTip(false);
+    setCustomTipValue("");
+    setTipAmount(0);
+    setScreenState(SCREEN.TIP_REQUEST);
+  }
+
+  function handleTipRequestYes() {
+    setFinalTotalBackScreen(SCREEN.TIP);
+    setScreenState(SCREEN.TIP);
+  }
+
+  function handleTipRequestNo() {
+    setTipAmount(0);
+    setFinalTotalBackScreen(SCREEN.TIP_REQUEST);
+    setScreenState(SCREEN.FINAL_TOTAL);
   }
 
   function handleTipSelection(amount) {
@@ -221,6 +230,7 @@ export default function CashierPOS() {
     setPendingPaymentMethod(null);
     setShowCustomTip(false);
     setCustomTipValue("");
+    setFinalTotalBackScreen(SCREEN.TIP_REQUEST);
     setScreenState(SCREEN.HOME);
   }
 
@@ -371,6 +381,14 @@ export default function CashierPOS() {
           />
         )}
 
+        {screen === SCREEN.TIP_REQUEST && (
+          <TipRequestScreen
+            setScreen={setScreenState}
+            onRequestTip={handleTipRequestYes}
+            onSkipTip={handleTipRequestNo}
+          />
+        )}
+
         {screen === SCREEN.FINAL_TOTAL && (
           <FinalTotalScreen
             orderTotal={orderTotal}
@@ -378,6 +396,7 @@ export default function CashierPOS() {
             pendingPaymentMethod={pendingPaymentMethod}
             setScreen={setScreenState}
             completeOrder={completeOrder}
+            backScreen={finalTotalBackScreen}
           />
         )}
 
