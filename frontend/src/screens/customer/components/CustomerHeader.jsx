@@ -1,279 +1,132 @@
-﻿import React, { useState } from "react";
-import { FiArrowLeft, FiCheck, FiCoffee, FiDroplet, FiWind, FiList } from "react-icons/fi";
-import { currency } from "../utils";
+﻿import React from "react";
+import { FiChevronDown } from "react-icons/fi";
+import { LiaUniversalAccessSolid } from "react-icons/lia";
 
-export default function CustomizeScreen({
-  currentItem,
-  selectedSize,
-  setSelectedSize,
-  selectedSugar,
-  setSelectedSugar,
-  selectedIce,
-  setSelectedIce,
-  isIceLocked = false,
-  selectedToppings,
-  toggleTopping,
-  comments,
-  setComments,
-  handleCancelCustomization,
-  saveCustomizedItem,
-  editingCartItemId,
-  sizeOptions,
-  sugarOptions,
-  iceOptions,
-  toppingOptions,
+export default function CustomerHeader({
+  user,
+  logout,
+  navigate,
+  accessibilityOpen,
+  setAccessibilityOpen,
+  textScale,
+  setTextScale,
+  fontSize,
+  setFontSize,
+  magnifierEnabled,
+  setMagnifierEnabled,
+  magnifierZoom,
+  setMagnifierZoom,
+  highContrastEnabled,
+  setHighContrastEnabled,
+  translateContainerId,
+  accessibilityPanelRef,
+  isMagnified,
 }) {
-  const [quantity, setQuantity] = useState(1);
-  const livePrice =
-    currentItem.cost +
-    (selectedSize?.cost || 0) +
-    (selectedSugar?.cost || 0) +
-    (selectedIce?.cost || 0) +
-    selectedToppings.reduce((sum, t) => sum + t.cost, 0);
+  const textSizePercent = ((textScale - 85) / (140 - 85)) * 100;
+  const zoomPercent = ((magnifierZoom - 1.5) / (4 - 1.5)) * 100;
 
   return (
-    <div className="customize-fullpage customize-fullpage-single">
-      <div className="customize-top-bar">
-        <button className="kiosk-back-btn" onClick={handleCancelCustomization}><FiArrowLeft /> Back</button>
-        <div className="customize-item-summary">
-          <span className="customize-item-name">{currentItem.name}</span>
-          <span className="customize-item-price">{currency(livePrice * quantity)}</span>
-        </div>
-      </div>
-
-      <div className="customize-single-content">
-        <div className="customize-single-left">
-          <div className="customize-sections-grid">
-            <section className="customize-section-card customize-section-card-wide">
-              <h2 className="customize-step-title customize-step-title-left">Size</h2>
-              <div className="customize-option-grid customize-option-grid-compact customize-size-grid">
-                {sizeOptions.map((opt) => (
-                  <button
-                    key={opt.id}
-                    className={`customize-option-card customize-size-option${selectedSize?.id === opt.id ? " selected" : ""}`}
-                    onClick={() => setSelectedSize(opt)}
-                  >
-                    <span className="customize-option-name">{opt.name}</span>
-                    {opt.cost > 0 && <span className="customize-option-cost">+{currency(opt.cost)}</span>}
-                    {selectedSize?.id === opt.id && <span className="customize-option-check"><FiCheck /></span>}
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            <section className="customize-section-card">
-              <h2 className="customize-step-title customize-step-title-left">Sugar</h2>
-              <div className="customize-option-grid customize-option-grid-compact">
-                {sugarOptions.map((opt) => (
-                  <button
-                    key={opt.id}
-                    className={`customize-option-card${selectedSugar?.id === opt.id ? " selected" : ""}`}
-                    onClick={() => setSelectedSugar(opt)}
-                  >
-                    <span className="customize-option-name">{opt.name}</span>
-                    {opt.cost > 0 && <span className="customize-option-cost">+{currency(opt.cost)}</span>}
-                    {selectedSugar?.id === opt.id && <span className="customize-option-check"><FiCheck /></span>}
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            <section className="customize-section-card">
-              <h2 className="customize-step-title customize-step-title-left">Ice</h2>
-              {isIceLocked ? (
-                <div className="customize-ice-locked">
-                  <div className="customize-option-card selected" style={{ cursor: "default", opacity: 0.75 }}>
-                    <span className="customize-option-name">{selectedIce?.name || "No Ice"}</span>
-                    <span className="customize-option-check"><FiCheck /></span>
-                  </div>
-                  <p className="customize-ice-locked-note">Hot drinks are served without ice.</p>
-                </div>
-              ) : (
-                <div className="customize-option-grid customize-option-grid-compact">
-                  {iceOptions.map((opt) => (
-                    <button
-                      key={opt.id}
-                      className={`customize-option-card${selectedIce?.id === opt.id ? " selected" : ""}`}
-                      onClick={() => setSelectedIce(opt)}
-                    >
-                      <span className="customize-option-name">{opt.name}</span>
-                      {opt.cost > 0 && <span className="customize-option-cost">+{currency(opt.cost)}</span>}
-                      {selectedIce?.id === opt.id && <span className="customize-option-check"><FiCheck /></span>}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <section className="customize-section-card customize-section-card-wide">
-              <h2 className="customize-step-title customize-step-title-left">Toppings</h2>
-              <p className="customize-step-subtitle customize-step-subtitle-left">Select as many as you like</p>
-              <div className="customize-option-grid customize-option-grid-compact">
-                {toppingOptions.map((opt) => {
-                  const isSelected = selectedToppings.some((t) => t.id === opt.id);
-                  return (
-                    <button
-                      key={opt.id}
-                      className={`customize-option-card${isSelected ? " selected" : ""}`}
-                      onClick={() => toggleTopping(opt)}
-                    >
-                      <span className="customize-option-name">{opt.name}</span>
-                      {opt.cost > 0 && <span className="customize-option-cost">+{currency(opt.cost)}</span>}
-                      {isSelected && <span className="customize-option-check"><FiCheck /></span>}
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-
-            <section 
-              className="customize-section-card customize-section-card-wide" 
-              style={{ display: "flex", alignItems: "center", gap: "1rem" }}
+    <header className="customer-header">
+      <div className="header-content">
+        <h1>Team 32's Boba Bar</h1>
+        <div className="header-controls-row">
+          <div className="header-actions">
+            <div
+              className="accessibility-wrapper"
+              ref={isMagnified ? null : accessibilityPanelRef}
             >
-              <h2 
-                className="customize-step-title customize-step-title-left" 
-                style={{ margin: 0, flexShrink: 0 }}
+              <button
+                className="accessibility-toggle-btn"
+                onClick={() => setAccessibilityOpen((o) => !o)}
+                aria-expanded={accessibilityOpen}
+                aria-haspopup="true"
               >
-                Special Instructions
-              </h2>
-              <input
-                type="text"
-                className="comments-input"
-                value={comments}
-                onChange={(e) => setComments(e.target.value)}
-                placeholder="e.g., Extra shaken, half boba..."
-                style={{ width: "100%", margin: 0 }}
-              />
-            </section>
-          </div>
-        </div>
+                <LiaUniversalAccessSolid className="a11y-icon" size={32}/> 
+                <span>Accessibility</span>
+                <FiChevronDown className={`a11y-caret ${accessibilityOpen ? "open" : ""}`} />
+              </button>
 
-        <aside className="customize-single-right">
-        <div className="customize-side-total-top">
-            <span className="customize-side-total-label">Total</span>
-            <span className="customize-side-total-value">{currency(livePrice * quantity)}</span>
-          </div>
+              <div className={`accessibility-panel ${accessibilityOpen ? "open" : ""}`} style={{ padding: "1.5rem" }}>
+                <section className="a11y-section">
+                <div className="a11y-section-header">
+                  <span className="a11y-section-title">UI Size</span>
+                  <span className="a11y-section-value notranslate" translate="no">{textScale}%</span>
+                </div>
+                  <input
+                    type="range" min="85" max="140" step="5"
+                    value={textScale}
+                    onChange={(e) => setTextScale(Number(e.target.value))}
+                    className="a11y-slider"
+                    style={{ background: `linear-gradient(to right, #8b4513 ${textSizePercent}%, #e5d4b8 ${textSizePercent}%)`, '--value': `${textSizePercent}%`}}
+                  />
+                </section>
 
-          <div className="customize-review customize-review-compact">
-            <div className="customize-review-header">
-              <span className="customize-review-header-icon"><FiCoffee /></span>
-              <div className="customize-review-header-text">
-                <h3>{currentItem.name}</h3>
-                <p>Base price: {currency(currentItem.cost)}</p>
-              </div>
-            </div>
+                <div className="a11y-divider" />
 
-            <div className="customize-review-body">
-              <div className="customize-review-row">
-                <span className="customize-review-label">Size</span>
-                <span className="customize-review-value">
-                  {selectedSize?.name || "Regular"}
-                  {selectedSize?.cost > 0 && (
-                    <span className="customize-review-value-cost">+{currency(selectedSize.cost)}</span>
-                  )}
-                </span>
-              </div>
-              <div className="customize-review-row">
-                <span className="customize-review-label">
-                  <span className="customize-review-label-icon"><FiDroplet /></span> Sugar
-                </span>
-                <span className="customize-review-value">
-                  {selectedSugar?.name || "Default"}
-                  {selectedSugar?.cost > 0 && (
-                    <span className="customize-review-value-cost">+{currency(selectedSugar.cost)}</span>
-                  )}
-                </span>
-              </div>
-              <div className="customize-review-row">
-                <span className="customize-review-label">
-                  <span className="customize-review-label-icon"><FiWind /></span> Ice
-                </span>
-                <span className="customize-review-value">
-                  {selectedIce?.name || "Default"}
-                  {selectedIce?.cost > 0 && (
-                    <span className="customize-review-value-cost">+{currency(selectedIce.cost)}</span>
-                  )}
-                </span>
-              </div>
-
-              {selectedToppings.length > 0 ? (
-                <div className="customize-review-section">
-                  <div className="customize-review-section-title">Toppings</div>
-                  <div className="customize-review-toppings">
-                    {selectedToppings.map((t) => (
-                      <span key={t.id} className="customize-review-topping-chip">
-                        {t.name}
-                        {t.cost > 0 && <span className="customize-review-topping-cost">+{currency(t.cost)}</span>}
-                      </span>
-                    ))}
+                <section className="a11y-section">
+                  <div className="a11y-section-header">
+                    <span className="a11y-section-title">Language</span>
                   </div>
-                </div>
-              ) : (
-                <div className="customize-review-row">
-                  <span className="customize-review-label">
-                    <span className="customize-review-label-icon"><FiList /></span> Toppings
-                  </span>
-                  <span className="customize-review-value">None</span>
-                </div>
-              )}
-            </div>
+                  <div
+                    id={isMagnified ? undefined : translateContainerId}
+                    className="google-translate-widget notranslate"
+                    translate="no"
+                  />
+                </section>
 
-            <div className="customize-review-breakdown">
-              <div className="customize-review-breakdown-row">
-                <span>Base</span><span>{currency(currentItem.cost)}</span>
+                <div className="a11y-divider" />
+
+                <section className="a11y-section">
+                  <div className="a11y-section-header" style={{ marginBottom: 0 }}>
+                    <span className="a11y-section-title">Contrast (B&W)</span>
+                    <button
+                      className={`a11y-toggle${highContrastEnabled ? " on" : " off"}`}
+                      onClick={() => setHighContrastEnabled((v) => !v)}
+                    >
+                      {highContrastEnabled ? "ON" : "OFF"}
+                    </button>
+                  </div>
+                </section>
+
+                <div className="a11y-divider" />
+
+                <section className="a11y-section">
+                  <div className="a11y-section-header">
+                    <span className="a11y-section-title">Magnifier</span>
+                    <button
+                      className={`a11y-toggle${magnifierEnabled ? " on" : " off"}`}
+                      onClick={() => setMagnifierEnabled((v) => !v)}
+                    >
+                      {magnifierEnabled ? "ON" : "OFF"}
+                    </button>
+                  </div>
+                  {magnifierEnabled && (
+                    <div className="magnifier-controls">
+                      <label className="a11y-control-label">
+                        Zoom &nbsp;<strong className="notranslate" translate="no">{magnifierZoom}Ã—</strong>
+                      </label>
+                      <input
+                        type="range" min="1.5" max="4" step="0.5"
+                        value={magnifierZoom}
+                        onChange={(e) => setMagnifierZoom(Number(e.target.value))}
+                        className="a11y-slider"
+                        style={{ background: `linear-gradient(to right, #8b4513 ${zoomPercent}%, #e5d4b8 ${zoomPercent}%)`, '--value': `${zoomPercent}%` }}
+                      />
+                    </div>
+                  )}
+                </section>
               </div>
-              {selectedSize?.cost > 0 && (
-                <div className="customize-review-breakdown-row">
-                  <span>{selectedSize.name}</span><span>+{currency(selectedSize.cost)}</span>
-                </div>
-              )}
-              {selectedSugar?.cost > 0 && (
-                <div className="customize-review-breakdown-row">
-                  <span>{selectedSugar.name}</span><span>+{currency(selectedSugar.cost)}</span>
-                </div>
-              )}
-              {selectedIce?.cost > 0 && (
-                <div className="customize-review-breakdown-row">
-                  <span>{selectedIce.name}</span><span>+{currency(selectedIce.cost)}</span>
-                </div>
-              )}
-              {selectedToppings.filter((t) => t.cost > 0).map((t) => (
-                <div key={t.id} className="customize-review-breakdown-row">
-                  <span>{t.name}</span><span>+{currency(t.cost)}</span>
-                </div>
-              ))}
             </div>
-
-            <div className="customize-review-total">
-              <span className="customize-review-total-label">Total</span>
-              <span className="customize-review-total-price">{currency(livePrice * quantity)}</span>
-            </div>
-          </div>
-          <div className="customize-add-container">
-            <button 
-              className="customize-nav-btn customize-nav-add customize-single-add" 
-              onClick={() => saveCustomizedItem(quantity)}
+            <button
+              className="exit-btn"
+              onClick={() => { logout(); navigate("/login/customer"); }}
             >
-              {editingCartItemId ? "Save Changes" : "Add to Order"}
+              Exit
             </button>
-            <div className="customize-quantity-selector">
-              <button 
-                className="quantity-btn" 
-                onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
-              >
-                -
-              </button>
-              <span className="quantity-display">{quantity}</span>
-              <button 
-                className="quantity-btn" 
-                onClick={() => setQuantity(prev => prev + 1)}
-              >
-                +
-              </button>
-            </div>
           </div>
-        </aside>
+        </div>
       </div>
-    </div>
+    </header>
   );
 }
+
