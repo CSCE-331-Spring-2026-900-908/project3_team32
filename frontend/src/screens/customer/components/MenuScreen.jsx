@@ -236,7 +236,7 @@ export default function MenuScreen({
                   mostOrderedData.map((item) => (
                     <button key={item.id} className="menu-item-card" onClick={() => handleSelectItem(item)}>
                       <img
-                        src={`/Images/drinks/${item.id}.png`}
+                        src={`/images/drinks/${item.id}.png`}
                         alt={item.name}
                         className="menu-item-img"
                         onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
@@ -251,7 +251,7 @@ export default function MenuScreen({
                 visibleItems.map((item) => (
                   <button key={item.id} className="menu-item-card" onClick={() => handleSelectItem(item)}>
                     <img
-                      src={`/Images/drinks/${item.id}.png`}
+                      src={`/images/drinks/${item.id}.png`}
                       alt={item.name}
                       className="menu-item-img"
                       onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
