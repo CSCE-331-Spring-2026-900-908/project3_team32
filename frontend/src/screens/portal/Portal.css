@@ -1,10 +1,29 @@
+.portal-route-active,
+.portal-route-active body {
+  position: static !important;
+  height: auto !important;
+  min-height: 100% !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+.portal-route-active #root {
+  position: static !important;
+  height: auto !important;
+  min-height: 100vh !important;
+  overflow: visible !important;
+}
+
 .portal {
   min-height: 100vh;
+  height: 100vh;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   background: linear-gradient(135deg, #fef3e2 0%, #fce7c8 100%);
-  padding: 2rem;
+  padding: clamp(1rem, 2.5vh, 2rem);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .portal-content {
@@ -14,7 +33,7 @@
 }
 
 .portal-header {
-  margin-bottom: 4rem;
+  margin-bottom: clamp(1.5rem, 4vh, 4rem);
 }
 
 .logo {
@@ -48,8 +67,8 @@
 .portal-cards {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 2rem;
-  margin-bottom: 2rem;
+  gap: clamp(1rem, 2vh, 2rem);
+  margin-bottom: clamp(1rem, 2vh, 2rem);
 }
 
 /* Shared card styles */
@@ -57,7 +76,7 @@
   background: white;
   border: 2px solid #e5d4b8;
   border-radius: 20px;
-  padding: 3rem 2rem;
+  padding: clamp(1.6rem, 4vh, 3rem) clamp(1.2rem, 2.5vw, 2rem);
   cursor: pointer;
   transition: all 0.3s ease;
   position: relative;
@@ -73,9 +92,9 @@
   flex-direction: row;
   align-items: center;
   gap: 1.5rem;
-  padding: 2rem 2.5rem;
+  padding: clamp(1.1rem, 2.8vh, 2rem) clamp(1.2rem, 2.5vw, 2.5rem);
   text-align: left;
-  margin-bottom: 3rem;
+  margin-bottom: clamp(1.1rem, 3vh, 3rem);
   box-sizing: border-box;
 }
 

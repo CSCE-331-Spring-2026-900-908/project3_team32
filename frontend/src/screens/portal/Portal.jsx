@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiShoppingBag, FiUsers, FiCoffee } from 'react-icons/fi';
 import { HiArrowRight } from 'react-icons/hi';
@@ -6,6 +6,15 @@ import './Portal.css';
 
 function Portal() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.documentElement.classList.add('portal-route-active');
+    document.body.classList.add('portal-route-active');
+    return () => {
+      document.documentElement.classList.remove('portal-route-active');
+      document.body.classList.remove('portal-route-active');
+    };
+  }, []);
 
   return (
     <div className="portal">
