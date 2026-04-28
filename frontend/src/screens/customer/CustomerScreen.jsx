@@ -115,7 +115,10 @@ export default function CustomerScreen() {
 
     const SCROLLABLE = [
       ".menu-left-col", ".cart-panel-scroll-area", ".orders-modal-body",
-      ".customize-step-content", ".checkout-screen", ".cart-screen", ".customer-content-wrapper",
+      ".customize-step-content", ".customize-single-left", ".customize-single-right", 
+      ".customize-single-content", ".checkout-screen", ".cart-screen", ".customer-content-wrapper",
+      ".accessibility-panel", ".accessibility-dropdown", ".accessibility-menu", ".accessibility-panel-content",
+      ".customize-review", ".customize-review-body"
     ];
 
     function findReal(sel) {
@@ -201,10 +204,6 @@ export default function CustomerScreen() {
           magEl.style.height = `${rect.height}px`;
         }
       };
-
-      syncFixedElement("real-cart-badge", "magnified-cart-badge");
-      syncFixedElement("real-confirmation", "magnified-confirmation");
-      syncFixedElement("real-orders-modal", "magnified-orders-modal");
       
       const realWeather = findReal(".kiosk-weather-strip");
       const magWeather = inner.querySelector(".kiosk-weather-strip");
@@ -806,30 +805,29 @@ export default function CustomerScreen() {
         customerOrders={customerOrders}
         isMagnified={isMagnified}
       />
+
+      <Chatbot
+          menuItems={menuItems}
+          toppingOptions={toppingOptions}
+          sugarOptions={sugarOptions}
+          iceOptions={iceOptions}
+          sizeOptions={sizeOptions}
+          mostOrderedItems={mostOrderedItems}
+        />
     </>
   );
 
   return (
     <div className="customer-page">
       {renderAppContent(false)}
-
       {magnifierEnabled && (
-        <div ref={magnifierRef} className="magnifier-v1">
+        <div ref={magnifierRef} className="magnifier-v1" style={{ zIndex: 10000, pointerEvents: "none" }}>
           <div ref={lensInnerRef} className="magnified-content">
             {renderAppContent(true)}
           </div>
           <div className="magnifier-badge">{magnifierZoom}×</div>
         </div>
       )}
-
-      <Chatbot
-        menuItems={menuItems}
-        toppingOptions={toppingOptions}
-        sugarOptions={sugarOptions}
-        iceOptions={iceOptions}
-        sizeOptions={sizeOptions}
-        mostOrderedItems={mostOrderedItems}
-      />
     </div>
   );
 }

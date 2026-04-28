@@ -10,8 +10,6 @@ export default function CustomerHeader({
   setAccessibilityOpen,
   textScale,
   setTextScale,
-  fontSize,
-  setFontSize,
   magnifierEnabled,
   setMagnifierEnabled,
   magnifierZoom,
@@ -103,7 +101,7 @@ export default function CustomerHeader({
                   {magnifierEnabled && (
                     <div className="magnifier-controls">
                       <label className="a11y-control-label">
-                        Zoom &nbsp;<strong className="notranslate" translate="no">{magnifierZoom}Ã—</strong>
+                        Zoom &nbsp;<strong className="notranslate" translate="no">{magnifierZoom}x</strong>
                       </label>
                       <input
                         type="range" min="1.5" max="4" step="0.5"

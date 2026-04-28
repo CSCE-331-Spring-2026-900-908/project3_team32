@@ -605,44 +605,76 @@
   animation: fadeIn 0.2s ease-out;
 }
 
+.tip-overlay-btn {
+  position: fixed;
+  z-index: 2100;
+  border: 2px solid #ced4da;
+  background: #ffffff;
+  color: #495057;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+}
+
+.tip-overlay-back-btn {
+  top: 16px;
+  left: 16px;
+}
+
+.tip-overlay-cancel-btn {
+  top: 16px;
+  right: 16px;
+}
+
+.tip-overlay-btn:hover {
+  border-color: #8b4513;
+  color: #8b4513;
+  background: #fef3e2;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
 .tip-modal {
-  width: 85vw;
-  height: 85vh;
+  width: min(960px, 92vw);
+  max-height: 92vh;
+  height: auto;
   background: white;
   border-radius: 24px;
-  padding: 40px;
+  padding: clamp(18px, 2.5vh, 34px);
   display: flex;
   flex-direction: column;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
+  overflow: auto;
 }
 
 .tip-modal h2 {
-  font-size: 3.5rem;
+  font-size: clamp(2rem, 4.2vw, 3.2rem);
   font-weight: 800;
   color: #212529;
   text-align: center;
-  margin-top: 20px;
-  margin-bottom: 40px;
+  margin-top: 6px;
+  margin-bottom: clamp(14px, 2vh, 28px);
 }
 
 .tip-options {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 30px;
+  gap: clamp(12px, 2vw, 24px);
   flex: 1;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .tip-button {
   background: #f8f9fa;
   border: 4px solid #dee2e6;
   border-radius: 20px;
-  font-size: 3.2rem;
+  font-size: clamp(1.8rem, 3.4vw, 3rem);
   font-weight: 800;
   color: #212529;
   cursor: pointer;
@@ -651,8 +683,9 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 20px;
-  min-height: 220px;
+  gap: clamp(8px, 1.6vh, 16px);
+  min-height: clamp(130px, 20vh, 210px);
+  padding: clamp(10px, 1.6vh, 18px);
 }
 
 .tip-button:hover {
@@ -664,7 +697,7 @@
 }
 
 .tip-amount-label {
-  font-size: 2rem;
+  font-size: clamp(1.2rem, 2.1vw, 1.9rem);
   color: #6c757d;
   font-weight: 600;
 }
@@ -673,31 +706,19 @@
   color: #8b4513;
 }
 
-.tip-cancel-btn {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: #6c757d;
-  cursor: pointer;
-  text-decoration: underline;
-  padding: 20px;
-  margin-top: auto;
-  align-self: center;
-}
-
 .custom-tip-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   flex: 1;
-  gap: 60px;
+  gap: clamp(20px, 5vh, 48px);
 }
 
 .custom-tip-input-wrapper {
   display: flex;
   align-items: center;
-  font-size: 5rem;
+  font-size: clamp(2rem, 5vw, 4rem);
   color: #212529;
   font-weight: 800;
   border-bottom: 4px solid #dee2e6;
@@ -712,10 +733,10 @@
 .custom-tip-input {
   border: none;
   outline: none;
-  font-size: 5rem;
+  font-size: clamp(2rem, 5vw, 4rem);
   font-weight: 800;
   color: #212529;
-  width: 300px;
+  width: min(280px, 45vw);
   background: transparent;
   text-align: center;
 }
