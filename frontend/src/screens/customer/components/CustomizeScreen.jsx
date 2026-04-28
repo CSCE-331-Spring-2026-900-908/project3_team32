@@ -37,7 +37,7 @@ export default function CustomizeScreen({
         <button className="kiosk-back-btn" onClick={handleCancelCustomization}><FiArrowLeft /> Back</button>
         <div className="customize-item-summary">
           <span className="customize-item-name">{currentItem.name}</span>
-          <span className="customize-item-price">{currency(livePrice)}</span>
+          <span className="customize-item-price">{currency(livePrice * quantity)}</span>
         </div>
       </div>
 
@@ -140,9 +140,9 @@ export default function CustomizeScreen({
         </div>
 
         <aside className="customize-single-right">
-          <div className="customize-side-total-top">
+        <div className="customize-side-total-top">
             <span className="customize-side-total-label">Total</span>
-            <span className="customize-side-total-value">{currency(livePrice)}</span>
+            <span className="customize-side-total-value">{currency(livePrice * quantity)}</span>
           </div>
 
           <div className="customize-review customize-review-compact">
