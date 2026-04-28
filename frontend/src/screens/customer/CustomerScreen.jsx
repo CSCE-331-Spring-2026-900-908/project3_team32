@@ -543,8 +543,9 @@ export default function CustomerScreen() {
     });
   }
 
-  function saveCustomizedItem() {
+  function saveCustomizedItem(quantityToAdd = 1) {
     if (!currentItem) return;
+    const finalQty = typeof quantityToAdd === "number" ? quantityToAdd : 1;
     const effectiveSize =
       selectedSize ||
       defaultSizeOption ||
@@ -587,7 +588,9 @@ export default function CustomerScreen() {
     };
     if (editingCartItemId) {
       setCart((prev) =>
-        prev.map((item) => item.id === editingCartItemId ? { ...item, ...itemPayload } : item),
+        prev.map((item) =>
+          item.id === editingCartItemId ? { ...item, ...itemPayload, quantity: finalQty } : item
+        ),
       );
       clearCustomization();
       setCurrentItem(null);
@@ -595,7 +598,7 @@ export default function CustomerScreen() {
       setScreen(SCREEN.MENU);
       return;
     }
-    setCart((prev) => [...prev, { id: Date.now(), quantity: 1, ...itemPayload }]);
+    setCart((prev) => [...prev, { id: Date.now(), quantity: finalQty, ...itemPayload }]);
     clearCustomization();
     setCurrentItem(null);
     setScreen(SCREEN.MENU);

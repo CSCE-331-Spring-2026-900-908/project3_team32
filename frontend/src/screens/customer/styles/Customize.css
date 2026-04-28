@@ -607,6 +607,7 @@
 
   .customize-fullpage-single .customize-single-right {
     height: 100%;
+    max-height: 100%;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -634,14 +635,6 @@
   .customize-fullpage-single .customize-side-total-value {
     font-weight: 800;
     font-size: 1.25rem;
-  }
-
-  .customize-fullpage-single .customize-review-compact {
-    margin-top: 0;
-    flex: 1; 
-    display: block;
-    overflow-y: auto; 
-    background: #f3efe2;
   }
 
   .customize-fullpage-single .customize-review-header {
@@ -677,22 +670,6 @@
     position: static;
   }
 
-  .customize-fullpage-single .customize-single-add {
-    width: 100%;
-    flex-shrink: 0;
-    position: relative; 
-    margin-top: auto; 
-    z-index: 2;
-    box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.12);
-    background: #652613;
-    color: #ffffff;
-  }
-
-  .customize-fullpage-single .customize-single-add:hover {
-    background: #4f1d0f;
-    color: #ffffff;
-  }
-
   @media (max-width: 1280px) {
     .customize-fullpage-single .customize-single-content {
       grid-template-columns: 1fr;
@@ -719,19 +696,66 @@
     }
   }
 
-
   .customize-fullpage-single .customize-review-compact {
-    flex: 1;
-    overflow-y: auto;
+    margin-top: 0;
+    flex: 1; 
+    min-height: 0;
+    overflow-y: auto; 
+    background: #f3efe2;
+  }
+
+  .customize-fullpage-single .customize-add-container {
+    width: 100%;
+    flex-shrink: 0;
+    position: relative;
+    margin-top: auto;
+    z-index: 2;
+    display: flex;
+    gap: 0.5rem;
   }
 
   .customize-fullpage-single .customize-single-add {
-    /* Keep all your existing visual styles (background, color, box-shadow, width, etc.) */
-    width: 100%;
-    flex-shrink: 0;
-    z-index: 2;
-  
-    /* Change these layout properties: */
-    position: relative; /* Change from sticky to relative */
-    margin-top: auto;   /* Push the button to the very bottom */
+    flex: 1;
+    margin-top: 0;
+    position: static;
+    box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.12);
+    background: #652613;
+    color: #ffffff;
+  }
+
+  .customize-fullpage-single .customize-single-add:hover {
+    background: #4f1d0f;
+    color: #ffffff;
+  }
+
+  .customize-fullpage-single .customize-quantity-selector {
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    border: 2px solid #652613; 
+    border-radius: 12px;
+    box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.12);
+  }
+
+  .customize-fullpage-single .quantity-btn {
+    background: transparent;
+    border: none;
+    color: #652613; 
+    font-size: 1.5rem;
+    font-weight: 700;
+    padding: 0 1rem;
+    height: 100%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease;
+  }
+
+  .customize-fullpage-single .quantity-display {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #333;
+    min-width: 2rem;
+    text-align: center;
   }

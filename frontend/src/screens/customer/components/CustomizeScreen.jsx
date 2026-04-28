@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { FiArrowLeft, FiCheck, FiCoffee, FiDroplet, FiWind, FiList } from "react-icons/fi";
 import { currency } from "../utils";
 
@@ -23,6 +23,7 @@ export default function CustomizeScreen({
   iceOptions,
   toppingOptions,
 }) {
+  const [quantity, setQuantity] = useState(1);
   const livePrice =
     currentItem.cost +
     (selectedSize?.cost || 0) +
@@ -236,13 +237,32 @@ export default function CustomizeScreen({
 
             <div className="customize-review-total">
               <span className="customize-review-total-label">Total</span>
-              <span className="customize-review-total-price">{currency(livePrice)}</span>
+              <span className="customize-review-total-price">{currency(livePrice * quantity)}</span>
             </div>
           </div>
-
-          <button className="customize-nav-btn customize-nav-add customize-single-add" onClick={saveCustomizedItem}>
-            {editingCartItemId ? "Save Changes" : "Add to Order"}
-          </button>
+          <div className="customize-add-container">
+            <button 
+              className="customize-nav-btn customize-nav-add customize-single-add" 
+              onClick={() => saveCustomizedItem(quantity)}
+            >
+              {editingCartItemId ? "Save Changes" : "Add to Order"}
+            </button>
+            <div className="customize-quantity-selector">
+              <button 
+                className="quantity-btn" 
+                onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
+              >
+                -
+              </button>
+              <span className="quantity-display">{quantity}</span>
+              <button 
+                className="quantity-btn" 
+                onClick={() => setQuantity(prev => prev + 1)}
+              >
+                +
+              </button>
+            </div>
+          </div>
         </aside>
       </div>
     </div>
